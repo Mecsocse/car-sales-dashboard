@@ -16,7 +16,10 @@ def get_db():
     if db_url:
         import psycopg2
         from psycopg2.extras import RealDictCursor
-        conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+        if "sslmode=" not in db_url:
+            conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor, connect_timeout=10)
+        else:
+            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=10)
         conn.autocommit = True
         try:
             yield conn
@@ -30,6 +33,27 @@ def get_db():
             yield conn
         finally:
             conn.close()
+
+def exec_query(cursor, query: str, params=None):
+    if os.environ.get("DATABASE_URL"):
+        q = query.replace("?", "%s")
+        q = q.replace("v.modelo_clean NOT LIKE 'CAMION%'", "v.modelo_clean NOT LIKE 'CAMION%%'")
+        q = q.replace("modelo_clean NOT LIKE 'CAMION%'", "modelo_clean NOT LIKE 'CAMION%%'")
+        q = q.replace("v.fecha LIKE", "CAST(v.fecha AS TEXT) LIKE")
+        q = q.replace("fecha LIKE", "CAST(fecha AS TEXT) LIKE")
+        q = q.replace("substr(fecha", "substr(CAST(fecha AS TEXT)")
+        q = q.replace("v.pais_id = 1", "v.pais_id = '1'")
+        q = q.replace("pais_id = 1", "pais_id = '1'")
+        if params:
+            cursor.execute(q, params)
+        else:
+            cursor.execute(q)
+    else:
+        if params:
+            cursor.execute(query, params)
+        else:
+            cursor.execute(query)
+    return cursor
 
 def build_full_where(
     country: str = "es",
@@ -130,11 +154,11 @@ def get_summary(
             country, period, month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn
         )
 
-        c.execute("SELECT MAX(fecha) as max_date FROM ventas_registradas")
+        exec_query(c, "SELECT MAX(fecha) as max_date FROM ventas_registradas")
         max_row = c.fetchone()
         latest_date = max_row['max_date'] if max_row and max_row['max_date'] else "2026-08-04"
 
-        c.execute("SELECT SUM(unidades) as total FROM ventas_registradas WHERE fecha = ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%'", (latest_date,))
+        exec_query(c, "SELECT SUM(unidades) as total FROM ventas_registradas WHERE fecha = ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%'", (latest_date,))
         total_today = c.fetchone()['total'] or 0
 
         query_total = f"""
@@ -145,7 +169,7 @@ def get_summary(
             LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_sql}
         """
-        c.execute(query_total, params)
+        exec_query(c, query_total, params)
         total_month = c.fetchone()['total'] or 0
 
         target_m = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
@@ -166,7 +190,7 @@ def get_summary(
             LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_prev}
         """
-        c.execute(query_prev, params_prev)
+        exec_query(c, query_prev, params_prev)
         prev_month = c.fetchone()['total'] or 0
 
         pct_change = round(((total_month - prev_month) / prev_month * 100), 1) if prev_month > 0 else 0.0
@@ -179,7 +203,7 @@ def get_summary(
             LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_sql} AND (c.codigo = 'EV' OR v.carburante_std = 'ELECTRICO' OR v.carburante_raw IN ('EV','Eléctrico (BEV)'))
         """
-        c.execute(query_ev, params)
+        exec_query(c, query_ev, params)
         ev_units = c.fetchone()['total_ev'] or 0
         ev_share = round((ev_units / (total_month or 1) * 100), 1) if total_month > 0 else 0.0
 
@@ -193,7 +217,7 @@ def get_summary(
             GROUP BY marca
             ORDER BY total DESC LIMIT 1
         """
-        c.execute(query_brand, params)
+        exec_query(c, query_brand, params)
         top_b_row = c.fetchone()
         top_brand = top_b_row['marca'] if top_b_row else "N/A"
         top_brand_units = top_b_row['total'] if top_b_row else 0
@@ -209,7 +233,7 @@ def get_summary(
             GROUP BY modelo_full
             ORDER BY total DESC LIMIT 1
         """
-        c.execute(query_model, params)
+        exec_query(c, query_model, params)
         top_m_row = c.fetchone()
         top_model = top_m_row['modelo_full'] if top_m_row else "N/A"
         top_model_units = top_m_row['total'] if top_m_row else 0
@@ -268,7 +292,7 @@ def get_daily_registrations(
             GROUP BY v.fecha
             ORDER BY v.fecha ASC
         """
-        c.execute(query, params)
+        exec_query(c, query, params)
         rows = c.fetchall()
         return [dict(r) for r in rows]
     except Exception as e:
@@ -306,7 +330,7 @@ def get_table(
         LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
     """
-    c.execute(count_sql, params)
+    exec_query(c, count_sql, params)
     total_records = c.fetchone()['total'] or 0
 
     pages = max(1, (total_records + limit - 1) // limit)
@@ -327,7 +351,8 @@ def get_table(
         LIMIT ? OFFSET ?
     """
     data_params = params + [limit, offset]
-    c.execute(data_sql, data_params)
+    exec_query(c, data_sql, data_params)
+    rows = c.fetchall()
     rows = c.fetchall()
 
     return {

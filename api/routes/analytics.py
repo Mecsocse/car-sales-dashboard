@@ -7,7 +7,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from config import DB_PATH
-from api.routes.registrations import build_full_where
+from api.routes.registrations import build_full_where, exec_query
 
 router = APIRouter()
 
@@ -33,7 +33,10 @@ def get_db():
     if db_url:
         import psycopg2
         from psycopg2.extras import RealDictCursor
-        conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor)
+        if "sslmode=" not in db_url:
+            conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor, connect_timeout=10)
+        else:
+            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=10)
         conn.autocommit = True
         try:
             yield conn
@@ -51,7 +54,7 @@ def get_db():
 @router.get("/ccaa/list")
 def get_ccaa_list(conn: sqlite3.Connection = Depends(get_db)):
     c = conn.cursor()
-    c.execute("SELECT DISTINCT ccaa FROM ventas_registradas WHERE ccaa IS NOT NULL AND ccaa != '' ORDER BY ccaa")
+    exec_query(c, "SELECT DISTINCT ccaa FROM ventas_registradas WHERE ccaa IS NOT NULL AND ccaa != '' ORDER BY ccaa")
     return [r['ccaa'] for r in c.fetchall()]
 
 @router.get("/brands/ranking")
@@ -87,7 +90,7 @@ def get_brand_ranking(
         WHERE {where_sql}
         GROUP BY marca, modelo
     """
-    c.execute(query, params)
+    exec_query(c, query, params)
     rows = c.fetchall()
 
     brand_models = {}
@@ -154,7 +157,7 @@ def get_model_ranking(
         WHERE {where_sql}
         GROUP BY marca, modelo, carburante
     """
-    c.execute(query, params)
+    exec_query(c, query, params)
     rows = c.fetchall()
 
     model_totals = {}
@@ -264,7 +267,7 @@ def get_fuel_mix(
         GROUP BY grupo
         ORDER BY total DESC
     """
-    c.execute(query, params)
+    exec_query(c, query, params)
     rows = c.fetchall()
 
     FUEL_COLORS = {
@@ -302,11 +305,11 @@ def compare_months(
         WHERE {where_a}
         GROUP BY carburante
     """
-    c.execute(query_mix, params_a)
+    exec_query(c, query_mix, params_a)
     rows_a = {r['carburante']: r['total'] for r in c.fetchall()}
 
     where_b, params_b, _ = build_full_where(month=month_b, brand=brand, ccaa=ccaa, conn=conn)
-    c.execute(query_mix, params_b)
+    exec_query(c, query_mix, params_b)
     rows_b = {r['carburante']: r['total'] for r in c.fetchall()}
 
     total_a = sum(rows_a.values()) or 1
@@ -349,7 +352,7 @@ def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: 
     where_ccaa = " AND ccaa = ?" if ccaa else ""
     params = [f"{year}%", ccaa] if ccaa else [f"{year}%"]
 
-    c.execute(f"""
+    exec_query(c, f"""
         SELECT substr(fecha, 6, 2) as mes_num, SUM(unidades) as total
         FROM ventas_registradas
         WHERE fecha LIKE ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
@@ -377,7 +380,7 @@ def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection 
     where_ccaa = " AND ccaa = ?" if ccaa else ""
     params = [ccaa] if ccaa else []
 
-    c.execute(f"""
+    exec_query(c, f"""
         SELECT 
             substr(fecha, 1, 4) as y,
             substr(fecha, 6, 2) as m,
@@ -410,7 +413,7 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
     where_ccaa = " AND ccaa = ?" if ccaa else ""
     params = [ccaa] if ccaa else []
 
-    c.execute(f"""
+    exec_query(c, f"""
         SELECT 
             substr(fecha, 1, 4) as y,
             substr(fecha, 6, 2) as m,
@@ -451,7 +454,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
     where_ccaa = " AND ccaa = ?" if ccaa else ""
     params = [f"{year}%", ccaa] if ccaa else [f"{year}%"]
 
-    c.execute(f"""
+    exec_query(c, f"""
         SELECT 
             substr(fecha, 6, 2) as m,
             CASE
@@ -543,7 +546,7 @@ def get_monthly_matrix(
         LIMIT ?
     """
     params.append(limit)
-    c.execute(query, params)
+    exec_query(c, query, params)
     rows = c.fetchall()
 
     return [{
@@ -564,21 +567,21 @@ def get_province_ranking(conn: sqlite3.Connection = Depends(get_db)):
 @router.get("/brands/list")
 def get_brands_list(conn: sqlite3.Connection = Depends(get_db)):
     c = conn.cursor()
-    c.execute("SELECT DISTINCT COALESCE(marca_clean, marca_raw) as nombre FROM ventas_registradas WHERE marca_clean IS NOT NULL ORDER BY nombre")
+    exec_query(c, "SELECT DISTINCT COALESCE(marca_clean, marca_raw) as nombre FROM ventas_registradas WHERE marca_clean IS NOT NULL ORDER BY nombre")
     return [r['nombre'] for r in c.fetchall() if r['nombre']]
 
 @router.get("/models/list")
 def get_models_list(brand: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     c = conn.cursor()
     if brand:
-        c.execute("""
+        exec_query(c, """
             SELECT DISTINCT COALESCE(modelo_clean, modelo_raw) as modelo
             FROM ventas_registradas
             WHERE COALESCE(marca_clean, marca_raw) = ?
             ORDER BY modelo
         """, (brand,))
     else:
-        c.execute("SELECT DISTINCT COALESCE(modelo_clean, modelo_raw) as modelo FROM ventas_registradas ORDER BY modelo")
+        exec_query(c, "SELECT DISTINCT COALESCE(modelo_clean, modelo_raw) as modelo FROM ventas_registradas ORDER BY modelo")
     return [r['modelo'] for r in c.fetchall() if r['modelo']]
 
 @router.get("/fuel/list")
@@ -589,9 +592,9 @@ def get_fuel_list(conn: sqlite3.Connection = Depends(get_db)):
 def get_provinces_list(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     c = conn.cursor()
     if ccaa:
-        c.execute("SELECT DISTINCT provincia FROM ventas_registradas WHERE ccaa = ? AND provincia IS NOT NULL AND provincia != '' ORDER BY provincia", (ccaa,))
+        exec_query(c, "SELECT DISTINCT provincia FROM ventas_registradas WHERE ccaa = ? AND provincia IS NOT NULL AND provincia != '' ORDER BY provincia", (ccaa,))
     else:
-        c.execute("SELECT DISTINCT provincia FROM ventas_registradas WHERE provincia IS NOT NULL AND provincia != '' ORDER BY provincia")
+        exec_query(c, "SELECT DISTINCT provincia FROM ventas_registradas WHERE provincia IS NOT NULL AND provincia != '' ORDER BY provincia")
     return [r['provincia'] for r in c.fetchall()]
 
 @router.get("/insights")
@@ -615,7 +618,7 @@ def get_insights(
         country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn
     )
 
-    c.execute(f"SELECT SUM(v.unidades) as total FROM ventas_registradas v LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre) LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo) LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre) WHERE {where_sql}", params)
+    exec_query(c, f"SELECT SUM(v.unidades) as total FROM ventas_registradas v LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre) LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo) LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre) WHERE {where_sql}", params)
     row = c.fetchone()
     total_units = row['total'] or 0
 
@@ -625,7 +628,7 @@ def get_insights(
             "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
-    c.execute(f"""
+    exec_query(c, f"""
         SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
         FROM ventas_registradas v LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre) LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo) LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
@@ -634,7 +637,7 @@ def get_insights(
     top_b = c.fetchone()
     top_brand = top_b['marca'] if top_b else "N/A"
 
-    c.execute(f"""
+    exec_query(c, f"""
         SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full, SUM(v.unidades) as total
         FROM ventas_registradas v LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre) LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo) LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
