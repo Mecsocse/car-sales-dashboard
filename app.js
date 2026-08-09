@@ -822,6 +822,44 @@ class DashboardApp {
                         }
                     });
                 }
+            } else {
+                // Seamless fallback to individual calls
+                const [summaryData, brandsData, modelsData, evData, evBrandsData, fuelData] = await Promise.all([
+                    this.fetchCached(`${API_BASE}/api/summary?${q}`),
+                    this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&limit=${this.brandsLimit}`),
+                    this.fetchCached(`${API_BASE}/api/models/ranking?${q}&limit=${this.modelsLimit}`),
+                    this.fetchCached(`${API_BASE}/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`),
+                    this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`),
+                    this.fetchCached(`${API_BASE}/api/fuel/mix?${q}`)
+                ]);
+
+                if (summaryData) window.Components.renderMetrics(summaryData);
+                if (brandsData) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', brandsData);
+                if (modelsData) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', modelsData);
+                if (evData) window.DashboardCharts.initEVRankingChart('evRankingChart', evData);
+                if (evBrandsData) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', evBrandsData);
+                if (fuelData) {
+                    window.DashboardCharts.initFuelMixChart('fuelMixChart', fuelData, (clickedFuel) => {
+                        if (this.fuelFilter) {
+                            let targetOption = '';
+                            for (let opt of this.fuelFilter.options) {
+                                if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
+                                    targetOption = opt.value;
+                                    break;
+                                }
+                            }
+                            if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
+                            if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
+
+                            if (this.fuelFilter.value === targetOption) {
+                                this.fuelFilter.value = '';
+                            } else {
+                                this.fuelFilter.value = targetOption || clickedFuel;
+                            }
+                            this.refreshAll();
+                        }
+                    });
+                }
             }
         } catch (error) {
             console.error('Failed to load metrics and all-data:', error);
