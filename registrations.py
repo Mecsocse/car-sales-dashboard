@@ -128,13 +128,13 @@ def build_full_where(
             clauses.append("(v.carburante_std = ? OR v.carburante_raw = ?)")
             params.extend([fuel, fuel])
 
-    if province:
-        clauses.append("(v.provincia = ? OR v.provincia_raw = ?)")
-        params.extend([province, province])
+    if province and province.strip() and province.strip().lower() not in ('todas las provincias', 'todas', 'all', 'none', ''):
+        clauses.append("(LOWER(v.provincia) = LOWER(?) OR LOWER(v.provincia_raw) = LOWER(?))")
+        params.extend([province.strip(), province.strip()])
 
-    if ccaa:
-        clauses.append("v.ccaa = ?")
-        params.append(ccaa)
+    if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', ''):
+        clauses.append("LOWER(v.ccaa) = LOWER(?)")
+        params.append(ccaa.strip())
 
     return " AND ".join(clauses), params, 1
 
