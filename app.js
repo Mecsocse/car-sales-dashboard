@@ -793,10 +793,38 @@ class DashboardApp {
     async loadMetrics() {
         try {
             const q = this.getFullQueryParams();
-            const data = await this.fetchCached(`${API_BASE}/api/summary?${q}`);
-            if (data) window.Components.renderMetrics(data);
+            const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
+            if (allData && allData.summary) {
+                window.Components.renderMetrics(allData.summary);
+                if (allData.brands) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', allData.brands);
+                if (allData.models) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', allData.models);
+                if (allData.ev_models) window.DashboardCharts.initEVRankingChart('evRankingChart', allData.ev_models);
+                if (allData.ev_brands) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', allData.ev_brands);
+                if (allData.fuel_mix) {
+                    window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix, (clickedFuel) => {
+                        if (this.fuelFilter) {
+                            let targetOption = '';
+                            for (let opt of this.fuelFilter.options) {
+                                if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
+                                    targetOption = opt.value;
+                                    break;
+                                }
+                            }
+                            if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
+                            if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
+
+                            if (this.fuelFilter.value === targetOption) {
+                                this.fuelFilter.value = '';
+                            } else {
+                                this.fuelFilter.value = targetOption || clickedFuel;
+                            }
+                            this.refreshAll();
+                        }
+                    });
+                }
+            }
         } catch (error) {
-            console.error('Failed to load metrics:', error);
+            console.error('Failed to load metrics and all-data:', error);
         }
     }
 
@@ -805,26 +833,16 @@ class DashboardApp {
             const q = this.getFullQueryParams();
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
 
-            // Execute all chart queries in parallel with fetchCached
+            // Execute secondary trend queries in parallel with fetchCached
             const [
                 dailyData,
                 monthlyEvolData,
-                brandsData,
-                modelsData,
-                evData,
-                evBrandsData,
-                fuelData,
                 evQuotaData,
                 evCumData,
                 techQuotaData
             ] = await Promise.all([
                 this.fetchCached(`${API_BASE}/api/registrations/daily?${q}&days=30`),
                 this.fetchCached(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`),
-                this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&limit=${this.brandsLimit}`),
-                this.fetchCached(`${API_BASE}/api/models/ranking?${q}&limit=${this.modelsLimit}`),
-                this.fetchCached(`${API_BASE}/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`),
-                this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`),
-                this.fetchCached(`${API_BASE}/api/fuel/mix?${q}`),
                 this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`),
                 this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-cumulative?${ccaaParam}`),
                 this.fetchCached(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`)
@@ -851,45 +869,6 @@ class DashboardApp {
                 window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', monthlyEvolData);
             }
 
-            if (brandsData) {
-                window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', brandsData);
-            }
-
-            if (modelsData) {
-                window.DashboardCharts.initModelsRankingChart('modelsRankingChart', modelsData);
-            }
-
-            if (evData) {
-                window.DashboardCharts.initEVRankingChart('evRankingChart', evData);
-            }
-
-            if (evBrandsData) {
-                window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', evBrandsData);
-            }
-
-            if (fuelData) {
-                window.DashboardCharts.initFuelMixChart('fuelMixChart', fuelData, (clickedFuel) => {
-                    if (this.fuelFilter) {
-                        let targetOption = '';
-                        for (let opt of this.fuelFilter.options) {
-                            if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
-                                targetOption = opt.value;
-                                break;
-                            }
-                        }
-                        if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
-                        if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
-
-                        if (this.fuelFilter.value === targetOption) {
-                            this.fuelFilter.value = '';
-                        } else {
-                            this.fuelFilter.value = targetOption || clickedFuel;
-                        }
-                        this.refreshAll();
-                    }
-                });
-            }
-
             if (evQuotaData) {
                 window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', evQuotaData);
             }
@@ -904,7 +883,6 @@ class DashboardApp {
             if (techQuotaData) {
                 window.DashboardCharts.initAllTechQuotaChart('allTechQuotaChart', techQuotaData);
             }
-
         } catch (error) {
             console.error('Failed to load charts:', error);
         }

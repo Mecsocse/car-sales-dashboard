@@ -651,3 +651,113 @@ def get_insights(
         "insight_text": text,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
+
+@router.get("/dashboard/all-data")
+def get_dashboard_all_data(
+    country: str = "es",
+    period: str = "month",
+    month: Optional[str] = None,
+    year: Optional[str] = None,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    fuel: Optional[str] = None,
+    province: Optional[str] = None,
+    ccaa: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    conn: sqlite3.Connection = Depends(get_db)
+):
+    """Consolidated 1-pass endpoint returning summary, top brands, top models, top EV, and fuel mix in a single fast query."""
+    c = conn.cursor()
+    target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
+
+    from api.routes.registrations import get_summary
+    summary_data = get_summary(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
+
+    where_sql, params, _ = build_full_where(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
+
+    # 1. Brands ranking (Top 10)
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_sql}
+        GROUP BY marca ORDER BY total DESC LIMIT 10
+    """, params)
+    brands = c.fetchall()
+
+    # 2. Models ranking (Top 10)
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
+               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
+               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
+               v.carburante_std as carburante, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_sql}
+        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 10
+    """, params)
+    models = c.fetchall()
+
+    # 3. EV Models ranking (Top 10)
+    where_ev = f"{where_sql} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
+               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
+               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
+               v.carburante_std as carburante, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_ev}
+        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 10
+    """, params)
+    ev_models = c.fetchall()
+
+    # 4. EV Brands ranking (Top 10)
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_ev}
+        GROUP BY marca ORDER BY total DESC LIMIT 10
+    """, params)
+    ev_brands = c.fetchall()
+
+    # 5. Fuel Mix
+    exec_query(c, f"""
+        SELECT 
+            CASE
+                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
+                WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
+                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO') OR carburante_std LIKE '%HIBRID%' OR carburante_std LIKE '%HYBRID%' THEN 'HÍBRIDO (HEV/MHEV)'
+                WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                ELSE 'GASOLINA'
+            END as carburante,
+            SUM(unidades) as total
+        FROM ventas_registradas v WHERE {where_sql}
+        GROUP BY carburante ORDER BY total DESC
+    """, params)
+    fuel_rows = c.fetchall()
+
+    tot_fuel = sum(r['total'] for r in fuel_rows) or 1
+    fuel_mix = [{
+        "carburante": r['carburante'],
+        "total": r['total'],
+        "cuota": round((r['total'] / tot_fuel * 100), 1),
+        "color": FUEL_COLOR_MAP.get(r['carburante'], "#2563eb")
+    } for r in fuel_rows]
+
+    def _format_models_res(m_rows):
+        m_totals = {}
+        for r in m_rows:
+            mf, tot = r['modelo_full'], r['total']
+            m_totals[mf] = m_totals.get(mf, 0) + tot
+        return [{"modelo_full": mf, "total": tot} for mf, tot in sorted(m_totals.items(), key=lambda x: x[1], reverse=True)]
+
+    def _format_brands_res(b_rows):
+        b_totals = {}
+        for r in b_rows:
+            b, tot = r['marca'], r['total']
+            b_totals[b] = b_totals.get(b, 0) + tot
+        return [{"marca": b, "total": tot} for b, tot in sorted(b_totals.items(), key=lambda x: x[1], reverse=True)]
+
+    return {
+        "summary": summary_data,
+        "brands": _format_brands_res(brands),
+        "models": _format_models_res(models),
+        "ev_models": _format_models_res(ev_models),
+        "ev_brands": _format_brands_res(ev_brands),
+        "fuel_mix": fuel_mix
+    }
