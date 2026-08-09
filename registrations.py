@@ -92,8 +92,15 @@ def build_full_where(
             clauses.append("v.fecha = (SELECT MAX(fecha) FROM ventas_registradas WHERE fecha < (SELECT MAX(fecha) FROM ventas_registradas))")
         elif period in ("month", "custom_month"):
             target_month = month if month else "2026-08"
-            clauses.append("v.fecha >= ? AND v.fecha <= ?")
-            params.extend([f"{target_month}-01", f"{target_month}-31"])
+            if len(target_month) == 7:
+                import calendar
+                y, m = int(target_month[:4]), int(target_month[5:7])
+                last_day = calendar.monthrange(y, m)[1]
+                clauses.append("v.fecha >= ? AND v.fecha <= ?")
+                params.extend([f"{target_month}-01", f"{target_month}-{last_day:02d}"])
+            else:
+                clauses.append("v.fecha >= ? AND v.fecha <= ?")
+                params.extend(["2026-08-01", "2026-08-31"])
         elif period == "year":
             target_year = year if year else "2026"
             clauses.append("v.fecha >= ? AND v.fecha <= ?")
@@ -105,8 +112,8 @@ def build_full_where(
             params.extend(["2026-08-01", "2026-08-31"])
 
     if brand:
-        clauses.append("(COALESCE(m.nombre, v.marca_clean, v.marca_raw) = ?)")
-        params.append(brand)
+        clauses.append("(v.marca_clean = ? OR v.marca_raw = ?)")
+        params.extend([brand, brand])
     if model:
         clauses.append("(v.modelo_clean = ? OR v.modelo_raw = ?)")
         params.extend([model, model])
@@ -118,18 +125,32 @@ def build_full_where(
         elif fuel in ('HEV', 'Híbrido (HEV)', 'Híbrido', 'HIBRIDO'):
             clauses.append("(v.carburante_std IN ('HEV', 'MHEV', 'HIBRIDO') OR v.carburante_std LIKE '%HIBRID%' OR v.carburante_std LIKE '%HYBRID%')")
         else:
-            clauses.append("(c.nombre = ? OR c.codigo = ? OR v.carburante_std = ? OR v.carburante_raw = ?)")
-            params.extend([fuel, fuel, fuel, fuel])
+            clauses.append("(v.carburante_std = ? OR v.carburante_raw = ?)")
+            params.extend([fuel, fuel])
 
     if province:
-        clauses.append("(p.nombre = ? OR v.provincia_raw = ? OR v.provincia = ?)")
-        params.extend([province, province, province])
+        clauses.append("(v.provincia = ? OR v.provincia_raw = ?)")
+        params.extend([province, province])
 
     if ccaa:
         clauses.append("v.ccaa = ?")
         params.append(ccaa)
 
     return " AND ".join(clauses), params, 1
+
+def _get_val(row, key, idx=0):
+    if not row:
+        return None
+    try:
+        val = row[key]
+        if val is not None:
+            return val
+    except Exception:
+        pass
+    try:
+        return row[idx]
+    except Exception:
+        return None
 
 @router.get("/summary")
 def get_summary(
@@ -154,10 +175,11 @@ def get_summary(
 
         exec_query(c, "SELECT MAX(fecha) as max_date FROM ventas_registradas")
         max_row = c.fetchone()
-        latest_date = max_row['max_date'] if max_row and max_row['max_date'] else "2026-08-04"
+        latest_date = _get_val(max_row, 'max_date', 0) or "2026-08-04"
 
         exec_query(c, "SELECT SUM(unidades) as total FROM ventas_registradas WHERE fecha = ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%'", (latest_date,))
-        total_today = c.fetchone()['total'] or 0
+        today_row = c.fetchone()
+        total_today = _get_val(today_row, 'total', 0) or 0
 
         query_total = f"""
             SELECT SUM(v.unidades) as total 
@@ -165,25 +187,36 @@ def get_summary(
             WHERE {where_sql}
         """
         exec_query(c, query_total, params)
-        total_month = c.fetchone()['total'] or 0
+        total_row = c.fetchone()
+        total_month = _get_val(total_row, 'total', 0) or 0
 
-        target_m = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
-        if target_m and len(target_m) == 7:
-            y_int, m_int = int(target_m[:4]), int(target_m[5:7])
-            prev_m_str = f"{y_int - 1}-12" if m_int == 1 else f"{y_int}-{m_int - 1:02d}"
+        if date_from and date_to and date_from == date_to:
+            from datetime import datetime, timedelta
+            curr_d = datetime.strptime(date_from, "%Y-%m-%d")
+            prev_d_str = (curr_d - timedelta(days=1)).strftime("%Y-%m-%d")
+            where_prev, params_prev, _ = build_full_where(
+                country, "custom_date", None, year, brand, model, fuel, province, ccaa, prev_d_str, prev_d_str, conn
+            )
         else:
-            prev_m_str = "2026-07"
+            target_m = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
+            if target_m and len(target_m) == 7:
+                y_int, m_int = int(target_m[:4]), int(target_m[5:7])
+                prev_m_str = f"{y_int - 1}-12" if m_int == 1 else f"{y_int}-{m_int - 1:02d}"
+            else:
+                prev_m_str = "2026-07"
 
-        where_prev, params_prev, _ = build_full_where(
-            country, period, prev_m_str, year, brand, model, fuel, province, ccaa, date_from, date_to, conn
-        )
+            where_prev, params_prev, _ = build_full_where(
+                country, period, prev_m_str, year, brand, model, fuel, province, ccaa, None, None, conn
+            )
+
         query_prev = f"""
             SELECT SUM(v.unidades) as total 
             FROM ventas_registradas v
             WHERE {where_prev}
         """
         exec_query(c, query_prev, params_prev)
-        prev_month = c.fetchone()['total'] or 0
+        prev_row = c.fetchone()
+        prev_month = _get_val(prev_row, 'total', 0) or 0
 
         pct_change = round(((total_month - prev_month) / prev_month * 100), 1) if prev_month > 0 else 0.0
 
@@ -193,7 +226,8 @@ def get_summary(
             WHERE {where_sql} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')
         """
         exec_query(c, query_ev, params)
-        ev_units = c.fetchone()['total_ev'] or 0
+        ev_row = c.fetchone()
+        ev_units = _get_val(ev_row, 'total_ev', 0) or 0
         ev_share = round((ev_units / (total_month or 1) * 100), 1) if total_month > 0 else 0.0
 
         query_brand = f"""
@@ -205,8 +239,8 @@ def get_summary(
         """
         exec_query(c, query_brand, params)
         top_b_row = c.fetchone()
-        top_brand = top_b_row['marca'] if top_b_row else "N/A"
-        top_brand_units = top_b_row['total'] if top_b_row else 0
+        top_brand = _get_val(top_b_row, 'marca', 0) or "N/A"
+        top_brand_units = _get_val(top_b_row, 'total', 1) or 0
 
         query_model = f"""
             SELECT COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full, 
@@ -218,8 +252,8 @@ def get_summary(
         """
         exec_query(c, query_model, params)
         top_m_row = c.fetchone()
-        top_model = top_m_row['modelo_full'] if top_m_row else "N/A"
-        top_model_units = top_m_row['total'] if top_m_row else 0
+        top_model = _get_val(top_m_row, 'modelo_full', 0) or "N/A"
+        top_model_units = _get_val(top_m_row, 'total', 1) or 0
 
         return {
             "total_today": total_today,

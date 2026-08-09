@@ -22,17 +22,20 @@ function renderMetrics(summary) {
     const container = document.getElementById("metrics-container");
     if (!container || !summary) return;
 
-    const totalVal = summary.total_month ? summary.total_month.toLocaleString("es-ES") : "0";
-    const changeVal = summary.pct_change >= 0 ? `+${summary.pct_change}%` : `${summary.pct_change}%`;
-    const changeColor = summary.pct_change >= 0 ? "text-green" : "text-red";
-    const changeIcon = summary.pct_change >= 0 ? "trending-up" : "trending-down";
+    const rawTotal = (summary.total_month !== undefined && summary.total_month !== null) ? summary.total_month : (summary.total_units || 0);
+    const totalVal = rawTotal.toLocaleString("es-ES");
 
-    const evShareVal = summary.ev_share !== undefined ? `${summary.ev_share}%` : "0%";
+    const rawPct = (summary.pct_change !== undefined && summary.pct_change !== null) ? summary.pct_change : 0;
+    const changeVal = rawPct >= 0 ? `+${rawPct}%` : `${rawPct}%`;
+    const changeColor = rawPct >= 0 ? "text-green" : "text-red";
+    const changeIcon = rawPct >= 0 ? "trending-up" : "trending-down";
+
+    const evShareVal = (summary.ev_share !== undefined && summary.ev_share !== null) ? `${summary.ev_share}%` : "0%";
     const topBrandVal = summary.top_brand || "N/A";
-    const topBrandUnits = summary.top_brand_units ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
+    const topBrandUnits = (summary.top_brand_units !== undefined && summary.top_brand_units !== null && summary.top_brand_units > 0) ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
 
     const topModelVal = summary.top_model || "N/A";
-    const topModelUnits = summary.top_model_units ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
+    const topModelUnits = (summary.top_model_units !== undefined && summary.top_model_units !== null && summary.top_model_units > 0) ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
 
     container.innerHTML = `
         ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, "vs período anterior", "car")}
