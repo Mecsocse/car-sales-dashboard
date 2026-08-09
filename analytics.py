@@ -80,13 +80,10 @@ def get_brand_ranking(
     )
 
     query = f"""
-        SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca, 
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, 
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
                SUM(v.unidades) as total
         FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-        LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-        LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
         GROUP BY marca, modelo
     """
@@ -146,14 +143,11 @@ def get_model_ranking(
     )
 
     query = f"""
-        SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca, 
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, 
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
                v.carburante_std as carburante,
                SUM(v.unidades) as total
         FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-        LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-        LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
         GROUP BY marca, modelo, carburante
     """

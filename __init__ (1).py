@@ -1,1 +1,1 @@
-# AutoMarket Intelligence — Auditor Agents
+# AutoMarket Intelligence — API Middleware

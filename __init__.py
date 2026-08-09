@@ -1,1 +1,1 @@
-# AutoMarket Intelligence — Agents Package
+# AutoMarket Intelligence — API Package

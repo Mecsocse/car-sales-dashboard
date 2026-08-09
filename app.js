@@ -427,6 +427,17 @@ class DashboardApp {
         const isYearActive = !isDateActive && (this.currentPeriod === 'year');
         const isMonthActive = !isDateActive && !isYearActive;
 
+        if (isMonthActive) {
+            if (this.quickYearSelect) this.quickYearSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+        } else if (isYearActive) {
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+        } else if (isDateActive) {
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.quickYearSelect) this.quickYearSelect.value = '';
+        }
+
         const inactiveStyle = "border: 1px solid #cbd5e1; box-shadow: none; background: #ffffff;";
         const activeStyle = "border: 2px solid #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); background: #ffffff;";
 

@@ -162,9 +162,6 @@ def get_summary(
         query_total = f"""
             SELECT SUM(v.unidades) as total 
             FROM ventas_registradas v
-            LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-            LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-            LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_sql}
         """
         exec_query(c, query_total, params)
@@ -183,9 +180,6 @@ def get_summary(
         query_prev = f"""
             SELECT SUM(v.unidades) as total 
             FROM ventas_registradas v
-            LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-            LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-            LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_prev}
         """
         exec_query(c, query_prev, params_prev)
@@ -196,21 +190,15 @@ def get_summary(
         query_ev = f"""
             SELECT SUM(v.unidades) as total_ev
             FROM ventas_registradas v
-            LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-            LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-            LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
-            WHERE {where_sql} AND (c.codigo = 'EV' OR v.carburante_std = 'ELECTRICO' OR v.carburante_raw IN ('EV','Eléctrico (BEV)'))
+            WHERE {where_sql} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')
         """
         exec_query(c, query_ev, params)
         ev_units = c.fetchone()['total_ev'] or 0
         ev_share = round((ev_units / (total_month or 1) * 100), 1) if total_month > 0 else 0.0
 
         query_brand = f"""
-            SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
+            SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
             FROM ventas_registradas v
-            LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-            LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-            LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_sql}
             GROUP BY marca
             ORDER BY total DESC LIMIT 1
@@ -221,12 +209,9 @@ def get_summary(
         top_brand_units = top_b_row['total'] if top_b_row else 0
 
         query_model = f"""
-            SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full, 
+            SELECT COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full, 
                    SUM(v.unidades) as total
             FROM ventas_registradas v
-            LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-            LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-            LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
             WHERE {where_sql}
             GROUP BY modelo_full
             ORDER BY total DESC LIMIT 1
