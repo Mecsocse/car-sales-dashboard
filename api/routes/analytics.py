@@ -659,6 +659,8 @@ def get_insights(
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
+_ALL_DATA_CACHE = {}
+
 @router.get("/dashboard/all-data")
 def get_dashboard_all_data(
     country: str = "es",
@@ -675,6 +677,14 @@ def get_dashboard_all_data(
     conn: sqlite3.Connection = Depends(get_db)
 ):
     """Consolidated 1-pass endpoint returning summary, top brands, top models, top EV, and fuel mix in a single fast query."""
+    import time
+    cache_key = f"{country}:{period}:{month}:{year}:{brand}:{model}:{fuel}:{province}:{ccaa}:{date_from}:{date_to}"
+    now = time.time()
+    if cache_key in _ALL_DATA_CACHE:
+        cached_res, ts = _ALL_DATA_CACHE[cache_key]
+        if now - ts < 600: # 10 minutes cache
+            return cached_res
+
     c = conn.cursor()
     target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
 
@@ -760,7 +770,7 @@ def get_dashboard_all_data(
             b_totals[b] = b_totals.get(b, 0) + tot
         return [{"marca": b, "total": tot} for b, tot in sorted(b_totals.items(), key=lambda x: x[1], reverse=True)]
 
-    return {
+    res_payload = {
         "summary": summary_data,
         "brands": _format_brands_res(brands),
         "models": _format_models_res(models),
@@ -768,3 +778,5 @@ def get_dashboard_all_data(
         "ev_brands": _format_brands_res(ev_brands),
         "fuel_mix": fuel_mix
     }
+    _ALL_DATA_CACHE[cache_key] = (res_payload, now)
+    return res_payload
