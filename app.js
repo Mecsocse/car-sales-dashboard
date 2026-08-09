@@ -273,79 +273,69 @@ class DashboardApp {
         const containerMonth = document.getElementById('container-month-select');
         const containerYear = document.getElementById('container-year-select');
 
-        const triggerYearMode = () => {
-            if (this.currentPeriod !== 'year') {
-                this.currentPeriod = 'year';
-                if (this.quickYearSelect) this.selectedYear = this.quickYearSelect.value || '2026';
-                if (this.dateFromFilter) this.dateFromFilter.value = '';
-                if (this.dateToFilter) this.dateToFilter.value = '';
-                if (this.singleDatePicker) this.singleDatePicker.value = '';
-                this.updatePeriodTag();
-                this.refreshAll();
-                this.loadMonthlyMatrix('', this.matrixLimit);
-            }
+        const activateYearMode = (val = null) => {
+            const targetYear = val || (this.quickYearSelect && this.quickYearSelect.value) || this.selectedYear || '2026';
+            this.currentPeriod = 'year';
+            this.selectedYear = targetYear;
+
+            if (this.quickYearSelect) this.quickYearSelect.value = targetYear;
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+            if (this.dateFromFilter) this.dateFromFilter.value = '';
+            if (this.dateToFilter) this.dateToFilter.value = '';
+
+            this.updatePeriodTag();
+            this.refreshAll();
+            this.loadMonthlyMatrix('', this.matrixLimit);
         };
 
-        const triggerMonthMode = () => {
-            if (this.currentPeriod !== 'month') {
-                this.currentPeriod = 'month';
-                if (this.quickMonthSelect && this.quickMonthSelect.value) {
-                    this.selectedMonth = this.quickMonthSelect.value;
-                    this.selectedYear = this.quickMonthSelect.value.split('-')[0];
-                }
-                if (this.dateFromFilter) this.dateFromFilter.value = '';
-                if (this.dateToFilter) this.dateToFilter.value = '';
-                if (this.singleDatePicker) this.singleDatePicker.value = '';
-                this.updatePeriodTag();
-                this.refreshAll();
-            }
+        const activateMonthMode = (val = null) => {
+            const targetMonth = val || (this.quickMonthSelect && this.quickMonthSelect.value) || this.selectedMonth || '2026-08';
+            this.currentPeriod = 'month';
+            this.selectedMonth = targetMonth;
+            this.selectedYear = targetMonth.split('-')[0];
+
+            if (this.quickMonthSelect) this.quickMonthSelect.value = targetMonth;
+            if (this.quickYearSelect) this.quickYearSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+            if (this.dateFromFilter) this.dateFromFilter.value = '';
+            if (this.dateToFilter) this.dateToFilter.value = '';
+
+            this.updatePeriodTag();
+            this.refreshAll();
         };
 
         if (containerYear) {
-            containerYear.addEventListener('click', () => triggerYearMode());
-        }
-
-        if (containerMonth) {
-            containerMonth.addEventListener('click', () => triggerMonthMode());
-        }
-
-        // Independent Year Select Event
-        if (this.quickYearSelect) {
-            this.quickYearSelect.addEventListener('click', () => triggerYearMode());
-            this.quickYearSelect.addEventListener('change', (e) => {
-                this.selectedYear = e.target.value;
-                this.currentPeriod = 'year';
-                if (this.dateFromFilter) this.dateFromFilter.value = '';
-                if (this.dateToFilter) this.dateToFilter.value = '';
-                if (this.singleDatePicker) this.singleDatePicker.value = '';
-
-                this.updatePeriodTag();
-                this.refreshAll();
-                this.loadMonthlyMatrix('', this.matrixLimit);
+            containerYear.addEventListener('click', (e) => {
+                if (e.target !== this.quickYearSelect) {
+                    activateYearMode();
+                }
             });
         }
 
-        // Independent Month Select Event
+        if (containerMonth) {
+            containerMonth.addEventListener('click', (e) => {
+                if (e.target !== this.quickMonthSelect) {
+                    activateMonthMode();
+                }
+            });
+        }
+
+        if (this.quickYearSelect) {
+            this.quickYearSelect.addEventListener('change', (e) => activateYearMode(e.target.value));
+            this.quickYearSelect.addEventListener('focus', () => {
+                if (this.currentPeriod !== 'year' && !this.quickYearSelect.value) {
+                    this.quickYearSelect.value = this.selectedYear || '2026';
+                }
+            });
+        }
+
         if (this.quickMonthSelect) {
-            this.quickMonthSelect.addEventListener('click', () => triggerMonthMode());
-            this.quickMonthSelect.addEventListener('change', (e) => {
-                const monthVal = e.target.value;
-                if (!monthVal) return;
-
-                const yearPart = monthVal.split('-')[0];
-                this.selectedMonth = monthVal;
-                this.selectedYear = yearPart;
-
-                // Sync year dropdown to match month's year
-                if (this.quickYearSelect) this.quickYearSelect.value = yearPart;
-
-                this.currentPeriod = 'month';
-                if (this.dateFromFilter) this.dateFromFilter.value = '';
-                if (this.dateToFilter) this.dateToFilter.value = '';
-                if (this.singleDatePicker) this.singleDatePicker.value = '';
-
-                this.updatePeriodTag();
-                this.refreshAll();
+            this.quickMonthSelect.addEventListener('change', (e) => activateMonthMode(e.target.value));
+            this.quickMonthSelect.addEventListener('focus', () => {
+                if (this.currentPeriod !== 'month' && !this.quickMonthSelect.value) {
+                    this.quickMonthSelect.value = this.selectedMonth || '2026-08';
+                }
             });
         }
     }
