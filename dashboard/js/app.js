@@ -270,41 +270,78 @@ class DashboardApp {
             });
         }
 
-        // Independent Year Select Event
-        if (this.quickYearSelect) {
-            this.quickYearSelect.addEventListener('change', (e) => {
-                this.selectedYear = e.target.value;
-                this.currentPeriod = 'year';
-                if (this.dateFromFilter) this.dateFromFilter.value = '';
-                if (this.dateToFilter) this.dateToFilter.value = '';
-                if (this.singleDatePicker) this.singleDatePicker.value = '';
+        const containerMonth = document.getElementById('container-month-select');
+        const containerYear = document.getElementById('container-year-select');
 
-                this.updatePeriodTag();
-                this.refreshAll();
-                this.loadMonthlyMatrix('', this.matrixLimit);
+        const activateYearMode = (val = null) => {
+            const targetYear = val || (this.quickYearSelect && this.quickYearSelect.value) || this.selectedYear || '2026';
+            this.currentPeriod = 'year';
+            this.selectedYear = targetYear;
+
+            if (this.quickYearSelect) this.quickYearSelect.value = targetYear;
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+            if (this.dateFromFilter) this.dateFromFilter.value = '';
+            if (this.dateToFilter) this.dateToFilter.value = '';
+
+            this.updatePeriodTag();
+            this.refreshAll();
+            this.loadMonthlyMatrix('', this.matrixLimit);
+        };
+
+        const activateMonthMode = (val = null) => {
+            const targetMonth = val || (this.quickMonthSelect && this.quickMonthSelect.value) || this.selectedMonth || '2026-08';
+            this.currentPeriod = 'month';
+            this.selectedMonth = targetMonth;
+            this.selectedYear = targetMonth.split('-')[0];
+
+            if (this.quickMonthSelect) this.quickMonthSelect.value = targetMonth;
+            if (this.quickYearSelect) this.quickYearSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+            if (this.dateFromFilter) this.dateFromFilter.value = '';
+            if (this.dateToFilter) this.dateToFilter.value = '';
+
+            this.updatePeriodTag();
+            this.refreshAll();
+        };
+
+        if (containerYear) {
+            containerYear.addEventListener('click', (e) => {
+                if (e.target !== this.quickYearSelect) {
+                    activateYearMode();
+                }
             });
         }
 
-        // Independent Month Select Event
+        if (containerMonth) {
+            containerMonth.addEventListener('click', (e) => {
+                if (e.target !== this.quickMonthSelect) {
+                    activateMonthMode();
+                }
+            });
+        }
+
+        if (this.quickYearSelect) {
+            this.quickYearSelect.addEventListener('change', (e) => {
+                if (e.target.value) activateYearMode(e.target.value);
+            });
+            this.quickYearSelect.addEventListener('click', (e) => {
+                if (this.currentPeriod !== 'year' || !this.quickYearSelect.value) {
+                    const val = this.quickYearSelect.value || this.selectedYear || '2026';
+                    activateYearMode(val);
+                }
+            });
+        }
+
         if (this.quickMonthSelect) {
             this.quickMonthSelect.addEventListener('change', (e) => {
-                const monthVal = e.target.value;
-                if (!monthVal) return;
-
-                const yearPart = monthVal.split('-')[0];
-                this.selectedMonth = monthVal;
-                this.selectedYear = yearPart;
-
-                // Sync year dropdown to match month's year
-                if (this.quickYearSelect) this.quickYearSelect.value = yearPart;
-
-                this.currentPeriod = 'month';
-                if (this.dateFromFilter) this.dateFromFilter.value = '';
-                if (this.dateToFilter) this.dateToFilter.value = '';
-                if (this.singleDatePicker) this.singleDatePicker.value = '';
-
-                this.updatePeriodTag();
-                this.refreshAll();
+                if (e.target.value) activateMonthMode(e.target.value);
+            });
+            this.quickMonthSelect.addEventListener('click', (e) => {
+                if (this.currentPeriod !== 'month' || !this.quickMonthSelect.value) {
+                    const val = this.quickMonthSelect.value || this.selectedMonth || '2026-08';
+                    activateMonthMode(val);
+                }
             });
         }
     }
@@ -385,6 +422,17 @@ class DashboardApp {
         const isDateActive = (this.singleDatePicker && this.singleDatePicker.value) || (this.dateFromFilter && this.dateFromFilter.value) || (this.currentPeriod === 'custom_date');
         const isYearActive = !isDateActive && (this.currentPeriod === 'year');
         const isMonthActive = !isDateActive && !isYearActive;
+
+        if (isMonthActive) {
+            if (this.quickYearSelect) this.quickYearSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+        } else if (isYearActive) {
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+        } else if (isDateActive) {
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.quickYearSelect) this.quickYearSelect.value = '';
+        }
 
         const inactiveStyle = "border: 1px solid #cbd5e1; box-shadow: none; background: #ffffff;";
         const activeStyle = "border: 2px solid #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); background: #ffffff;";
@@ -721,27 +769,120 @@ class DashboardApp {
         }
     }
 
+    async fetchCached(url) {
+        if (!this.cacheMap) this.cacheMap = new Map();
+        if (this.cacheMap.has(url)) {
+            return this.cacheMap.get(url);
+        }
+        try {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const data = await res.json();
+            this.cacheMap.set(url, data);
+            return data;
+        } catch (e) {
+            console.error('Fetch error for', url, e);
+            return null;
+        }
+    }
+
     async loadMetrics() {
         try {
             const q = this.getFullQueryParams();
-            const res = await fetch(`${API_BASE}/api/summary?${q}`);
-            if (!res.ok) throw new Error('API Error');
-            const data = await res.json();
+            const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
+            if (allData && allData.summary) {
+                window.Components.renderMetrics(allData.summary);
+                if (allData.brands) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', allData.brands);
+                if (allData.models) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', allData.models);
+                if (allData.ev_models) window.DashboardCharts.initEVRankingChart('evRankingChart', allData.ev_models);
+                if (allData.ev_brands) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', allData.ev_brands);
+                if (allData.fuel_mix) {
+                    window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix, (clickedFuel) => {
+                        if (this.fuelFilter) {
+                            let targetOption = '';
+                            for (let opt of this.fuelFilter.options) {
+                                if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
+                                    targetOption = opt.value;
+                                    break;
+                                }
+                            }
+                            if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
+                            if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
 
-            window.Components.renderMetrics(data);
+                            if (this.fuelFilter.value === targetOption) {
+                                this.fuelFilter.value = '';
+                            } else {
+                                this.fuelFilter.value = targetOption || clickedFuel;
+                            }
+                            this.refreshAll();
+                        }
+                    });
+                }
+            } else {
+                // Seamless fallback to individual calls
+                const [summaryData, brandsData, modelsData, evData, evBrandsData, fuelData] = await Promise.all([
+                    this.fetchCached(`${API_BASE}/api/summary?${q}`),
+                    this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&limit=${this.brandsLimit}`),
+                    this.fetchCached(`${API_BASE}/api/models/ranking?${q}&limit=${this.modelsLimit}`),
+                    this.fetchCached(`${API_BASE}/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`),
+                    this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`),
+                    this.fetchCached(`${API_BASE}/api/fuel/mix?${q}`)
+                ]);
+
+                if (summaryData) window.Components.renderMetrics(summaryData);
+                if (brandsData) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', brandsData);
+                if (modelsData) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', modelsData);
+                if (evData) window.DashboardCharts.initEVRankingChart('evRankingChart', evData);
+                if (evBrandsData) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', evBrandsData);
+                if (fuelData) {
+                    window.DashboardCharts.initFuelMixChart('fuelMixChart', fuelData, (clickedFuel) => {
+                        if (this.fuelFilter) {
+                            let targetOption = '';
+                            for (let opt of this.fuelFilter.options) {
+                                if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
+                                    targetOption = opt.value;
+                                    break;
+                                }
+                            }
+                            if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
+                            if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
+
+                            if (this.fuelFilter.value === targetOption) {
+                                this.fuelFilter.value = '';
+                            } else {
+                                this.fuelFilter.value = targetOption || clickedFuel;
+                            }
+                            this.refreshAll();
+                        }
+                    });
+                }
+            }
         } catch (error) {
-            console.error('Failed to load metrics:', error);
+            console.error('Failed to load metrics and all-data:', error);
         }
     }
 
     async loadCharts() {
         try {
             const q = this.getFullQueryParams();
+            const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
 
-            // 1. Daily Evolution with Interactive Click Callback
-            const dailyRes = await fetch(`${API_BASE}/api/registrations/daily?${q}&days=30`).catch(()=>null);
-            if (dailyRes && dailyRes.ok) {
-                const dailyData = await dailyRes.json();
+            // Execute secondary trend queries in parallel with fetchCached
+            const [
+                dailyData,
+                monthlyEvolData,
+                evQuotaData,
+                evCumData,
+                techQuotaData
+            ] = await Promise.all([
+                this.fetchCached(`${API_BASE}/api/registrations/daily?${q}&days=30`),
+                this.fetchCached(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`),
+                this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`),
+                this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-cumulative?${ccaaParam}`),
+                this.fetchCached(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`)
+            ]);
+
+            if (dailyData) {
                 window.DashboardCharts.initDailyEvolutionChart('dailyEvolutionChart', dailyData, (clickedDate) => {
                     if (this.dateFromFilter && this.dateToFilter) {
                         if (this.dateFromFilter.value === clickedDate) {
@@ -758,92 +899,24 @@ class DashboardApp {
                 });
             }
 
-            // 2. Monthly Evolution Bar Chart
-            const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
-            const monthlyEvolRes = await fetch(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`).catch(()=>null);
-            if (monthlyEvolRes && monthlyEvolRes.ok) {
-                const monthlyEvolData = await monthlyEvolRes.json();
+            if (monthlyEvolData) {
                 window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', monthlyEvolData);
             }
 
-            // 3. Brands Ranking
-            const brandsRes = await fetch(`${API_BASE}/api/brands/ranking?${q}&limit=${this.brandsLimit}`).catch(()=>null);
-            if (brandsRes && brandsRes.ok) {
-                const brandsData = await brandsRes.json();
-                window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', brandsData);
-            }
-
-            // 4. Models Ranking
-            const modelsRes = await fetch(`${API_BASE}/api/models/ranking?${q}&limit=${this.modelsLimit}`).catch(()=>null);
-            if (modelsRes && modelsRes.ok) {
-                const modelsData = await modelsRes.json();
-                window.DashboardCharts.initModelsRankingChart('modelsRankingChart', modelsData);
-            }
-
-            // 5. EV Models Ranking
-            const evRes = await fetch(`${API_BASE}/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`).catch(()=>null);
-            if (evRes && evRes.ok) {
-                const evData = await evRes.json();
-                window.DashboardCharts.initEVRankingChart('evRankingChart', evData);
-            }
-
-            // 6. EV Brands Ranking
-            const evBrandsRes = await fetch(`${API_BASE}/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`).catch(()=>null);
-            if (evBrandsRes && evBrandsRes.ok) {
-                const evBrandsData = await evBrandsRes.json();
-                window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', evBrandsData);
-            }
-
-            // 6. Fuel Mix
-            const fuelRes = await fetch(`${API_BASE}/api/fuel/mix?${q}`).catch(()=>null);
-            if (fuelRes && fuelRes.ok) {
-                const fuelData = await fuelRes.json();
-                window.DashboardCharts.initFuelMixChart('fuelMixChart', fuelData, (clickedFuel) => {
-                    if (this.fuelFilter) {
-                        let targetOption = '';
-                        for (let opt of this.fuelFilter.options) {
-                            if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
-                                targetOption = opt.value;
-                                break;
-                            }
-                        }
-                        if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
-                        if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
-
-                        if (this.fuelFilter.value === targetOption) {
-                            this.fuelFilter.value = '';
-                        } else {
-                            this.fuelFilter.value = targetOption || clickedFuel;
-                        }
-                        this.refreshAll();
-                    }
-                });
-            }
-
-            // 7. Multi-year EV Quota Trend Chart
-            const evQuotaRes = await fetch(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`).catch(()=>null);
-            if (evQuotaRes && evQuotaRes.ok) {
-                const evQuotaData = await evQuotaRes.json();
+            if (evQuotaData) {
                 window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', evQuotaData);
             }
 
-            // 8. Multi-year EV Cumulative Trend Chart
-            const evCumRes = await fetch(`${API_BASE}/api/analytics/multiyear-ev-cumulative?${ccaaParam}`).catch(()=>null);
-            if (evCumRes && evCumRes.ok) {
-                const evCumData = await evCumRes.json();
+            if (evCumData) {
                 window.DashboardCharts.initEVCumulativeTrendChart('evCumulativeTrendChart', evCumData);
             }
 
-            // 9. All Technologies Monthly Quota Trend Chart
             const allTechTitleEl = document.getElementById('all-tech-quota-title');
             if (allTechTitleEl) allTechTitleEl.textContent = `Cuota por Tecnología Mes a Mes (${this.selectedYear})`;
 
-            const techQuotaRes = await fetch(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`).catch(()=>null);
-            if (techQuotaRes && techQuotaRes.ok) {
-                const techQuotaData = await techQuotaRes.json();
+            if (techQuotaData) {
                 window.DashboardCharts.initAllTechQuotaChart('allTechQuotaChart', techQuotaData);
             }
-
         } catch (error) {
             console.error('Failed to load charts:', error);
         }

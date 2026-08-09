@@ -22,17 +22,27 @@ function renderMetrics(summary) {
     const container = document.getElementById("metrics-container");
     if (!container || !summary) return;
 
-    const totalVal = summary.total_month ? summary.total_month.toLocaleString("es-ES") : "0";
-    const changeVal = summary.pct_change >= 0 ? `+${summary.pct_change}%` : `${summary.pct_change}%`;
-    const changeColor = summary.pct_change >= 0 ? "text-green" : "text-red";
-    const changeIcon = summary.pct_change >= 0 ? "trending-up" : "trending-down";
+    // Handle backend error responses gracefully
+    if (summary.error) {
+        console.warn("Summary API returned an error:", summary.error);
+    }
 
-    const evShareVal = summary.ev_share !== undefined ? `${summary.ev_share}%` : "0%";
+    const rawTotal = (summary.total_month !== undefined && summary.total_month !== null && typeof summary.total_month === 'number') 
+        ? summary.total_month 
+        : ((summary.total_units !== undefined && summary.total_units !== null && typeof summary.total_units === 'number') ? summary.total_units : 0);
+    const totalVal = rawTotal > 0 ? rawTotal.toLocaleString("es-ES") : "0";
+
+    const rawPct = (summary.pct_change !== undefined && summary.pct_change !== null && typeof summary.pct_change === 'number') ? summary.pct_change : null;
+    const changeVal = rawPct !== null ? (rawPct >= 0 ? `+${rawPct}%` : `${rawPct}%`) : "N/A";
+    const changeColor = rawPct !== null ? (rawPct >= 0 ? "text-green" : "text-red") : "text-muted";
+    const changeIcon = rawPct !== null ? (rawPct >= 0 ? "trending-up" : "trending-down") : "minus";
+
+    const evShareVal = (summary.ev_share !== undefined && summary.ev_share !== null && typeof summary.ev_share === 'number') ? `${summary.ev_share}%` : "0%";
     const topBrandVal = summary.top_brand || "N/A";
-    const topBrandUnits = summary.top_brand_units ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
+    const topBrandUnits = (summary.top_brand_units !== undefined && summary.top_brand_units !== null && summary.top_brand_units > 0) ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
 
     const topModelVal = summary.top_model || "N/A";
-    const topModelUnits = summary.top_model_units ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
+    const topModelUnits = (summary.top_model_units !== undefined && summary.top_model_units !== null && summary.top_model_units > 0) ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
 
     container.innerHTML = `
         ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, "vs período anterior", "car")}
