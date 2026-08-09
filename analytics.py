@@ -521,9 +521,9 @@ def get_monthly_matrix(
     order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
 
     query = f"""
-        SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca,
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
-               COALESCE(m.nombre, v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
+               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
                SUM(CASE WHEN fecha >= '{year}-01-01' AND fecha <= '{year}-01-31' THEN unidades ELSE 0 END) as ene,
                SUM(CASE WHEN fecha >= '{year}-02-01' AND fecha <= '{year}-02-28' THEN unidades ELSE 0 END) as feb,
                SUM(CASE WHEN fecha >= '{year}-03-01' AND fecha <= '{year}-03-31' THEN unidades ELSE 0 END) as mar,
@@ -538,7 +538,6 @@ def get_monthly_matrix(
                SUM(CASE WHEN fecha >= '{year}-12-01' AND fecha <= '{year}-12-31' THEN unidades ELSE 0 END) as dic,
                SUM(unidades) as total_2026
         FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
         WHERE v.fecha >= ? AND v.fecha <= ? AND (v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL) AND v.modelo_clean NOT LIKE 'CAMION%' AND (v.es_nuevo = 1 OR v.es_nuevo IS NULL) {where_extra}
         GROUP BY marca, modelo
         ORDER BY {order_col} {order_direction}
