@@ -76,6 +76,7 @@ def build_full_where(
 
     clauses.append("(v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL)")
     clauses.append("(v.modelo_clean NOT LIKE 'CAMION%')")
+    clauses.append("(v.es_nuevo = 1 OR v.es_nuevo IS NULL)")
 
     if date_from:
         clauses.append("v.fecha >= ?")

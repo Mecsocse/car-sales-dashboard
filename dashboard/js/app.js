@@ -371,6 +371,27 @@ class DashboardApp {
             const el = document.getElementById(id);
             if (el) el.textContent = badgeLabel;
         });
+
+        this.updateSelectorHighlights();
+    }
+
+    updateSelectorHighlights() {
+        const cMonth = document.getElementById('container-month-select');
+        const cYear = document.getElementById('container-year-select');
+        const cDate = document.getElementById('container-date-select');
+
+        if (!cMonth || !cYear || !cDate) return;
+
+        const isDateActive = (this.singleDatePicker && this.singleDatePicker.value) || (this.dateFromFilter && this.dateFromFilter.value) || (this.currentPeriod === 'custom_date');
+        const isYearActive = !isDateActive && (this.currentPeriod === 'year');
+        const isMonthActive = !isDateActive && !isYearActive;
+
+        const inactiveStyle = "border: 1px solid #cbd5e1; box-shadow: none; background: #ffffff;";
+        const activeStyle = "border: 2px solid #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); background: #ffffff;";
+
+        cMonth.style.cssText = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; " + (isMonthActive ? activeStyle : inactiveStyle);
+        cYear.style.cssText = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; " + (isYearActive ? activeStyle : inactiveStyle);
+        cDate.style.cssText = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; " + (isDateActive ? activeStyle : inactiveStyle);
     }
 
     async refreshAll() {
