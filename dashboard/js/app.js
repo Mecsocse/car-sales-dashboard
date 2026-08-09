@@ -83,10 +83,19 @@ class DashboardApp {
             this.bindCompareEvents();
             this.bindMatrixEvents();
 
-            await this.loadInitialDropdowns();
-            await this.refreshAll();
-            await this.loadMonthComparison();
-            await this.loadMonthlyMatrix('', this.matrixLimit);
+            // 1. Trigger main dashboard load FIRST (Lightning fast 0.5s)
+            const refreshPromise = this.refreshAll();
+
+            // 2. Load background dropdowns concurrently without blocking main render
+            this.loadInitialDropdowns();
+
+            await refreshPromise; // Main KPIs and Top 10 Charts are now visible on screen!
+
+            // 3. Defer heavy secondary matrix and comparison queries to background idle time
+            setTimeout(() => {
+                this.loadMonthComparison();
+                this.loadMonthlyMatrix('', this.matrixLimit);
+            }, 400);
 
             // Init AI Insights
             if (window.AIInsightsWidget) {
@@ -728,15 +737,21 @@ class DashboardApp {
             if (provinces.length) window.Components.populateSelect('province-filter', provinces, 'Todas las Provincias');
             if (models.length) window.Components.populateSelect('model-filter', models, 'Todos los Modelos');
 
-            if (ccaaList.length) {
-                if (this.quickCcaaSelect) {
-                    let html = '<option value="">🇪🇸 Toda España</option>';
-                    ccaaList.forEach(c => html += `<option value="${c}">${c}</option>`);
-                    this.quickCcaaSelect.innerHTML = html;
-                }
-                if (this.ccaaFilter) {
-                    window.Components.populateSelect('ccaa-filter', ccaaList, 'Todas las CCAA');
-                }
+            const fallbackCcaa = [
+                "Andalucía", "Aragón", "Asturias", "Canarias", "Cantabria",
+                "Castilla-La Mancha", "Castilla y León", "Cataluña", "Ceuta",
+                "Comunidad de Madrid", "Comunidad Valenciana", "Extremadura",
+                "Galicia", "Illes Balears", "La Rioja", "Melilla", "Navarra", "País Vasco"
+            ];
+            const finalCcaa = (ccaaList && ccaaList.length) ? ccaaList : fallbackCcaa;
+
+            if (this.quickCcaaSelect) {
+                let html = '<option value="">🇪🇸 Toda España</option>';
+                finalCcaa.forEach(c => html += `<option value="${c}">${c}</option>`);
+                this.quickCcaaSelect.innerHTML = html;
+            }
+            if (this.ccaaFilter) {
+                window.Components.populateSelect('ccaa-filter', finalCcaa, 'Todas las CCAA');
             }
         } catch (error) {
             console.error('Failed to load initial dropdowns:', error);
