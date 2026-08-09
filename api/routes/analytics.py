@@ -51,11 +51,17 @@ def get_db():
         finally:
             conn.close()
 
+_LIST_CACHE = {}
+
 @router.get("/ccaa/list")
 def get_ccaa_list(conn: sqlite3.Connection = Depends(get_db)):
+    if "ccaa_list" in _LIST_CACHE:
+        return _LIST_CACHE["ccaa_list"]
     c = conn.cursor()
     exec_query(c, "SELECT DISTINCT ccaa FROM ventas_registradas WHERE ccaa IS NOT NULL AND ccaa != '' ORDER BY ccaa")
-    return [r['ccaa'] for r in c.fetchall()]
+    res = [r['ccaa'] for r in c.fetchall()]
+    _LIST_CACHE["ccaa_list"] = res
+    return res
 
 @router.get("/brands/ranking")
 def get_brand_ranking(
@@ -571,12 +577,19 @@ def get_province_ranking(conn: sqlite3.Connection = Depends(get_db)):
 
 @router.get("/brands/list")
 def get_brands_list(conn: sqlite3.Connection = Depends(get_db)):
+    if "brands_list" in _LIST_CACHE:
+        return _LIST_CACHE["brands_list"]
     c = conn.cursor()
     exec_query(c, "SELECT DISTINCT COALESCE(marca_clean, marca_raw) as nombre FROM ventas_registradas WHERE marca_clean IS NOT NULL ORDER BY nombre")
-    return [r['nombre'] for r in c.fetchall() if r['nombre']]
+    res = [r['nombre'] for r in c.fetchall() if r['nombre']]
+    _LIST_CACHE["brands_list"] = res
+    return res
 
 @router.get("/models/list")
 def get_models_list(brand: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+    key = f"models:{brand}"
+    if key in _LIST_CACHE:
+        return _LIST_CACHE[key]
     c = conn.cursor()
     if brand:
         exec_query(c, """
@@ -586,8 +599,10 @@ def get_models_list(brand: Optional[str] = None, conn: sqlite3.Connection = Depe
             ORDER BY modelo
         """, (brand,))
     else:
-        exec_query(c, "SELECT DISTINCT COALESCE(modelo_clean, modelo_raw) as modelo FROM ventas_registradas ORDER BY modelo")
-    return [r['modelo'] for r in c.fetchall() if r['modelo']]
+        exec_query(c, "SELECT COALESCE(modelo_clean, modelo_raw) as modelo FROM ventas_registradas WHERE fecha >= '2026-01-01' GROUP BY modelo ORDER BY SUM(unidades) DESC LIMIT 200")
+    res = [r['modelo'] for r in c.fetchall() if r['modelo']]
+    _LIST_CACHE[key] = res
+    return res
 
 @router.get("/fuel/list")
 def get_fuel_list(conn: sqlite3.Connection = Depends(get_db)):
@@ -595,12 +610,17 @@ def get_fuel_list(conn: sqlite3.Connection = Depends(get_db)):
 
 @router.get("/provinces/list")
 def get_provinces_list(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+    key = f"provinces:{ccaa}"
+    if key in _LIST_CACHE:
+        return _LIST_CACHE[key]
     c = conn.cursor()
     if ccaa:
         exec_query(c, "SELECT DISTINCT provincia FROM ventas_registradas WHERE ccaa = ? AND provincia IS NOT NULL AND provincia != '' ORDER BY provincia", (ccaa,))
     else:
         exec_query(c, "SELECT DISTINCT provincia FROM ventas_registradas WHERE provincia IS NOT NULL AND provincia != '' ORDER BY provincia")
-    return [r['provincia'] for r in c.fetchall()]
+    res = [r['provincia'] for r in c.fetchall()]
+    _LIST_CACHE[key] = res
+    return res
 
 @router.get("/insights")
 def get_insights(
