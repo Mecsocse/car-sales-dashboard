@@ -213,10 +213,11 @@ def get_fuel_mix(
     # Build a minimal WHERE clause directly without JOINs
     clauses = ["(v.pais_id = 'ESP' OR v.pais_id = 1)",
                "(v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL)",
-               "v.modelo_clean NOT LIKE 'CAMION%'"]
+               "v.modelo_clean NOT LIKE 'CAMION%'",
+               "(v.es_nuevo = 1 OR v.es_nuevo IS NULL)"]
     params = []
 
-    # Period / date filter
+    # Period / date filter using indexed B-Tree date ranges
     if date_from:
         clauses.append("v.fecha >= ?"); params.append(date_from)
     if date_to:
@@ -224,10 +225,12 @@ def get_fuel_mix(
     if not date_from and not date_to:
         if period in ("month", "custom_month"):
             m_val = month if month else "2026-08"
-            clauses.append("v.fecha LIKE ?"); params.append(f"{m_val}%")
+            clauses.append("v.fecha >= ? AND v.fecha <= ?")
+            params.extend([f"{m_val}-01", f"{m_val}-31"])
         elif period == "year":
             y_val = year if year else "2026"
-            clauses.append("v.fecha LIKE ?"); params.append(f"{y_val}%")
+            clauses.append("v.fecha >= ? AND v.fecha <= ?")
+            params.extend([f"{y_val}-01-01", f"{y_val}-12-31"])
         elif period == "today":
             clauses.append("v.fecha = (SELECT MAX(fecha) FROM ventas_registradas)")
         elif period == "yesterday":
@@ -235,7 +238,8 @@ def get_fuel_mix(
         elif period == "all":
             pass
         else:
-            clauses.append("v.fecha LIKE ?"); params.append("2026-08%")
+            clauses.append("v.fecha >= ? AND v.fecha <= ?")
+            params.extend(["2026-08-01", "2026-08-31"])
 
     if brand:
         clauses.append("v.marca_clean = ?"); params.append(brand)
@@ -248,7 +252,6 @@ def get_fuel_mix(
 
     where_sql = " AND ".join(clauses)
 
-    # SQL CASE breakdown: GASOLINA, HÍBRIDO (HEV), HÍBRIDO ENCHUFABLE (PHEV), ELÉCTRICO (BEV), DIÉSEL
     query = f"""
         SELECT
             CASE
@@ -353,9 +356,9 @@ def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: 
     params = [f"{year}-01-01", f"{year}-12-31", ccaa] if ccaa else [f"{year}-01-01", f"{year}-12-31"]
 
     exec_query(c, f"""
-        SELECT substr(fecha, 6, 2) as mes_num, SUM(unidades) as total
+        SELECT substr(CAST(fecha AS TEXT), 6, 2) as mes_num, SUM(unidades) as total
         FROM ventas_registradas
-        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
+        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' AND (es_nuevo = 1 OR es_nuevo IS NULL) {where_ccaa}
         GROUP BY mes_num
         ORDER BY mes_num ASC
     """, params)
@@ -382,13 +385,14 @@ def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection 
 
     exec_query(c, f"""
         SELECT 
-            substr(fecha, 1, 4) as y,
-            substr(fecha, 6, 2) as m,
+            substr(CAST(fecha AS TEXT), 1, 4) as y,
+            substr(CAST(fecha AS TEXT), 6, 2) as m,
             SUM(CASE WHEN carburante_std IN ('ELECTRICO','EV','BEV') THEN unidades ELSE 0 END) as ev_units,
             SUM(unidades) as total_units
         FROM ventas_registradas
         WHERE (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL)
           AND modelo_clean NOT LIKE 'CAMION%'
+          AND (es_nuevo = 1 OR es_nuevo IS NULL)
           AND fecha >= '2024-01-01' {where_ccaa}
         GROUP BY y, m
         ORDER BY y, m
@@ -415,12 +419,13 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
 
     exec_query(c, f"""
         SELECT 
-            substr(fecha, 1, 4) as y,
-            substr(fecha, 6, 2) as m,
+            substr(CAST(fecha AS TEXT), 1, 4) as y,
+            substr(CAST(fecha AS TEXT), 6, 2) as m,
             SUM(unidades) as ev_units
         FROM ventas_registradas
         WHERE (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL)
           AND modelo_clean NOT LIKE 'CAMION%'
+          AND (es_nuevo = 1 OR es_nuevo IS NULL)
           AND carburante_std IN ('ELECTRICO','EV','BEV')
           AND fecha >= '2024-01-01' {where_ccaa}
         GROUP BY y, m
@@ -456,7 +461,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
 
     exec_query(c, f"""
         SELECT 
-            substr(fecha, 6, 2) as m,
+            substr(CAST(fecha AS TEXT), 6, 2) as m,
             CASE
                 WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
@@ -466,7 +471,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
             END as tech,
             SUM(unidades) as units
         FROM ventas_registradas
-        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
+        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' AND (es_nuevo = 1 OR es_nuevo IS NULL) {where_ccaa}
         GROUP BY m, tech
         ORDER BY m, units DESC
     """, params)
@@ -502,7 +507,7 @@ def get_monthly_matrix(
 ):
     c = conn.cursor()
     where_extra = ""
-    params = [f"{year}%"]
+    params = [f"{year}-01-01", f"{year}-12-31"]
 
     if search:
         where_extra += " AND (v.marca_clean LIKE ? OR v.modelo_clean LIKE ?)"
@@ -525,22 +530,22 @@ def get_monthly_matrix(
         SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca,
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
                COALESCE(m.nombre, v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
-               SUM(CASE WHEN fecha LIKE '{year}-01%' THEN unidades ELSE 0 END) as ene,
-               SUM(CASE WHEN fecha LIKE '{year}-02%' THEN unidades ELSE 0 END) as feb,
-               SUM(CASE WHEN fecha LIKE '{year}-03%' THEN unidades ELSE 0 END) as mar,
-               SUM(CASE WHEN fecha LIKE '{year}-04%' THEN unidades ELSE 0 END) as abr,
-               SUM(CASE WHEN fecha LIKE '{year}-05%' THEN unidades ELSE 0 END) as may,
-               SUM(CASE WHEN fecha LIKE '{year}-06%' THEN unidades ELSE 0 END) as jun,
-               SUM(CASE WHEN fecha LIKE '{year}-07%' THEN unidades ELSE 0 END) as jul,
-               SUM(CASE WHEN fecha LIKE '{year}-08%' THEN unidades ELSE 0 END) as ago,
-               SUM(CASE WHEN fecha LIKE '{year}-09%' THEN unidades ELSE 0 END) as sep,
-               SUM(CASE WHEN fecha LIKE '{year}-10%' THEN unidades ELSE 0 END) as oct,
-               SUM(CASE WHEN fecha LIKE '{year}-11%' THEN unidades ELSE 0 END) as nov,
-               SUM(CASE WHEN fecha LIKE '{year}-12%' THEN unidades ELSE 0 END) as dic,
+               SUM(CASE WHEN fecha >= '{year}-01-01' AND fecha <= '{year}-01-31' THEN unidades ELSE 0 END) as ene,
+               SUM(CASE WHEN fecha >= '{year}-02-01' AND fecha <= '{year}-02-28' THEN unidades ELSE 0 END) as feb,
+               SUM(CASE WHEN fecha >= '{year}-03-01' AND fecha <= '{year}-03-31' THEN unidades ELSE 0 END) as mar,
+               SUM(CASE WHEN fecha >= '{year}-04-01' AND fecha <= '{year}-04-30' THEN unidades ELSE 0 END) as abr,
+               SUM(CASE WHEN fecha >= '{year}-05-01' AND fecha <= '{year}-05-31' THEN unidades ELSE 0 END) as may,
+               SUM(CASE WHEN fecha >= '{year}-06-01' AND fecha <= '{year}-06-30' THEN unidades ELSE 0 END) as jun,
+               SUM(CASE WHEN fecha >= '{year}-07-01' AND fecha <= '{year}-07-31' THEN unidades ELSE 0 END) as jul,
+               SUM(CASE WHEN fecha >= '{year}-08-01' AND fecha <= '{year}-08-31' THEN unidades ELSE 0 END) as ago,
+               SUM(CASE WHEN fecha >= '{year}-09-01' AND fecha <= '{year}-09-30' THEN unidades ELSE 0 END) as sep,
+               SUM(CASE WHEN fecha >= '{year}-10-01' AND fecha <= '{year}-10-31' THEN unidades ELSE 0 END) as oct,
+               SUM(CASE WHEN fecha >= '{year}-11-01' AND fecha <= '{year}-11-30' THEN unidades ELSE 0 END) as nov,
+               SUM(CASE WHEN fecha >= '{year}-12-01' AND fecha <= '{year}-12-31' THEN unidades ELSE 0 END) as dic,
                SUM(unidades) as total_2026
         FROM ventas_registradas v
         LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-        WHERE v.fecha LIKE ? AND (v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL) AND v.modelo_clean NOT LIKE 'CAMION%' {where_extra}
+        WHERE v.fecha >= ? AND v.fecha <= ? AND (v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL) AND v.modelo_clean NOT LIKE 'CAMION%' AND (v.es_nuevo = 1 OR v.es_nuevo IS NULL) {where_extra}
         GROUP BY marca, modelo
         ORDER BY {order_col} {order_direction}
         LIMIT ?

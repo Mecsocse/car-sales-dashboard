@@ -36,9 +36,9 @@ def get_db():
 
 def exec_query(cursor, query: str, params=None):
     if os.environ.get("DATABASE_URL"):
-        q = query.replace("?", "%s")
-        q = q.replace("v.modelo_clean NOT LIKE 'CAMION%'", "v.modelo_clean NOT LIKE 'CAMION%%'")
-        q = q.replace("modelo_clean NOT LIKE 'CAMION%'", "modelo_clean NOT LIKE 'CAMION%%'")
+        q = query.replace("?", "___PARAM_PLACEHOLDER___")
+        q = q.replace("%", "%%")
+        q = q.replace("___PARAM_PLACEHOLDER___", "%s")
         q = q.replace("v.pais_id = 1", "v.pais_id = '1'")
         q = q.replace("pais_id = 1", "pais_id = '1'")
         if params:
@@ -112,11 +112,11 @@ def build_full_where(
         params.extend([model, model])
     if fuel:
         if fuel in ('EV', 'Eléctrico (BEV)', 'Eléctrico', 'ELECTRICO'):
-            clauses.append("(c.codigo = 'EV' OR v.carburante_std = 'ELECTRICO' OR v.carburante_raw IN ('EV', 'Eléctrico (BEV)', 'Eléctrico'))")
+            clauses.append("v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')")
         elif fuel in ('PHEV', 'Híbrido Enchufable'):
-            clauses.append("(c.codigo = 'PHEV' OR v.carburante_std = 'HIBRIDO' OR v.carburante_raw IN ('PHEV', 'Híbrido Enchufable'))")
+            clauses.append("v.carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE')")
         elif fuel in ('HEV', 'Híbrido (HEV)', 'Híbrido', 'HIBRIDO'):
-            clauses.append("(c.codigo IN ('HEV','MHEV') OR v.carburante_std = 'HIBRIDO' OR v.carburante_raw IN ('HEV', 'Híbrido (HEV)', 'Híbrido'))")
+            clauses.append("(v.carburante_std IN ('HEV', 'MHEV', 'HIBRIDO') OR v.carburante_std LIKE '%HIBRID%' OR v.carburante_std LIKE '%HYBRID%')")
         else:
             clauses.append("(c.nombre = ? OR c.codigo = ? OR v.carburante_std = ? OR v.carburante_raw = ?)")
             params.extend([fuel, fuel, fuel, fuel])
