@@ -350,12 +350,12 @@ def compare_months(
 def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     c = conn.cursor()
     where_ccaa = " AND ccaa = ?" if ccaa else ""
-    params = [f"{year}%", ccaa] if ccaa else [f"{year}%"]
+    params = [f"{year}-01-01", f"{year}-12-31", ccaa] if ccaa else [f"{year}-01-01", f"{year}-12-31"]
 
     exec_query(c, f"""
         SELECT substr(fecha, 6, 2) as mes_num, SUM(unidades) as total
         FROM ventas_registradas
-        WHERE fecha LIKE ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
+        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
         GROUP BY mes_num
         ORDER BY mes_num ASC
     """, params)
@@ -452,7 +452,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
     """Returns monthly market share quota % for all propulsion technologies in a selected year."""
     c = conn.cursor()
     where_ccaa = " AND ccaa = ?" if ccaa else ""
-    params = [f"{year}%", ccaa] if ccaa else [f"{year}%"]
+    params = [f"{year}-01-01", f"{year}-12-31", ccaa] if ccaa else [f"{year}-01-01", f"{year}-12-31"]
 
     exec_query(c, f"""
         SELECT 
@@ -466,7 +466,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
             END as tech,
             SUM(unidades) as units
         FROM ventas_registradas
-        WHERE fecha LIKE ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
+        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' {where_ccaa}
         GROUP BY m, tech
         ORDER BY m, units DESC
     """, params)

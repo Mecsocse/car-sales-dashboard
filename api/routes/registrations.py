@@ -39,9 +39,6 @@ def exec_query(cursor, query: str, params=None):
         q = query.replace("?", "%s")
         q = q.replace("v.modelo_clean NOT LIKE 'CAMION%'", "v.modelo_clean NOT LIKE 'CAMION%%'")
         q = q.replace("modelo_clean NOT LIKE 'CAMION%'", "modelo_clean NOT LIKE 'CAMION%%'")
-        q = q.replace("v.fecha LIKE", "CAST(v.fecha AS TEXT) LIKE")
-        q = q.replace("fecha LIKE", "CAST(fecha AS TEXT) LIKE")
-        q = q.replace("substr(fecha", "substr(CAST(fecha AS TEXT)")
         q = q.replace("v.pais_id = 1", "v.pais_id = '1'")
         q = q.replace("pais_id = 1", "pais_id = '1'")
         if params:
@@ -94,17 +91,17 @@ def build_full_where(
             clauses.append("v.fecha = (SELECT MAX(fecha) FROM ventas_registradas WHERE fecha < (SELECT MAX(fecha) FROM ventas_registradas))")
         elif period in ("month", "custom_month"):
             target_month = month if month else "2026-08"
-            clauses.append("v.fecha LIKE ?")
-            params.append(f"{target_month}%")
+            clauses.append("v.fecha >= ? AND v.fecha <= ?")
+            params.extend([f"{target_month}-01", f"{target_month}-31"])
         elif period == "year":
             target_year = year if year else "2026"
-            clauses.append("v.fecha LIKE ?")
-            params.append(f"{target_year}%")
+            clauses.append("v.fecha >= ? AND v.fecha <= ?")
+            params.extend([f"{target_year}-01-01", f"{target_year}-12-31"])
         elif period == "all":
             pass
         else:
-            clauses.append("v.fecha LIKE ?")
-            params.append("2026-08%")
+            clauses.append("v.fecha >= ? AND v.fecha <= ?")
+            params.extend(["2026-08-01", "2026-08-31"])
 
     if brand:
         clauses.append("(COALESCE(m.nombre, v.marca_clean, v.marca_raw) = ?)")

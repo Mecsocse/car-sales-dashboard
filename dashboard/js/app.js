@@ -1,5 +1,7 @@
 // app.js - Main Application Logic with Separated Independent Year & Month Selectors, Full Historical Month Picker & CCAA Filtering
 
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://car-sales-api-jafd.onrender.com';
+
 document.addEventListener('DOMContentLoaded', () => {
     const app = new DashboardApp();
     app.init();
@@ -346,9 +348,22 @@ class DashboardApp {
         this.activePeriodTag.innerHTML = `✨ Visualizando en este momento: <strong>${periodStr}</strong>`;
 
         let badgeLabel = this.selectedMonth;
-        if (this.currentPeriod === 'today') badgeLabel = '⚡ Hoy (Día)';
+        if (this.singleDatePicker && this.singleDatePicker.value) {
+            const dParts = this.singleDatePicker.value.split('-');
+            badgeLabel = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : this.singleDatePicker.value;
+        } else if (this.dateFromFilter && this.dateFromFilter.value) {
+            const dParts1 = this.dateFromFilter.value.split('-');
+            const d1 = dParts1.length === 3 ? `${dParts1[2]}/${dParts1[1]}/${dParts1[0]}` : this.dateFromFilter.value;
+            if (this.dateToFilter && this.dateToFilter.value && this.dateToFilter.value !== this.dateFromFilter.value) {
+                const dParts2 = this.dateToFilter.value.split('-');
+                const d2 = dParts2.length === 3 ? `${dParts2[2]}/${dParts2[1]}/${dParts2[0]}` : this.dateToFilter.value;
+                badgeLabel = `${d1} - ${d2}`;
+            } else {
+                badgeLabel = d1;
+            }
+        } else if (this.currentPeriod === 'today') badgeLabel = '⚡ Hoy (Día)';
         else if (this.currentPeriod === 'yesterday') badgeLabel = '⏮️ Ayer (Día)';
-        else if (this.currentPeriod === 'year') badgeLabel = `Año ${this.selectedYear} Completo`;
+        else if (this.currentPeriod === 'year') badgeLabel = `Año ${this.selectedYear}`;
 
         if (this.selectedCcaa) badgeLabel += ` (${this.selectedCcaa})`;
 
@@ -549,7 +564,7 @@ class DashboardApp {
 
         try {
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
-            const url = `/api/analytics/monthly-matrix?year=${this.selectedYear}&limit=${limit}&sort_by=${this.matrixSortBy}&sort_dir=${this.matrixSortDir}${ccaaParam}${search ? '&search=' + encodeURIComponent(search) : ''}`;
+            const url = `${API_BASE}/api/analytics/monthly-matrix?year=${this.selectedYear}&limit=${limit}&sort_by=${this.matrixSortBy}&sort_dir=${this.matrixSortDir}${ccaaParam}${search ? '&search=' + encodeURIComponent(search) : ''}`;
             const res = await fetch(url);
             if (!res.ok) return;
             const data = await res.json();
@@ -599,7 +614,7 @@ class DashboardApp {
         const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
 
         try {
-            const res = await fetch(`/api/analytics/compare-months?month_a=${monthA}&month_b=${monthB}&brand=${encodeURIComponent(brand)}${ccaaParam}`);
+            const res = await fetch(`${API_BASE}/api/analytics/compare-months?month_a=${monthA}&month_b=${monthB}&brand=${encodeURIComponent(brand)}${ccaaParam}`);
             if (!res.ok) return;
             const compData = await res.json();
 
@@ -632,11 +647,11 @@ class DashboardApp {
     async loadInitialDropdowns() {
         try {
             const [brands, fuels, ccaaList, provinces, models] = await Promise.all([
-                fetch('/api/brands/list').then(r => r.ok ? r.json() : []),
-                fetch('/api/fuel/list').then(r => r.ok ? r.json() : []),
-                fetch('/api/ccaa/list').then(r => r.ok ? r.json() : []),
-                fetch('/api/provinces/list').then(r => r.ok ? r.json() : []),
-                fetch('/api/models/list').then(r => r.ok ? r.json() : [])
+                fetch(`${API_BASE}/api/brands/list`).then(r => r.ok ? r.json() : []),
+                fetch(`${API_BASE}/api/fuel/list`).then(r => r.ok ? r.json() : []),
+                fetch(`${API_BASE}/api/ccaa/list`).then(r => r.ok ? r.json() : []),
+                fetch(`${API_BASE}/api/provinces/list`).then(r => r.ok ? r.json() : []),
+                fetch(`${API_BASE}/api/models/list`).then(r => r.ok ? r.json() : [])
             ]).catch(() => [[], [], [], [], []]);
 
             if (brands.length) window.Components.populateSelect('brand-filter', brands, 'Todas las Marcas');
@@ -661,7 +676,7 @@ class DashboardApp {
 
     async loadProvincesForCcaa(ccaa) {
         try {
-            const url = ccaa ? `/api/provinces/list?ccaa=${encodeURIComponent(ccaa)}` : '/api/provinces/list';
+            const url = ccaa ? `${API_BASE}/api/provinces/list?ccaa=${encodeURIComponent(ccaa)}` : `${API_BASE}/api/provinces/list`;
             const res = await fetch(url);
             if (res.ok) {
                 const provinces = await res.json();
@@ -674,7 +689,7 @@ class DashboardApp {
 
     async loadModelsForBrand(brand) {
         try {
-            const url = brand ? `/api/models/list?brand=${encodeURIComponent(brand)}` : '/api/models/list';
+            const url = brand ? `${API_BASE}/api/models/list?brand=${encodeURIComponent(brand)}` : `${API_BASE}/api/models/list`;
             const res = await fetch(url);
             if (res.ok) {
                 const models = await res.json();
@@ -688,7 +703,7 @@ class DashboardApp {
     async loadMetrics() {
         try {
             const q = this.getFullQueryParams();
-            const res = await fetch(`/api/summary?${q}`);
+            const res = await fetch(`${API_BASE}/api/summary?${q}`);
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
 
@@ -703,7 +718,7 @@ class DashboardApp {
             const q = this.getFullQueryParams();
 
             // 1. Daily Evolution with Interactive Click Callback
-            const dailyRes = await fetch(`/api/registrations/daily?${q}&days=30`).catch(()=>null);
+            const dailyRes = await fetch(`${API_BASE}/api/registrations/daily?${q}&days=30`).catch(()=>null);
             if (dailyRes && dailyRes.ok) {
                 const dailyData = await dailyRes.json();
                 window.DashboardCharts.initDailyEvolutionChart('dailyEvolutionChart', dailyData, (clickedDate) => {
@@ -724,42 +739,42 @@ class DashboardApp {
 
             // 2. Monthly Evolution Bar Chart
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
-            const monthlyEvolRes = await fetch(`/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`).catch(()=>null);
+            const monthlyEvolRes = await fetch(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`).catch(()=>null);
             if (monthlyEvolRes && monthlyEvolRes.ok) {
                 const monthlyEvolData = await monthlyEvolRes.json();
                 window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', monthlyEvolData);
             }
 
             // 3. Brands Ranking
-            const brandsRes = await fetch(`/api/brands/ranking?${q}&limit=${this.brandsLimit}`).catch(()=>null);
+            const brandsRes = await fetch(`${API_BASE}/api/brands/ranking?${q}&limit=${this.brandsLimit}`).catch(()=>null);
             if (brandsRes && brandsRes.ok) {
                 const brandsData = await brandsRes.json();
                 window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', brandsData);
             }
 
             // 4. Models Ranking
-            const modelsRes = await fetch(`/api/models/ranking?${q}&limit=${this.modelsLimit}`).catch(()=>null);
+            const modelsRes = await fetch(`${API_BASE}/api/models/ranking?${q}&limit=${this.modelsLimit}`).catch(()=>null);
             if (modelsRes && modelsRes.ok) {
                 const modelsData = await modelsRes.json();
                 window.DashboardCharts.initModelsRankingChart('modelsRankingChart', modelsData);
             }
 
             // 5. EV Models Ranking
-            const evRes = await fetch(`/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`).catch(()=>null);
+            const evRes = await fetch(`${API_BASE}/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`).catch(()=>null);
             if (evRes && evRes.ok) {
                 const evData = await evRes.json();
                 window.DashboardCharts.initEVRankingChart('evRankingChart', evData);
             }
 
             // 6. EV Brands Ranking
-            const evBrandsRes = await fetch(`/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`).catch(()=>null);
+            const evBrandsRes = await fetch(`${API_BASE}/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`).catch(()=>null);
             if (evBrandsRes && evBrandsRes.ok) {
                 const evBrandsData = await evBrandsRes.json();
                 window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', evBrandsData);
             }
 
             // 6. Fuel Mix
-            const fuelRes = await fetch(`/api/fuel/mix?${q}`).catch(()=>null);
+            const fuelRes = await fetch(`${API_BASE}/api/fuel/mix?${q}`).catch(()=>null);
             if (fuelRes && fuelRes.ok) {
                 const fuelData = await fuelRes.json();
                 window.DashboardCharts.initFuelMixChart('fuelMixChart', fuelData, (clickedFuel) => {
@@ -785,14 +800,14 @@ class DashboardApp {
             }
 
             // 7. Multi-year EV Quota Trend Chart
-            const evQuotaRes = await fetch(`/api/analytics/multiyear-ev-quota?${ccaaParam}`).catch(()=>null);
+            const evQuotaRes = await fetch(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`).catch(()=>null);
             if (evQuotaRes && evQuotaRes.ok) {
                 const evQuotaData = await evQuotaRes.json();
                 window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', evQuotaData);
             }
 
             // 8. Multi-year EV Cumulative Trend Chart
-            const evCumRes = await fetch(`/api/analytics/multiyear-ev-cumulative?${ccaaParam}`).catch(()=>null);
+            const evCumRes = await fetch(`${API_BASE}/api/analytics/multiyear-ev-cumulative?${ccaaParam}`).catch(()=>null);
             if (evCumRes && evCumRes.ok) {
                 const evCumData = await evCumRes.json();
                 window.DashboardCharts.initEVCumulativeTrendChart('evCumulativeTrendChart', evCumData);
@@ -802,7 +817,7 @@ class DashboardApp {
             const allTechTitleEl = document.getElementById('all-tech-quota-title');
             if (allTechTitleEl) allTechTitleEl.textContent = `Cuota por Tecnología Mes a Mes (${this.selectedYear})`;
 
-            const techQuotaRes = await fetch(`/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`).catch(()=>null);
+            const techQuotaRes = await fetch(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`).catch(()=>null);
             if (techQuotaRes && techQuotaRes.ok) {
                 const techQuotaData = await techQuotaRes.json();
                 window.DashboardCharts.initAllTechQuotaChart('allTechQuotaChart', techQuotaData);
@@ -819,7 +834,7 @@ class DashboardApp {
 
         try {
             const q = this.getFullQueryParams();
-            const url = `/api/registrations/table?${q}&page=${this.currentPage}&limit=${this.limit}`;
+            const url = `${API_BASE}/api/registrations/table?${q}&page=${this.currentPage}&limit=${this.limit}`;
 
             const res = await fetch(url);
             if (!res.ok) throw new Error('API Error');
