@@ -219,8 +219,15 @@ def get_fuel_mix(
     if not date_from and not date_to:
         if period in ("month", "custom_month"):
             m_val = month if month else "2026-08"
-            clauses.append("v.fecha >= ? AND v.fecha <= ?")
-            params.extend([f"{m_val}-01", f"{m_val}-31"])
+            if len(m_val) == 7:
+                import calendar
+                y, m = int(m_val[:4]), int(m_val[5:7])
+                last_d = calendar.monthrange(y, m)[1]
+                clauses.append("v.fecha >= ? AND v.fecha <= ?")
+                params.extend([f"{m_val}-01", f"{m_val}-{last_d:02d}"])
+            else:
+                clauses.append("v.fecha >= ? AND v.fecha <= ?")
+                params.extend(["2026-08-01", "2026-08-31"])
         elif period == "year":
             y_val = year if year else "2026"
             clauses.append("v.fecha >= ? AND v.fecha <= ?")
