@@ -80,13 +80,10 @@ def get_brand_ranking(
     )
 
     query = f"""
-        SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca, 
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, 
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
                SUM(v.unidades) as total
         FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-        LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-        LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
         GROUP BY marca, modelo
     """
@@ -146,14 +143,11 @@ def get_model_ranking(
     )
 
     query = f"""
-        SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca, 
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, 
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
                v.carburante_std as carburante,
                SUM(v.unidades) as total
         FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-        LEFT JOIN carburantes c ON (v.carburante_id = c.id OR v.carburante_std = c.codigo)
-        LEFT JOIN provincias p ON (v.provincia_id = p.id OR v.provincia = p.nombre)
         WHERE {where_sql}
         GROUP BY marca, modelo, carburante
     """
@@ -225,8 +219,15 @@ def get_fuel_mix(
     if not date_from and not date_to:
         if period in ("month", "custom_month"):
             m_val = month if month else "2026-08"
-            clauses.append("v.fecha >= ? AND v.fecha <= ?")
-            params.extend([f"{m_val}-01", f"{m_val}-31"])
+            if len(m_val) == 7:
+                import calendar
+                y, m = int(m_val[:4]), int(m_val[5:7])
+                last_d = calendar.monthrange(y, m)[1]
+                clauses.append("v.fecha >= ? AND v.fecha <= ?")
+                params.extend([f"{m_val}-01", f"{m_val}-{last_d:02d}"])
+            else:
+                clauses.append("v.fecha >= ? AND v.fecha <= ?")
+                params.extend(["2026-08-01", "2026-08-31"])
         elif period == "year":
             y_val = year if year else "2026"
             clauses.append("v.fecha >= ? AND v.fecha <= ?")
@@ -527,9 +528,9 @@ def get_monthly_matrix(
     order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
 
     query = f"""
-        SELECT COALESCE(m.nombre, v.marca_clean, v.marca_raw) as marca,
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
                COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
-               COALESCE(m.nombre, v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
+               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
                SUM(CASE WHEN fecha >= '{year}-01-01' AND fecha <= '{year}-01-31' THEN unidades ELSE 0 END) as ene,
                SUM(CASE WHEN fecha >= '{year}-02-01' AND fecha <= '{year}-02-28' THEN unidades ELSE 0 END) as feb,
                SUM(CASE WHEN fecha >= '{year}-03-01' AND fecha <= '{year}-03-31' THEN unidades ELSE 0 END) as mar,
@@ -544,7 +545,6 @@ def get_monthly_matrix(
                SUM(CASE WHEN fecha >= '{year}-12-01' AND fecha <= '{year}-12-31' THEN unidades ELSE 0 END) as dic,
                SUM(unidades) as total_2026
         FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
         WHERE v.fecha >= ? AND v.fecha <= ? AND (v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL) AND v.modelo_clean NOT LIKE 'CAMION%' AND (v.es_nuevo = 1 OR v.es_nuevo IS NULL) {where_extra}
         GROUP BY marca, modelo
         ORDER BY {order_col} {order_direction}
@@ -657,4 +657,114 @@ def get_insights(
     return {
         "insight_text": text,
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+@router.get("/dashboard/all-data")
+def get_dashboard_all_data(
+    country: str = "es",
+    period: str = "month",
+    month: Optional[str] = None,
+    year: Optional[str] = None,
+    brand: Optional[str] = None,
+    model: Optional[str] = None,
+    fuel: Optional[str] = None,
+    province: Optional[str] = None,
+    ccaa: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    conn: sqlite3.Connection = Depends(get_db)
+):
+    """Consolidated 1-pass endpoint returning summary, top brands, top models, top EV, and fuel mix in a single fast query."""
+    c = conn.cursor()
+    target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
+
+    from api.routes.registrations import get_summary
+    summary_data = get_summary(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
+
+    where_sql, params, _ = build_full_where(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
+
+    # 1. Brands ranking (Top 10)
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_sql}
+        GROUP BY marca ORDER BY total DESC LIMIT 10
+    """, params)
+    brands = c.fetchall()
+
+    # 2. Models ranking (Top 10)
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
+               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
+               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
+               v.carburante_std as carburante, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_sql}
+        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 10
+    """, params)
+    models = c.fetchall()
+
+    # 3. EV Models ranking (Top 10)
+    where_ev = f"{where_sql} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
+               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
+               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
+               v.carburante_std as carburante, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_ev}
+        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 10
+    """, params)
+    ev_models = c.fetchall()
+
+    # 4. EV Brands ranking (Top 10)
+    exec_query(c, f"""
+        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
+        FROM ventas_registradas v WHERE {where_ev}
+        GROUP BY marca ORDER BY total DESC LIMIT 10
+    """, params)
+    ev_brands = c.fetchall()
+
+    # 5. Fuel Mix
+    exec_query(c, f"""
+        SELECT 
+            CASE
+                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
+                WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
+                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO') OR carburante_std LIKE '%HIBRID%' OR carburante_std LIKE '%HYBRID%' THEN 'HÍBRIDO (HEV/MHEV)'
+                WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                ELSE 'GASOLINA'
+            END as carburante,
+            SUM(unidades) as total
+        FROM ventas_registradas v WHERE {where_sql}
+        GROUP BY carburante ORDER BY total DESC
+    """, params)
+    fuel_rows = c.fetchall()
+
+    tot_fuel = sum(r['total'] for r in fuel_rows) or 1
+    fuel_mix = [{
+        "carburante": r['carburante'],
+        "total": r['total'],
+        "cuota": round((r['total'] / tot_fuel * 100), 1),
+        "color": FUEL_COLOR_MAP.get(r['carburante'], "#2563eb")
+    } for r in fuel_rows]
+
+    def _format_models_res(m_rows):
+        m_totals = {}
+        for r in m_rows:
+            mf, tot = r['modelo_full'], r['total']
+            m_totals[mf] = m_totals.get(mf, 0) + tot
+        return [{"modelo_full": mf, "total": tot} for mf, tot in sorted(m_totals.items(), key=lambda x: x[1], reverse=True)]
+
+    def _format_brands_res(b_rows):
+        b_totals = {}
+        for r in b_rows:
+            b, tot = r['marca'], r['total']
+            b_totals[b] = b_totals.get(b, 0) + tot
+        return [{"marca": b, "total": tot} for b, tot in sorted(b_totals.items(), key=lambda x: x[1], reverse=True)]
+
+    return {
+        "summary": summary_data,
+        "brands": _format_brands_res(brands),
+        "models": _format_models_res(models),
+        "ev_models": _format_models_res(ev_models),
+        "ev_brands": _format_brands_res(ev_brands),
+        "fuel_mix": fuel_mix
     }
