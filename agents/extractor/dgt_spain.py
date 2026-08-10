@@ -20,6 +20,7 @@ class DGTSpainExtractor:
         self.db_path = db_path
         
     def download_and_extract(self, date_obj):
+        import time
         year = date_obj.strftime("%Y")
         month_no_zero = str(date_obj.month)
         date_str = date_obj.strftime("%Y%m%d")
@@ -27,29 +28,33 @@ class DGTSpainExtractor:
         url = f"{DGT_BASE_URL}/{year}/{month_no_zero}/vehiculos/matriculaciones/export_mat_{date_str}.zip"
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         
-        try:
-            response = requests.get(url, headers=headers, timeout=30)
-            if response.status_code == 404:
-                logging.info(f"No data for {date_str} (HTTP 404, likely weekend/holiday)")
-                return None
-            response.raise_for_status()
-            
-            with zipfile.ZipFile(io.BytesIO(response.content)) as z:
-                txt_files = [f for f in z.namelist() if f.endswith('.txt')]
-                if not txt_files:
-                    logging.error(f"No .txt file found in ZIP for {date_str}")
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            try:
+                response = requests.get(url, headers=headers, timeout=30)
+                if response.status_code == 404:
+                    logging.info(f"No data for {date_str} (HTTP 404, DGT file not yet published or weekend/holiday)")
                     return None
-                    
-                with z.open(txt_files[0]) as f:
-                    df = pd.read_csv(f, sep=DGT_DELIMITER, encoding=DGT_ENCODING, dtype=str, on_bad_lines='skip')
-                    return df
-                    
-        except requests.RequestException as e:
-            logging.error(f"Error downloading {url}: {e}")
-            return None
-        except Exception as e:
-            logging.error(f"Error processing ZIP for {date_str}: {e}")
-            return None
+                response.raise_for_status()
+                
+                with zipfile.ZipFile(io.BytesIO(response.content)) as z:
+                    txt_files = [f for f in z.namelist() if f.endswith('.txt')]
+                    if not txt_files:
+                        logging.error(f"No .txt file found in ZIP for {date_str}")
+                        return None
+                        
+                    with z.open(txt_files[0]) as f:
+                        df = pd.read_csv(f, sep=DGT_DELIMITER, encoding=DGT_ENCODING, dtype=str, on_bad_lines='skip')
+                        return df
+                        
+            except requests.RequestException as e:
+                logging.warning(f"Attempt {attempt}/{max_attempts} failed downloading {url}: {e}")
+                if attempt < max_attempts:
+                    time.sleep(attempt * 5)
+            except Exception as e:
+                logging.error(f"Error processing ZIP for {date_str}: {e}")
+                return None
+        return None
 
     def process_dataframe(self, df, date_obj):
         cols = [c.upper() for c in df.columns]
