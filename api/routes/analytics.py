@@ -514,15 +514,15 @@ def get_monthly_matrix(
 ):
     c = conn.cursor()
     where_extra = ""
-    params = [f"{year}-01-01", f"{year}-12-31"]
+    params = [year]
 
     if search:
         where_extra += " AND (v.marca_clean LIKE ? OR v.modelo_clean LIKE ?)"
         params.extend([f"%{search}%", f"%{search}%"])
 
-    if ccaa:
-        where_extra += " AND v.ccaa = ?"
-        params.append(ccaa)
+    if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', ''):
+        where_extra += " AND LOWER(v.ccaa) = LOWER(?)"
+        params.append(ccaa.strip())
 
     valid_sorts = {
         "ene": "ene", "feb": "feb", "mar": "mar", "abr": "abr",
@@ -534,25 +534,26 @@ def get_monthly_matrix(
     order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
 
     query = f"""
-        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
-               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
-               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
-               SUM(CASE WHEN fecha >= '{year}-01-01' AND fecha <= '{year}-01-31' THEN unidades ELSE 0 END) as ene,
-               SUM(CASE WHEN fecha >= '{year}-02-01' AND fecha <= '{year}-02-28' THEN unidades ELSE 0 END) as feb,
-               SUM(CASE WHEN fecha >= '{year}-03-01' AND fecha <= '{year}-03-31' THEN unidades ELSE 0 END) as mar,
-               SUM(CASE WHEN fecha >= '{year}-04-01' AND fecha <= '{year}-04-30' THEN unidades ELSE 0 END) as abr,
-               SUM(CASE WHEN fecha >= '{year}-05-01' AND fecha <= '{year}-05-31' THEN unidades ELSE 0 END) as may,
-               SUM(CASE WHEN fecha >= '{year}-06-01' AND fecha <= '{year}-06-30' THEN unidades ELSE 0 END) as jun,
-               SUM(CASE WHEN fecha >= '{year}-07-01' AND fecha <= '{year}-07-31' THEN unidades ELSE 0 END) as jul,
-               SUM(CASE WHEN fecha >= '{year}-08-01' AND fecha <= '{year}-08-31' THEN unidades ELSE 0 END) as ago,
-               SUM(CASE WHEN fecha >= '{year}-09-01' AND fecha <= '{year}-09-30' THEN unidades ELSE 0 END) as sep,
-               SUM(CASE WHEN fecha >= '{year}-10-01' AND fecha <= '{year}-10-31' THEN unidades ELSE 0 END) as oct,
-               SUM(CASE WHEN fecha >= '{year}-11-01' AND fecha <= '{year}-11-30' THEN unidades ELSE 0 END) as nov,
-               SUM(CASE WHEN fecha >= '{year}-12-01' AND fecha <= '{year}-12-31' THEN unidades ELSE 0 END) as dic,
-               SUM(unidades) as total_2026
-        FROM ventas_registradas v
-        WHERE v.fecha >= ? AND v.fecha <= ? AND (v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL) AND v.modelo_clean NOT LIKE 'CAMION%' AND (v.es_nuevo = 1 OR v.es_nuevo IS NULL) {where_extra}
-        GROUP BY marca, modelo
+        SELECT 
+            v.marca_clean as marca,
+            v.modelo_clean as modelo,
+            v.modelo_full as modelo_full,
+            SUM(CASE WHEN mes_str = '{year}-01' THEN total_unidades ELSE 0 END) as ene,
+            SUM(CASE WHEN mes_str = '{year}-02' THEN total_unidades ELSE 0 END) as feb,
+            SUM(CASE WHEN mes_str = '{year}-03' THEN total_unidades ELSE 0 END) as mar,
+            SUM(CASE WHEN mes_str = '{year}-04' THEN total_unidades ELSE 0 END) as abr,
+            SUM(CASE WHEN mes_str = '{year}-05' THEN total_unidades ELSE 0 END) as may,
+            SUM(CASE WHEN mes_str = '{year}-06' THEN total_unidades ELSE 0 END) as jun,
+            SUM(CASE WHEN mes_str = '{year}-07' THEN total_unidades ELSE 0 END) as jul,
+            SUM(CASE WHEN mes_str = '{year}-08' THEN total_unidades ELSE 0 END) as ago,
+            SUM(CASE WHEN mes_str = '{year}-09' THEN total_unidades ELSE 0 END) as sep,
+            SUM(CASE WHEN mes_str = '{year}-10' THEN total_unidades ELSE 0 END) as oct,
+            SUM(CASE WHEN mes_str = '{year}-11' THEN total_unidades ELSE 0 END) as nov,
+            SUM(CASE WHEN mes_str = '{year}-12' THEN total_unidades ELSE 0 END) as dic,
+            SUM(total_unidades) as total_2026
+        FROM ventas_mensuales_resumen v
+        WHERE anio_str = ? {where_extra}
+        GROUP BY marca, modelo, modelo_full
         ORDER BY {order_col} {order_direction}
         LIMIT ?
     """
