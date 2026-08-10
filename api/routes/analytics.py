@@ -705,9 +705,25 @@ def get_dashboard_all_data(
         if now - ts < 600: # 10 minutes cache
             return cached_res
 
-    c = conn.cursor()
     target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
+    target_year = year if year else "2026"
 
+    # Fast-Path: Use Postgres RPC Function if available
+    try:
+        if os.environ.get("DATABASE_URL"):
+            c = conn.cursor()
+            exec_query(c, "SELECT get_dashboard_metrics(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       [period, target_month, target_year, ccaa, province, brand, fuel, date_from, date_to])
+            row = c.fetchone()
+            if row:
+                rpc_res = row['get_dashboard_metrics'] if isinstance(row, dict) and 'get_dashboard_metrics' in row else (row[0] if isinstance(row, (list, tuple)) else None)
+                if rpc_res and isinstance(rpc_res, dict) and rpc_res.get('summary'):
+                    _ALL_DATA_CACHE[cache_key] = (rpc_res, now)
+                    return rpc_res
+    except Exception as err:
+        print("RPC fallback to standard query:", err)
+
+    c = conn.cursor()
     from api.routes.registrations import get_summary
     summary_data = get_summary(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
 
