@@ -801,38 +801,58 @@ class DashboardApp {
         }
     }
 
+    renderAllDataPayload(allData) {
+        if (!allData || !allData.summary) return;
+        window.Components.renderMetrics(allData.summary);
+        if (allData.brands) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', allData.brands);
+        if (allData.models) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', allData.models);
+        if (allData.ev_models) window.DashboardCharts.initEVRankingChart('evRankingChart', allData.ev_models);
+        if (allData.ev_brands) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', allData.ev_brands);
+        if (allData.fuel_mix) {
+            window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix, (clickedFuel) => {
+                if (this.fuelFilter) {
+                    let targetOption = '';
+                    for (let opt of this.fuelFilter.options) {
+                        if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
+                            targetOption = opt.value;
+                            break;
+                        }
+                    }
+                    if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
+                    if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
+
+                    if (this.fuelFilter.value === targetOption) {
+                        this.fuelFilter.value = '';
+                    } else {
+                        this.fuelFilter.value = targetOption || clickedFuel;
+                    }
+                    this.refreshAll();
+                }
+            });
+        }
+    }
+
     async loadMetrics() {
         try {
             const q = this.getFullQueryParams();
+            const cacheKey = `dash_cache_${q}`;
+
+            // 1. Instant 0ms Pre-Render from Browser LocalStorage Cache
+            const localCached = localStorage.getItem(cacheKey);
+            if (localCached) {
+                try {
+                    const parsed = JSON.parse(localCached);
+                    this.renderAllDataPayload(parsed);
+                } catch(e) {}
+            }
+
+            // 2. Fetch fresh data from API and update UI + cache
             const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
             if (allData && allData.summary) {
-                window.Components.renderMetrics(allData.summary);
-                if (allData.brands) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', allData.brands);
-                if (allData.models) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', allData.models);
-                if (allData.ev_models) window.DashboardCharts.initEVRankingChart('evRankingChart', allData.ev_models);
-                if (allData.ev_brands) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', allData.ev_brands);
-                if (allData.fuel_mix) {
-                    window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix, (clickedFuel) => {
-                        if (this.fuelFilter) {
-                            let targetOption = '';
-                            for (let opt of this.fuelFilter.options) {
-                                if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
-                                    targetOption = opt.value;
-                                    break;
-                                }
-                            }
-                            if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
-                            if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
-
-                            if (this.fuelFilter.value === targetOption) {
-                                this.fuelFilter.value = '';
-                            } else {
-                                this.fuelFilter.value = targetOption || clickedFuel;
-                            }
-                            this.refreshAll();
-                        }
-                    });
-                }
+                this.renderAllDataPayload(allData);
+                try {
+                    localStorage.setItem(cacheKey, JSON.stringify(allData));
+                } catch(e) {}
             } else {
                 // Seamless fallback to individual calls
                 const [summaryData, brandsData, modelsData, evData, evBrandsData, fuelData] = await Promise.all([
