@@ -334,11 +334,23 @@ class DashboardApp {
             this.quickYearSelect.addEventListener('change', (e) => {
                 if (e.target.value) activateYearMode(e.target.value);
             });
+            this.quickYearSelect.addEventListener('click', () => {
+                if (this.currentPeriod !== 'year') {
+                    const val = this.quickYearSelect.value || this.selectedYear || '2026';
+                    activateYearMode(val);
+                }
+            });
         }
 
         if (this.quickMonthSelect) {
             this.quickMonthSelect.addEventListener('change', (e) => {
                 if (e.target.value) activateMonthMode(e.target.value);
+            });
+            this.quickMonthSelect.addEventListener('click', () => {
+                if (this.currentPeriod !== 'month') {
+                    const val = this.quickMonthSelect.value || this.selectedMonth || '2026-08';
+                    activateMonthMode(val);
+                }
             });
         }
     }
