@@ -113,7 +113,7 @@ class DashboardApp {
         const monthsName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const years = [2026, 2025, 2024];
 
-        let html = '<option value="" disabled style="font-weight:700; color:#94a3b8;">-- Seleccionar Mes --</option>';
+        let html = '<option value="">-- Seleccionar Mes Concreto --</option>';
 
         years.forEach(yr => {
             const maxM = yr === 2026 ? 8 : 12;
