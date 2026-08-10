@@ -1,4 +1,4 @@
-// insights.js - AI Insights Widget
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://car-sales-api-jafd.onrender.com';
 
 class AIInsights {
     constructor(elementId) {
@@ -11,7 +11,7 @@ class AIInsights {
     async fetchInsight(queryStr = '') {
         try {
             this.setLoading(true);
-            const url = queryStr ? `/api/insights?${queryStr}` : '/api/insights';
+            const url = queryStr ? `${API_BASE}/api/insights?${queryStr}` : `${API_BASE}/api/insights`;
             const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to fetch insight');
             

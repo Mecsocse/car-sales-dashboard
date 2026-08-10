@@ -171,7 +171,7 @@ class DashboardApp {
 
         // Fetch latest available date from API summary
         try {
-            const res = await fetch('/api/registrations/summary?period=today').catch(() => null);
+            const res = await fetch(`${API_BASE}/api/registrations/summary?period=today`).catch(() => null);
             let latestDateInDb = null;
             if (res && res.ok) {
                 const data = await res.json();
