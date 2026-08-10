@@ -59,24 +59,24 @@
                     </div>
                 </div>
 
-                <!-- 3 Clean Independent Temporal Selectors -->
-                <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: flex-start;">
+                <!-- Clean Independent Selectors: Month, Year, Day, CCAA & Province -->
+                <div style="display: flex; flex-wrap: wrap; gap: 14px; align-items: center; justify-content: flex-start;">
                     <!-- 1. Seleccionar Mes Concreto (Defecto: Mes Actual) -->
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 170px;">
                         <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📆 Mes Concreto:</span>
-                        <div id="container-month-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 2px solid #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
-                            <select id="quick-month-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 14px;">
+                        <div id="container-month-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 2px solid #2563eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                            <select id="quick-month-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 13px;">
                                 <!-- Injected dynamically with ALL historical months -->
                             </select>
                         </div>
                     </div>
 
                     <!-- 2. Seleccionar Año Completo -->
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px;">
                         <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📊 Año Completo:</span>
-                        <div id="container-year-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
-                            <select id="quick-year-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 14px;">
-                                <option value="" disabled>Seleccionar año...</option>
+                        <div id="container-year-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
+                            <select id="quick-year-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 13px;">
+                                <option value="">Seleccionar año completo...</option>
                                 <option value="2026">Año 2026 Completo</option>
                                 <option value="2025">Año 2025 Completo</option>
                                 <option value="2024">Año 2024 Completo</option>
@@ -85,10 +85,30 @@
                     </div>
 
                     <!-- 3. Seleccionar Día Concreto -->
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px;">
                         <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📅 Día Concreto:</span>
-                        <div id="container-date-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
-                            <input type="date" id="single-date-picker" style="background: transparent; border: none; color: #0f172a; outline: none; cursor: pointer; font-family: inherit; font-weight: 600; width: 100%; font-size: 14px;">
+                        <div id="container-date-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
+                            <input type="date" id="single-date-picker" style="background: transparent; border: none; color: #0f172a; outline: none; cursor: pointer; font-family: inherit; font-weight: 600; width: 100%; font-size: 13px;">
+                        </div>
+                    </div>
+
+                    <!-- 4. Comunidad Autónoma (CCAA) -->
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 170px;">
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">🗺️ Comunidad Autónoma:</span>
+                        <div style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
+                            <select id="ccaa-filter" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 13px;">
+                                <option value="">🇪🇸 Todas las CCAA</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- 5. Provincia -->
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 150px;">
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📍 Provincia:</span>
+                        <div style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
+                            <select id="province-filter" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 13px;">
+                                <option value="">Todas las Provincias</option>
+                            </select>
                         </div>
                     </div>
                 </div>
