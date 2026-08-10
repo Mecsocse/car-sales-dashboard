@@ -356,16 +356,21 @@ def compare_months(
         "fuel_comparison": fuel_comparison
     }
 
+_TRENDS_CACHE = {}
+
 @router.get("/analytics/monthly-evolution")
 def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+    cache_key = f"evol:{year}:{ccaa}"
+    if cache_key in _TRENDS_CACHE:
+        return _TRENDS_CACHE[cache_key]
     c = conn.cursor()
-    where_ccaa = " AND ccaa = ?" if ccaa else ""
-    params = [f"{year}-01-01", f"{year}-12-31", ccaa] if ccaa else [f"{year}-01-01", f"{year}-12-31"]
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+    params = [year, ccaa.strip()] if where_ccaa else [year]
 
     exec_query(c, f"""
-        SELECT substr(CAST(fecha AS TEXT), 6, 2) as mes_num, SUM(unidades) as total
-        FROM ventas_registradas
-        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' AND (es_nuevo = 1 OR es_nuevo IS NULL) {where_ccaa}
+        SELECT substr(mes_str, 6, 2) as mes_num, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str = ? {where_ccaa}
         GROUP BY mes_num
         ORDER BY mes_num ASC
     """, params)
@@ -377,36 +382,37 @@ def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: 
         ("09", "SEP"), ("10", "OCT"), ("11", "NOV"), ("12", "DIC")
     ]
 
-    return [{
+    res = [{
         "mes_code": code,
         "mes_nombre": nombre,
         "total": rows.get(code, 0)
     } for code, nombre in meses_nombres]
+    _TRENDS_CACHE[cache_key] = res
+    return res
 
 @router.get("/analytics/multiyear-ev-quota")
 def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly EV quota % across years (2024, 2025, 2026) for line charts."""
+    cache_key = f"ev_quota:{ccaa}"
+    if cache_key in _TRENDS_CACHE:
+        return _TRENDS_CACHE[cache_key]
     c = conn.cursor()
-    where_ccaa = " AND ccaa = ?" if ccaa else ""
-    params = [ccaa] if ccaa else []
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+    params = [ccaa.strip()] if where_ccaa else []
 
     exec_query(c, f"""
         SELECT 
-            substr(CAST(fecha AS TEXT), 1, 4) as y,
-            substr(CAST(fecha AS TEXT), 6, 2) as m,
-            SUM(CASE WHEN carburante_std IN ('ELECTRICO','EV','BEV') THEN unidades ELSE 0 END) as ev_units,
-            SUM(unidades) as total_units
-        FROM ventas_registradas
-        WHERE (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL)
-          AND modelo_clean NOT LIKE 'CAMION%'
-          AND (es_nuevo = 1 OR es_nuevo IS NULL)
-          AND fecha >= '2024-01-01' {where_ccaa}
+            anio_str as y,
+            substr(mes_str, 6, 2) as m,
+            SUM(CASE WHEN carburante_std IN ('ELECTRICO','EV','BEV') THEN total_unidades ELSE 0 END) as ev_units,
+            SUM(total_unidades) as total_units
+        FROM ventas_mensuales_resumen
+        WHERE anio_str >= '2024' {where_ccaa}
         GROUP BY y, m
         ORDER BY y, m
     """, params)
     rows = c.fetchall()
 
-    # Structure data by year
     years_data = {}
     for r in rows:
         y, m, ev_u, tot_u = r['y'], r['m'], r['ev_units'], r['total_units']
@@ -415,26 +421,27 @@ def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection 
         pct = round((ev_u / tot_u * 100), 1) if tot_u > 0 else 0.0
         years_data[y][m] = {"quota": pct, "ev_units": ev_u, "total_units": tot_u}
 
+    _TRENDS_CACHE[cache_key] = years_data
     return years_data
 
 @router.get("/analytics/multiyear-ev-cumulative")
 def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly cumulative EV sales units across years (2024, 2025, 2026)."""
+    cache_key = f"ev_cum:{ccaa}"
+    if cache_key in _TRENDS_CACHE:
+        return _TRENDS_CACHE[cache_key]
     c = conn.cursor()
-    where_ccaa = " AND ccaa = ?" if ccaa else ""
-    params = [ccaa] if ccaa else []
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+    params = [ccaa.strip()] if where_ccaa else []
 
     exec_query(c, f"""
         SELECT 
-            substr(CAST(fecha AS TEXT), 1, 4) as y,
-            substr(CAST(fecha AS TEXT), 6, 2) as m,
-            SUM(unidades) as ev_units
-        FROM ventas_registradas
-        WHERE (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL)
-          AND modelo_clean NOT LIKE 'CAMION%'
-          AND (es_nuevo = 1 OR es_nuevo IS NULL)
-          AND carburante_std IN ('ELECTRICO','EV','BEV')
-          AND fecha >= '2024-01-01' {where_ccaa}
+            anio_str as y,
+            substr(mes_str, 6, 2) as m,
+            SUM(total_unidades) as ev_units
+        FROM ventas_mensuales_resumen
+        WHERE carburante_std IN ('ELECTRICO','EV','BEV')
+          AND anio_str >= '2024' {where_ccaa}
         GROUP BY y, m
         ORDER BY y, m
     """, params)
@@ -447,7 +454,6 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
             years_cumulative[y] = {}
         years_cumulative[y][m] = ev_u
 
-    # Calculate running sum per year
     result = {}
     for y, months in years_cumulative.items():
         result[y] = {}
@@ -457,18 +463,22 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
                 running_total += months[m_code]
                 result[y][m_code] = running_total
 
+    _TRENDS_CACHE[cache_key] = result
     return result
 
 @router.get("/analytics/monthly-tech-quota")
 def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly market share quota % for all propulsion technologies in a selected year."""
+    cache_key = f"tech_quota:{year}:{ccaa}"
+    if cache_key in _TRENDS_CACHE:
+        return _TRENDS_CACHE[cache_key]
     c = conn.cursor()
-    where_ccaa = " AND ccaa = ?" if ccaa else ""
-    params = [f"{year}-01-01", f"{year}-12-31", ccaa] if ccaa else [f"{year}-01-01", f"{year}-12-31"]
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+    params = [year, ccaa.strip()] if where_ccaa else [year]
 
     exec_query(c, f"""
         SELECT 
-            substr(CAST(fecha AS TEXT), 6, 2) as m,
+            substr(mes_str, 6, 2) as m,
             CASE
                 WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
@@ -476,9 +486,9 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
                 WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
                 ELSE 'GASOLINA'
             END as tech,
-            SUM(unidades) as units
-        FROM ventas_registradas
-        WHERE fecha >= ? AND fecha <= ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%' AND (es_nuevo = 1 OR es_nuevo IS NULL) {where_ccaa}
+            SUM(total_unidades) as units
+        FROM ventas_mensuales_resumen
+        WHERE anio_str = ? {where_ccaa}
         GROUP BY m, tech
         ORDER BY m, units DESC
     """, params)
@@ -494,12 +504,12 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
         month_tech_totals[m][tech] = u
         month_totals[m] += u
 
-    # Build % breakdown per month
     result = {}
     for m, techs in month_tech_totals.items():
         tot = month_totals[m] or 1
         result[m] = {tech: round((units / tot * 100), 1) for tech, units in techs.items()}
 
+    _TRENDS_CACHE[cache_key] = result
     return result
 
 @router.get("/analytics/monthly-matrix")
