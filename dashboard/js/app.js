@@ -314,42 +314,22 @@ class DashboardApp {
             this.refreshAll();
         };
 
-        if (containerYear) {
-            containerYear.addEventListener('click', (e) => {
-                if (e.target !== this.quickYearSelect) {
-                    activateYearMode();
-                }
-            });
-        }
-
-        if (containerMonth) {
-            containerMonth.addEventListener('click', (e) => {
-                if (e.target !== this.quickMonthSelect) {
-                    activateMonthMode();
-                }
-            });
-        }
+        // Initialize default view state: Month Mode Active (Agosto 2026), Year Select Reset to Blank
+        if (this.quickMonthSelect) this.quickMonthSelect.value = this.selectedMonth || '2026-08';
+        if (this.quickYearSelect) this.quickYearSelect.value = '';
 
         if (this.quickYearSelect) {
             this.quickYearSelect.addEventListener('change', (e) => {
-                if (e.target.value) activateYearMode(e.target.value);
-            });
-            this.quickYearSelect.addEventListener('click', () => {
-                if (this.currentPeriod !== 'year') {
-                    const val = this.quickYearSelect.value || this.selectedYear || '2026';
-                    activateYearMode(val);
+                if (e.target.value) {
+                    activateYearMode(e.target.value);
                 }
             });
         }
 
         if (this.quickMonthSelect) {
             this.quickMonthSelect.addEventListener('change', (e) => {
-                if (e.target.value) activateMonthMode(e.target.value);
-            });
-            this.quickMonthSelect.addEventListener('click', () => {
-                if (this.currentPeriod !== 'month') {
-                    const val = this.quickMonthSelect.value || this.selectedMonth || '2026-08';
-                    activateMonthMode(val);
+                if (e.target.value) {
+                    activateMonthMode(e.target.value);
                 }
             });
         }
