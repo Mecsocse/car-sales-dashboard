@@ -25,6 +25,6 @@ jobs:
 
       - name: Execute Resilient DGT Extraction & Database Sync
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL || secrets.SUPABASE_DATABASE_URL }}
         run: |
           python scripts/run_pipeline.py
