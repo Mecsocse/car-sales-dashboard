@@ -25,6 +25,7 @@ jobs:
 
       - name: Execute Resilient DGT Extraction & Database Sync
         env:
+          PYTHONPATH: .
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
           python agents/extractor/dgt_spain.py
