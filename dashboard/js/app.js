@@ -855,23 +855,30 @@ class DashboardApp {
             .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
             .map(b => {
                 const brandUpper = String(b.marca).trim().toUpperCase();
-                const brandModels = (allData.models || [])
+                let rawList = (b.modelos && b.modelos.length > 0) ? b.modelos : (allData.models || [])
                     .filter(m => {
                         const name = String(m.modelo_full || m.modelo || '').toUpperCase();
                         return name.startsWith(brandUpper + ' ') || name === brandUpper;
                     })
-                    .map(m => {
-                        let mName = cleanModelName(b.marca, m.modelo_full, m.modelo);
-                        if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
-                            mName = mName.substring(brandUpper.length + 1).trim();
-                        }
-                        return { modelo: mName, total: m.total };
-                    })
+                    .map(m => ({ modelo: m.modelo_full || m.modelo, total: m.total }));
+
+                const merged = {};
+                rawList.forEach(m => {
+                    let mName = cleanModelName(b.marca, m.modelo, m.modelo);
+                    if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
+                        mName = mName.substring(brandUpper.length + 1).trim();
+                    }
+                    if (!mName || mName.toUpperCase().includes('DESCONOCIDO')) return;
+                    merged[mName] = (merged[mName] || 0) + m.total;
+                });
+
+                const sortedModels = Object.entries(merged)
+                    .map(([modelo, total]) => ({ modelo, total }))
                     .sort((x, y) => y.total - x.total);
 
                 return {
                     ...b,
-                    modelos: brandModels
+                    modelos: sortedModels
                 };
             })
             .slice(0, this.brandsLimit);
@@ -907,23 +914,30 @@ class DashboardApp {
             .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
             .map(b => {
                 const brandUpper = String(b.marca).trim().toUpperCase();
-                const brandEvModels = (allData.ev_models || [])
+                let rawList = (b.modelos && b.modelos.length > 0) ? b.modelos : (allData.ev_models || [])
                     .filter(m => {
                         const name = String(m.modelo_full || m.modelo || '').toUpperCase();
                         return name.startsWith(brandUpper + ' ') || name === brandUpper;
                     })
-                    .map(m => {
-                        let mName = cleanModelName(b.marca, m.modelo_full, m.modelo);
-                        if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
-                            mName = mName.substring(brandUpper.length + 1).trim();
-                        }
-                        return { modelo: mName, total: m.total };
-                    })
+                    .map(m => ({ modelo: m.modelo_full || m.modelo, total: m.total }));
+
+                const merged = {};
+                rawList.forEach(m => {
+                    let mName = cleanModelName(b.marca, m.modelo, m.modelo);
+                    if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
+                        mName = mName.substring(brandUpper.length + 1).trim();
+                    }
+                    if (!mName || mName.toUpperCase().includes('DESCONOCIDO')) return;
+                    merged[mName] = (merged[mName] || 0) + m.total;
+                });
+
+                const sortedModels = Object.entries(merged)
+                    .map(([modelo, total]) => ({ modelo, total }))
                     .sort((x, y) => y.total - x.total);
 
                 return {
                     ...b,
-                    modelos: brandEvModels
+                    modelos: sortedModels
                 };
             })
             .slice(0, this.evBrandsLimit);

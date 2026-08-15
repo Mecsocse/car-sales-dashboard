@@ -189,15 +189,9 @@ function initBrandsRankingChart(ctxId, data) {
                             if (!brandObj || !brandObj.modelos || brandObj.modelos.length === 0) return [];
 
                             const lines = ['Desglose por modelo:'];
-                            let accounted = 0;
                             brandObj.modelos.forEach(m => {
                                 lines.push(`  • ${m.modelo}: ${m.total.toLocaleString('es-ES')} un.`);
-                                accounted += m.total;
                             });
-                            const rest = brandObj.total - accounted;
-                            if (rest > 0) {
-                                lines.push(`  • Otros modelos: ${rest.toLocaleString('es-ES')} un.`);
-                            }
                             return lines;
                         }
                     }
@@ -339,15 +333,9 @@ function initEVBrandsRankingChart(ctxId, data) {
                             if (!brandObj || !brandObj.modelos || brandObj.modelos.length === 0) return [];
 
                             const lines = ['Desglose por modelo (BEV):'];
-                            let accounted = 0;
                             brandObj.modelos.forEach(m => {
                                 lines.push(`  • ${m.modelo}: ${m.total.toLocaleString('es-ES')} un.`);
-                                accounted += m.total;
                             });
-                            const rest = brandObj.total - accounted;
-                            if (rest > 0) {
-                                lines.push(`  • Otros modelos: ${rest.toLocaleString('es-ES')} un.`);
-                            }
                             return lines;
                         }
                     }
