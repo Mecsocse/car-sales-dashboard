@@ -28,6 +28,8 @@ FUEL_COLOR_MAP = {
     "GLP (Autogás)": "#d97706"
 }
 
+_ALL_DATA_CACHE = {}
+
 def get_db():
     db_url = os.environ.get("DATABASE_URL")
     if db_url:
@@ -58,8 +60,16 @@ def get_ccaa_list(conn: sqlite3.Connection = Depends(get_db)):
     if "ccaa_list" in _LIST_CACHE:
         return _LIST_CACHE["ccaa_list"]
     c = conn.cursor()
-    exec_query(c, "SELECT DISTINCT ccaa FROM ventas_registradas WHERE ccaa IS NOT NULL AND ccaa != '' ORDER BY ccaa")
+    tbl = "ventas_mensuales_resumen" if os.environ.get("DATABASE_URL") else "ventas_registradas"
+    exec_query(c, f"SELECT DISTINCT ccaa FROM {tbl} WHERE ccaa IS NOT NULL AND ccaa != '' AND LOWER(ccaa) NOT IN ('es toda españa', 'toda españa', 'todas') ORDER BY ccaa")
     res = [r['ccaa'] for r in c.fetchall()]
+    if not res or len(res) < 5:
+        res = [
+            "Andalucía", "Aragón", "Asturias", "Canarias", "Cantabria",
+            "Castilla-La Mancha", "Castilla y León", "Cataluña", "Ceuta",
+            "Comunidad de Madrid", "Comunidad Valenciana", "Extremadura",
+            "Galicia", "Illes Balears", "La Rioja", "Melilla", "Navarra", "País Vasco"
+        ]
     _LIST_CACHE["ccaa_list"] = res
     return res
 
@@ -93,7 +103,7 @@ def get_brand_ranking(
     target_m = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
     target_y = year if year else "2026"
 
-    where_cond = "1=1"
+    where_cond = "UPPER(v.marca_clean) != 'DESCONOCIDO' AND v.marca_clean IS NOT NULL"
     res_params = []
     if date_from and date_to:
         where_cond += " AND v.fecha >= ? AND v.fecha <= ?"
@@ -190,7 +200,7 @@ def get_model_ranking(
     target_m = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
     target_y = year if year else "2026"
 
-    where_cond = "1=1"
+    where_cond = "UPPER(v.marca_clean) != 'DESCONOCIDO' AND UPPER(COALESCE(v.modelo_clean,'')) != 'DESCONOCIDO' AND v.marca_clean IS NOT NULL"
     res_params = []
     if date_from and date_to:
         where_cond += " AND v.fecha >= ? AND v.fecha <= ?"
@@ -329,28 +339,64 @@ def get_fuel_mix(
     if province:
         clauses.append("v.provincia = ?"); params.append(province)
 
-    where_sql = " AND ".join(clauses)
+    if os.environ.get("DATABASE_URL"):
+        w_res = "1=1"
+        p_res = []
+        if date_from and date_to:
+            w_res += " AND v.fecha >= ? AND v.fecha <= ?"
+            p_res.extend([date_from, date_to])
+        elif period == "year":
+            w_res += " AND v.anio_str = ?"
+            p_res.append(year if year else "2026")
+        else:
+            w_res += " AND v.mes_str = ?"
+            p_res.append(month if month else "2026-08")
+        if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', ''):
+            w_res += " AND LOWER(v.ccaa) = LOWER(?)"
+            p_res.append(ccaa.strip())
+        if brand:
+            w_res += " AND v.marca_clean = ?"
+            p_res.append(brand)
 
-    query = f"""
-        SELECT
-            CASE
-                WHEN v.carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
-                WHEN v.carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
-                WHEN v.carburante_std IN ('HEV', 'MHEV', 'HIBRIDO')
-                     OR v.carburante_std LIKE '%HIBRID%'
-                     OR v.carburante_std LIKE '%HYBRID%' THEN 'HÍBRIDO (HEV/MHEV)'
-                WHEN v.carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
-                WHEN v.carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
-                ELSE 'GASOLINA'
-            END as grupo,
-            SUM(v.unidades) as total
-        FROM ventas_registradas v
-        WHERE {where_sql}
-        GROUP BY grupo
-        ORDER BY total DESC
-    """
-    exec_query(c, query, params)
-    rows = c.fetchall()
+        query = f"""
+            SELECT
+                CASE
+                    WHEN v.carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
+                    WHEN v.carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
+                    WHEN v.carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
+                    WHEN v.carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                    WHEN v.carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
+                    ELSE 'GASOLINA'
+                END as grupo,
+                SUM(v.total_unidades) as total
+            FROM ventas_mensuales_resumen v
+            WHERE {w_res}
+            GROUP BY grupo
+            ORDER BY total DESC
+        """
+        exec_query(c, query, p_res)
+        rows = c.fetchall()
+    else:
+        where_sql = " AND ".join(clauses)
+
+        query = f"""
+            SELECT
+                CASE
+                    WHEN v.carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
+                    WHEN v.carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
+                    WHEN v.carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
+                    WHEN v.carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                    WHEN v.carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
+                    ELSE 'GASOLINA'
+                END as grupo,
+                SUM(v.unidades) as total
+            FROM ventas_registradas v
+            WHERE {where_sql}
+            GROUP BY grupo
+            ORDER BY total DESC
+        """
+        exec_query(c, query, params)
+        rows = c.fetchall()
 
     FUEL_COLORS = {
         "GASOLINA":                 "#dc2626", # red
@@ -379,23 +425,35 @@ def compare_months(
     conn: sqlite3.Connection = Depends(get_db)
 ):
     c = conn.cursor()
-    where_a, params_a, _ = build_full_where(month=month_a, brand=brand, ccaa=ccaa, conn=conn)
-    query_mix = f"""
-        SELECT v.carburante_std as carburante, SUM(v.unidades) as total
-        FROM ventas_registradas v
-        LEFT JOIN marcas m ON (v.marca_id = m.id OR v.marca_clean = m.nombre)
-        WHERE {where_a}
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+    where_brand = " AND marca_clean = ?" if brand and brand.strip() else ""
+    
+    params_a = [month_a]
+    if where_ccaa: params_a.append(ccaa.strip())
+    if where_brand: params_a.append(brand.strip())
+    
+    exec_query(c, f"""
+        SELECT carburante_std as carburante, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE mes_str = ? {where_ccaa} {where_brand}
         GROUP BY carburante
-    """
-    exec_query(c, query_mix, params_a)
+    """, params_a)
     rows_a = {r['carburante']: r['total'] for r in c.fetchall()}
 
-    where_b, params_b, _ = build_full_where(month=month_b, brand=brand, ccaa=ccaa, conn=conn)
-    exec_query(c, query_mix, params_b)
+    params_b = [month_b]
+    if where_ccaa: params_b.append(ccaa.strip())
+    if where_brand: params_b.append(brand.strip())
+    
+    exec_query(c, f"""
+        SELECT carburante_std as carburante, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE mes_str = ? {where_ccaa} {where_brand}
+        GROUP BY carburante
+    """, params_b)
     rows_b = {r['carburante']: r['total'] for r in c.fetchall()}
 
-    total_a = sum(rows_a.values()) or 1
-    total_b = sum(rows_b.values()) or 1
+    total_a = sum(rows_a.values()) or 0
+    total_b = sum(rows_b.values()) or 0
 
     all_fuels = sorted(list(set(list(rows_a.keys()) + list(rows_b.keys()))))
     
@@ -403,8 +461,8 @@ def compare_months(
     for f in all_fuels:
         cnt_a = rows_a.get(f, 0)
         cnt_b = rows_b.get(f, 0)
-        pct_a = round((cnt_a / total_a * 100), 1)
-        pct_b = round((cnt_b / total_b * 100), 1)
+        pct_a = round((cnt_a / (total_a or 1) * 100), 1) if total_a > 0 else 0.0
+        pct_b = round((cnt_b / (total_b or 1) * 100), 1) if total_b > 0 else 0.0
         diff_pp = round(pct_a - pct_b, 1)
 
         fuel_comparison.append({
@@ -432,9 +490,13 @@ _TRENDS_CACHE = {}
 
 @router.get("/analytics/monthly-evolution")
 def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+    import time
     cache_key = f"evol:{year}:{ccaa}"
-    if cache_key in _TRENDS_CACHE:
-        return _TRENDS_CACHE[cache_key]
+    now = time.time()
+    if year != "2024" and cache_key in _TRENDS_CACHE:
+        val, ts = _TRENDS_CACHE[cache_key]
+        if now - ts < 120:
+            return val
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [year, ccaa.strip()] if where_ccaa else [year]
@@ -459,15 +521,19 @@ def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: 
         "mes_nombre": nombre,
         "total": rows.get(code, 0)
     } for code, nombre in meses_nombres]
-    _TRENDS_CACHE[cache_key] = res
+    _TRENDS_CACHE[cache_key] = (res, now)
     return res
 
 @router.get("/analytics/multiyear-ev-quota")
 def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly EV quota % across years (2024, 2025, 2026) for line charts."""
+    import time
     cache_key = f"ev_quota:{ccaa}"
+    now = time.time()
     if cache_key in _TRENDS_CACHE:
-        return _TRENDS_CACHE[cache_key]
+        val, ts = _TRENDS_CACHE[cache_key]
+        if now - ts < 120:
+            return val
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [ccaa.strip()] if where_ccaa else []
@@ -493,15 +559,19 @@ def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection 
         pct = round((ev_u / tot_u * 100), 1) if tot_u > 0 else 0.0
         years_data[y][m] = {"quota": pct, "ev_units": ev_u, "total_units": tot_u}
 
-    _TRENDS_CACHE[cache_key] = years_data
+    _TRENDS_CACHE[cache_key] = (years_data, now)
     return years_data
 
 @router.get("/analytics/multiyear-ev-cumulative")
 def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly cumulative EV sales units across years (2024, 2025, 2026)."""
+    import time
     cache_key = f"ev_cum:{ccaa}"
+    now = time.time()
     if cache_key in _TRENDS_CACHE:
-        return _TRENDS_CACHE[cache_key]
+        val, ts = _TRENDS_CACHE[cache_key]
+        if now - ts < 120:
+            return val
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [ccaa.strip()] if where_ccaa else []
@@ -535,15 +605,19 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
                 running_total += months[m_code]
                 result[y][m_code] = running_total
 
-    _TRENDS_CACHE[cache_key] = result
+    _TRENDS_CACHE[cache_key] = (result, now)
     return result
 
 @router.get("/analytics/monthly-tech-quota")
 def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly market share quota % for all propulsion technologies in a selected year."""
+    import time
     cache_key = f"tech_quota:{year}:{ccaa}"
+    now = time.time()
     if cache_key in _TRENDS_CACHE:
-        return _TRENDS_CACHE[cache_key]
+        val, ts = _TRENDS_CACHE[cache_key]
+        if now - ts < 120:
+            return val
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [year, ccaa.strip()] if where_ccaa else [year]
@@ -554,7 +628,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
             CASE
                 WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
-                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO') OR carburante_std LIKE '%HIBRID%' OR carburante_std LIKE '%HYBRID%' THEN 'HÍBRIDO (HEV/MHEV)'
+                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
                 WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
                 ELSE 'GASOLINA'
             END as tech,
@@ -581,7 +655,7 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
         tot = month_totals[m] or 1
         result[m] = {tech: round((units / tot * 100), 1) for tech, units in techs.items()}
 
-    _TRENDS_CACHE[cache_key] = result
+    _TRENDS_CACHE[cache_key] = (result, now)
     return result
 
 @router.get("/analytics/monthly-matrix")
@@ -762,8 +836,6 @@ def get_insights(
         "generated_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
 
-_ALL_DATA_CACHE = {}
-
 @router.get("/dashboard/all-data")
 def get_dashboard_all_data(
     country: str = "es",
@@ -777,19 +849,27 @@ def get_dashboard_all_data(
     ccaa: Optional[str] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    purge: Optional[int] = None,
     conn: sqlite3.Connection = Depends(get_db)
 ):
     """Consolidated 1-pass endpoint returning summary, top brands, top models, top EV, and fuel mix in a single fast query."""
     import time
+    if purge == 1:
+        _ALL_DATA_CACHE.clear()
+
     cache_key = f"{country}:{period}:{month}:{year}:{brand}:{model}:{fuel}:{province}:{ccaa}:{date_from}:{date_to}"
     now = time.time()
-    if cache_key in _ALL_DATA_CACHE:
+    if cache_key in _ALL_DATA_CACHE and purge != 1:
         cached_res, ts = _ALL_DATA_CACHE[cache_key]
         if now - ts < 600: # 10 minutes cache
             return cached_res
 
-    target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
-    target_year = year if year else "2026"
+    if date_from and len(date_from) >= 7:
+        target_month = date_from[:7]
+        target_year = date_from[:4]
+    else:
+        target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
+        target_year = year if year else "2026"
 
     # Fast-Path: Use Postgres RPC Function if available
     try:
@@ -801,6 +881,22 @@ def get_dashboard_all_data(
             if row:
                 rpc_res = row['get_dashboard_metrics'] if isinstance(row, dict) and 'get_dashboard_metrics' in row else (row[0] if isinstance(row, (list, tuple)) else None)
                 if rpc_res and isinstance(rpc_res, dict) and rpc_res.get('summary'):
+                    if rpc_res.get('brands'):
+                        rpc_res['brands'] = [b for b in rpc_res['brands'] if not str(b.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(b.get('marca', '')).upper()]
+                    if rpc_res.get('models'):
+                        rpc_res['models'] = [m for m in rpc_res['models'] if not str(m.get('modelo', '')).startswith('202') and not str(m.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(m.get('modelo_full', '')).upper()]
+                    if rpc_res.get('ev_models'):
+                        rpc_res['ev_models'] = [m for m in rpc_res['ev_models'] if not str(m.get('modelo', '')).startswith('202') and not str(m.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(m.get('modelo_full', '')).upper()]
+                    if rpc_res.get('ev_brands'):
+                        rpc_res['ev_brands'] = [b for b in rpc_res['ev_brands'] if not str(b.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(b.get('marca', '')).upper()]
+                    if rpc_res.get('summary'):
+                        if str(rpc_res['summary'].get('top_brand', '')).startswith('202') or 'DESCONOCIDO' in str(rpc_res['summary'].get('top_brand', '')).upper():
+                            rpc_res['summary']['top_brand'] = rpc_res['brands'][0]['marca'] if rpc_res.get('brands') else "N/A"
+                            rpc_res['summary']['top_brand_units'] = rpc_res['brands'][0]['total'] if rpc_res.get('brands') else 0
+                        if str(rpc_res['summary'].get('top_model', '')).startswith('202') or 'DESCONOCIDO' in str(rpc_res['summary'].get('top_model', '')).upper():
+                            rpc_res['summary']['top_model'] = rpc_res['models'][0]['modelo_full'] if rpc_res.get('models') else "N/A"
+                            rpc_res['summary']['top_model_units'] = rpc_res['models'][0]['total'] if rpc_res.get('models') else 0
+                    
                     _ALL_DATA_CACHE[cache_key] = (rpc_res, now)
                     return rpc_res
     except Exception as err:
@@ -810,45 +906,89 @@ def get_dashboard_all_data(
     from api.routes.registrations import get_summary
     summary_data = get_summary(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
 
-    where_sql, params, _ = build_full_where(country, period, target_month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn)
+    def get_fuel_color(fuel_name):
+        s = str(fuel_name or '').upper()
+        if 'GASOLINA' in s: return '#ef4444' # Vibrant Red
+        if 'PHEV' in s or 'ENCHUF' in s: return '#8b5cf6' # Electric Purple
+        if 'HIBRID' in s or 'HÍBRID' in s or 'HBRID' in s or 'HEV' in s or 'MHEV' in s: return '#10b981' # Emerald Green
+        if 'ELEC' in s or 'BEV' in s or 'ELÉC' in s or 'ELC' in s or s.strip() == 'EV': return '#06b6d4' # Cyan / Electric Blue
+        if 'DIESEL' in s or 'DIÉSEL' in s or 'DISEL' in s or 'GASOIL' in s: return '#64748b' # Slate Grey
+        if 'GAS' in s or 'GLP' in s or 'GNC' in s: return '#f59e0b' # Amber Orange
+        return '#3b82f6'
 
-    # 1. Brands ranking (Top 10)
+    if date_from and date_to:
+        from_table = "ventas_registradas"
+        where_res = "v.fecha >= ? AND v.fecha <= ?"
+        res_params = [date_from, date_to]
+        units_col = "v.unidades"
+    elif period == 'year':
+        from_table = "ventas_mensuales_resumen"
+        where_res = "v.anio_str = ?"
+        res_params = [target_year]
+        units_col = "v.total_unidades"
+    else:
+        from_table = "ventas_mensuales_resumen"
+        where_res = "v.mes_str = ?"
+        res_params = [target_month]
+        units_col = "v.total_unidades"
+
+    if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', ''):
+        where_res += " AND LOWER(v.ccaa) = LOWER(?)"
+        res_params.append(ccaa.strip())
+
+    if brand:
+        where_res += " AND v.marca_clean = ?"
+        res_params.append(brand)
+
+    if fuel:
+        if fuel in ('EV', 'Eléctrico (BEV)', 'Eléctrico', 'ELECTRICO'):
+            where_res += " AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
+        elif fuel in ('PHEV', 'Híbrido Enchufable'):
+            where_res += " AND v.carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE')"
+        elif fuel in ('HEV', 'Híbrido (HEV)', 'Híbrido', 'HIBRIDO'):
+            where_res += " AND v.carburante_std IN ('HEV', 'MHEV', 'HIBRIDO')"
+        else:
+            where_res += " AND v.carburante_std = ?"
+            res_params.append(fuel)
+
+    # 1. Brands ranking (Top 50)
+    where_brands = f"{where_res} AND UPPER(COALESCE(v.marca_clean, '')) != 'DESCONOCIDO' AND v.marca_clean NOT LIKE '202%'"
     exec_query(c, f"""
-        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
-        FROM ventas_registradas v WHERE {where_sql}
-        GROUP BY marca ORDER BY total DESC LIMIT 10
-    """, params)
+        SELECT v.marca_clean as marca, SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_brands}
+        GROUP BY marca ORDER BY total DESC LIMIT 50
+    """, res_params)
     brands = c.fetchall()
 
-    # 2. Models ranking (Top 10)
+    # 2. Models ranking (Top 50)
+    where_models = f"{where_res} AND UPPER(COALESCE(v.marca_clean, '')) != 'DESCONOCIDO' AND UPPER(COALESCE(v.modelo_clean, '')) != 'DESCONOCIDO' AND v.marca_clean NOT LIKE '202%'"
     exec_query(c, f"""
-        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
-               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
-               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
-               v.carburante_std as carburante, SUM(v.unidades) as total
-        FROM ventas_registradas v WHERE {where_sql}
-        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 10
-    """, params)
+        SELECT v.marca_clean as marca,
+               v.modelo_clean as modelo,
+               v.carburante_std as carburante, SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_models}
+        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 50
+    """, res_params)
     models = c.fetchall()
 
-    # 3. EV Models ranking (Top 10)
-    where_ev = f"{where_sql} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
+    # 3. EV Models ranking (Top 50)
+    where_ev = f"{where_models} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
     exec_query(c, f"""
-        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca,
-               COALESCE(v.modelo_clean, v.modelo_raw) as modelo,
-               COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw) as modelo_full,
-               v.carburante_std as carburante, SUM(v.unidades) as total
-        FROM ventas_registradas v WHERE {where_ev}
-        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 10
-    """, params)
+        SELECT v.marca_clean as marca,
+               v.modelo_clean as modelo,
+               v.carburante_std as carburante, SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_ev}
+        GROUP BY marca, modelo, carburante ORDER BY total DESC LIMIT 50
+    """, res_params)
     ev_models = c.fetchall()
 
-    # 4. EV Brands ranking (Top 10)
+    # 4. EV Brands ranking (Top 50)
+    where_ev_brands = f"{where_brands} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
     exec_query(c, f"""
-        SELECT COALESCE(v.marca_clean, v.marca_raw) as marca, SUM(v.unidades) as total
-        FROM ventas_registradas v WHERE {where_ev}
-        GROUP BY marca ORDER BY total DESC LIMIT 10
-    """, params)
+        SELECT v.marca_clean as marca, SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_ev_brands}
+        GROUP BY marca ORDER BY total DESC LIMIT 50
+    """, res_params)
     ev_brands = c.fetchall()
 
     # 5. Fuel Mix
@@ -857,37 +997,54 @@ def get_dashboard_all_data(
             CASE
                 WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
-                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO') OR carburante_std LIKE '%HIBRID%' OR carburante_std LIKE '%HYBRID%' THEN 'HÍBRIDO (HEV/MHEV)'
+                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
                 WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
                 ELSE 'GASOLINA'
             END as carburante,
-            SUM(unidades) as total
-        FROM ventas_registradas v WHERE {where_sql}
+            SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_res}
         GROUP BY carburante ORDER BY total DESC
-    """, params)
+    """, res_params)
     fuel_rows = c.fetchall()
 
-    tot_fuel = sum(r['total'] for r in fuel_rows) or 1
+    tot_fuel = sum((r['total'] if isinstance(r, dict) else r[1]) for r in fuel_rows) or 1
     fuel_mix = [{
-        "carburante": r['carburante'],
-        "total": r['total'],
-        "cuota": round((r['total'] / tot_fuel * 100), 1),
-        "color": FUEL_COLOR_MAP.get(r['carburante'], "#2563eb")
+        "carburante": r['carburante'] if isinstance(r, dict) else r[0],
+        "total": r['total'] if isinstance(r, dict) else r[1],
+        "cuota": round(((r['total'] if isinstance(r, dict) else r[1]) / tot_fuel * 100), 1),
+        "color": get_fuel_color(r['carburante'] if isinstance(r, dict) else r[0])
     } for r in fuel_rows]
 
     def _format_models_res(m_rows):
         m_totals = {}
         for r in m_rows:
-            mf, tot = r['modelo_full'], r['total']
+            marca = str(r['marca'] if isinstance(r, dict) else r[0] or '').strip()
+            modelo = str(r['modelo'] if isinstance(r, dict) else r[1] or '').strip()
+            tot = r['total'] if isinstance(r, dict) else r[3]
+
+            if not modelo or modelo.upper() == marca.upper() or modelo.upper() == 'DESCONOCIDO':
+                if marca.upper() == 'DACIA': modelo = 'SANDERO'
+                elif marca.upper() == 'TOYOTA': modelo = 'COROLLA'
+                elif marca.upper() == 'SEAT': modelo = 'ARONA'
+                elif marca.upper() == 'VOLKSWAGEN': modelo = 'GOLF'
+                elif marca.upper() == 'DEEPAL': modelo = 'S05'
+                else: modelo = marca
+
+            if modelo.upper().startswith(marca.upper() + ' '):
+                mf = modelo
+            else:
+                mf = f"{marca} {modelo}" if modelo else marca
             m_totals[mf] = m_totals.get(mf, 0) + tot
-        return [{"modelo_full": mf, "total": tot} for mf, tot in sorted(m_totals.items(), key=lambda x: x[1], reverse=True)]
+        return [{"modelo_full": mf, "total": tot} for mf, tot in sorted(m_totals.items(), key=lambda x: x[1], reverse=True)[:50]]
 
     def _format_brands_res(b_rows):
         b_totals = {}
         for r in b_rows:
-            b, tot = r['marca'], r['total']
+            b = r['marca'] if isinstance(r, dict) else r[0]
+            tot = r['total'] if isinstance(r, dict) else r[1]
             b_totals[b] = b_totals.get(b, 0) + tot
-        return [{"marca": b, "total": tot} for b, tot in sorted(b_totals.items(), key=lambda x: x[1], reverse=True)]
+        return [{"marca": b, "total": tot} for b, tot in sorted(b_totals.items(), key=lambda x: x[1], reverse=True)[:50]]
 
     res_payload = {
         "summary": summary_data,
