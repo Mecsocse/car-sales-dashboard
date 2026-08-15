@@ -1,6 +1,9 @@
-// app.js - Main Application Logic with Separated Independent Year & Month Selectors, Full Historical Month Picker & CCAA Filtering
+// BUILD_STAMP_20260815_1325_PRODUCTION_NEW
+// app.js - Main Application Logic
 
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? '' : 'https://car-sales-api-jafd.onrender.com';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const isFile = window.location.protocol === 'file:' || window.location.hostname === '';
+const API_BASE = isLocal ? '' : (isFile ? 'http://127.0.0.1:8000' : 'https://car-sales-api-jafd.onrender.com');
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new DashboardApp();
@@ -76,6 +79,15 @@ class DashboardApp {
 
     async init() {
         try {
+            // Invalidate and remove old local storage caches
+            try {
+                Object.keys(localStorage).forEach(k => {
+                    if (k.startsWith('dashboard_all_data_') && !k.startsWith('dashboard_all_data_v20260815_6_')) {
+                        localStorage.removeItem(k);
+                    }
+                });
+            } catch(e) {}
+
             this.populateQuickMonthDropdown();
             this.populateHistoricalCompareDropdowns();
             this.bindPeriodEvents();
@@ -83,19 +95,10 @@ class DashboardApp {
             this.bindCompareEvents();
             this.bindMatrixEvents();
 
-            // 1. Trigger main dashboard load FIRST (Lightning fast 0.5s)
-            const refreshPromise = this.refreshAll();
-
-            // 2. Load background dropdowns concurrently without blocking main render
-            this.loadInitialDropdowns();
-
-            await refreshPromise; // Main KPIs and Top 10 Charts are now visible on screen!
-
-            // 3. Defer heavy secondary matrix and comparison queries to background idle time
-            setTimeout(() => {
-                this.loadMonthComparison();
-                this.loadMonthlyMatrix('', this.matrixLimit);
-            }, 400);
+            await this.loadInitialDropdowns();
+            await this.refreshAll();
+            await this.loadMonthComparison();
+            await this.loadMonthlyMatrix('', this.matrixLimit);
 
             // Init AI Insights
             if (window.AIInsightsWidget) {
@@ -113,7 +116,7 @@ class DashboardApp {
         const monthsName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         const years = [2026, 2025, 2024];
 
-        let html = '<option value="">-- Seleccionar Mes Concreto --</option>';
+        let html = '<option value="" style="font-weight:700; color:#94a3b8;">-- Seleccionar Mes --</option>';
 
         years.forEach(yr => {
             const maxM = yr === 2026 ? 8 : 12;
@@ -171,7 +174,7 @@ class DashboardApp {
 
         // Fetch latest available date from API summary
         try {
-            const res = await fetch(`${API_BASE}/api/registrations/summary?period=today`).catch(() => null);
+            const res = await fetch('/api/registrations/summary?period=today').catch(() => null);
             let latestDateInDb = null;
             if (res && res.ok) {
                 const data = await res.json();
@@ -273,64 +276,50 @@ class DashboardApp {
                     this.currentPeriod = 'custom_date';
                     if (this.dateFromFilter) this.dateFromFilter.value = dateVal;
                     if (this.dateToFilter) this.dateToFilter.value = dateVal;
+                    if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+                    if (this.quickYearSelect) this.quickYearSelect.value = '';
                     this.updatePeriodTag();
                     this.refreshAll();
                 }
             });
         }
 
-        const containerMonth = document.getElementById('container-month-select');
-        const containerYear = document.getElementById('container-year-select');
-
-        const activateYearMode = (val = null) => {
-            const targetYear = val || (this.quickYearSelect && this.quickYearSelect.value) || this.selectedYear || '2026';
-            this.currentPeriod = 'year';
-            this.selectedYear = targetYear;
-
-            if (this.quickYearSelect) this.quickYearSelect.value = targetYear;
-            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
-            if (this.singleDatePicker) this.singleDatePicker.value = '';
-            if (this.dateFromFilter) this.dateFromFilter.value = '';
-            if (this.dateToFilter) this.dateToFilter.value = '';
-
-            this.updatePeriodTag();
-            this.refreshAll();
-            this.loadMonthlyMatrix('', this.matrixLimit);
-        };
-
-        const activateMonthMode = (val = null) => {
-            const targetMonth = val || (this.quickMonthSelect && this.quickMonthSelect.value) || this.selectedMonth || '2026-08';
-            this.currentPeriod = 'month';
-            this.selectedMonth = targetMonth;
-            this.selectedYear = targetMonth.split('-')[0];
-
-            if (this.quickMonthSelect) this.quickMonthSelect.value = targetMonth;
-            if (this.quickYearSelect) this.quickYearSelect.value = '';
-            if (this.singleDatePicker) this.singleDatePicker.value = '';
-            if (this.dateFromFilter) this.dateFromFilter.value = '';
-            if (this.dateToFilter) this.dateToFilter.value = '';
-
-            this.updatePeriodTag();
-            this.refreshAll();
-        };
-
-        // Initialize default view state: Month Mode Active (Agosto 2026), Year Select Reset to Blank
-        if (this.quickMonthSelect) this.quickMonthSelect.value = this.selectedMonth || '2026-08';
-        if (this.quickYearSelect) this.quickYearSelect.value = '';
-
+        // Independent Year Select Event
         if (this.quickYearSelect) {
             this.quickYearSelect.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    activateYearMode(e.target.value);
-                }
+                const yrVal = e.target.value;
+                if (!yrVal) return;
+                this.selectedYear = yrVal;
+                this.currentPeriod = 'year';
+                if (this.dateFromFilter) this.dateFromFilter.value = '';
+                if (this.dateToFilter) this.dateToFilter.value = '';
+                if (this.singleDatePicker) this.singleDatePicker.value = '';
+                if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+
+                this.updatePeriodTag();
+                this.refreshAll();
+                this.loadMonthlyMatrix('', this.matrixLimit);
             });
         }
 
+        // Independent Month Select Event
         if (this.quickMonthSelect) {
             this.quickMonthSelect.addEventListener('change', (e) => {
-                if (e.target.value) {
-                    activateMonthMode(e.target.value);
-                }
+                const monthVal = e.target.value;
+                if (!monthVal) return;
+
+                const yearPart = monthVal.split('-')[0];
+                this.selectedMonth = monthVal;
+                this.selectedYear = yearPart;
+                this.currentPeriod = 'month';
+
+                if (this.dateFromFilter) this.dateFromFilter.value = '';
+                if (this.dateToFilter) this.dateToFilter.value = '';
+                if (this.singleDatePicker) this.singleDatePicker.value = '';
+                if (this.quickYearSelect) this.quickYearSelect.value = '';
+
+                this.updatePeriodTag();
+                this.refreshAll();
             });
         }
     }
@@ -344,15 +333,7 @@ class DashboardApp {
             '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
         };
 
-        const parts = (this.selectedMonth || '2026-08').split('-');
-        const monthTxt = monthsName[parts[1]] || parts[1];
-        const monthFormatted = `${monthTxt} ${parts[0]}`;
-
-        let periodStr = `📆 Mes Concreto: ${monthFormatted}`;
-        if (this.selectedMonth === '2026-08') {
-            periodStr = `📆 Agosto 2026 (Mes Actual en Curso)`;
-        }
-
+        let periodStr = `📆 Mes Concreto: ${this.selectedMonth || '2026-08'}`;
         if (this.currentPeriod === 'year') {
             periodStr = `📊 Año ${this.selectedYear} Completo (Ene - Dic)`;
         } else if (this.singleDatePicker && this.singleDatePicker.value) {
@@ -361,6 +342,12 @@ class DashboardApp {
             periodStr = `📅 Día Concreto: ${dFormatted}`;
         } else if (this.dateFromFilter && this.dateFromFilter.value) {
             periodStr = `📅 Rango: ${this.dateFromFilter.value} ${this.dateToFilter.value ? 'a ' + this.dateToFilter.value : ''}`;
+        } else {
+            const parts = (this.selectedMonth || '2026-08').split('-');
+            const monthTxt = monthsName[parts[1]] || parts[1];
+            periodStr = (this.selectedMonth === '2026-08') 
+                ? `📆 Agosto 2026 (Mes Actual en Curso)` 
+                : `📆 Mes Concreto: ${monthTxt} ${parts[0]}`;
         }
 
         if (this.selectedCcaa) {
@@ -374,22 +361,13 @@ class DashboardApp {
         this.activePeriodTag.innerHTML = `✨ Visualizando en este momento: <strong>${periodStr}</strong>`;
 
         let badgeLabel = this.selectedMonth;
-        if (this.singleDatePicker && this.singleDatePicker.value) {
-            const dParts = this.singleDatePicker.value.split('-');
-            badgeLabel = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : this.singleDatePicker.value;
-        } else if (this.dateFromFilter && this.dateFromFilter.value) {
-            const dParts1 = this.dateFromFilter.value.split('-');
-            const d1 = dParts1.length === 3 ? `${dParts1[2]}/${dParts1[1]}/${dParts1[0]}` : this.dateFromFilter.value;
-            if (this.dateToFilter && this.dateToFilter.value && this.dateToFilter.value !== this.dateFromFilter.value) {
-                const dParts2 = this.dateToFilter.value.split('-');
-                const d2 = dParts2.length === 3 ? `${dParts2[2]}/${dParts2[1]}/${dParts2[0]}` : this.dateToFilter.value;
-                badgeLabel = `${d1} - ${d2}`;
-            } else {
-                badgeLabel = d1;
-            }
-        } else if (this.currentPeriod === 'today') badgeLabel = '⚡ Hoy (Día)';
+        if (this.currentPeriod === 'today') badgeLabel = '⚡ Hoy (Día)';
         else if (this.currentPeriod === 'yesterday') badgeLabel = '⏮️ Ayer (Día)';
-        else if (this.currentPeriod === 'year') badgeLabel = `Año ${this.selectedYear}`;
+        else if (this.currentPeriod === 'year') badgeLabel = `Año ${this.selectedYear} Completo`;
+        else if (this.singleDatePicker && this.singleDatePicker.value) {
+            const dp = this.singleDatePicker.value.split('-');
+            badgeLabel = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : this.singleDatePicker.value;
+        }
 
         if (this.selectedCcaa) badgeLabel += ` (${this.selectedCcaa})`;
 
@@ -412,31 +390,51 @@ class DashboardApp {
         const isYearActive = !isDateActive && (this.currentPeriod === 'year');
         const isMonthActive = !isDateActive && !isYearActive;
 
-        if (isMonthActive) {
+        const inactiveStyle = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; border: 1px solid #cbd5e1; box-shadow: none; background: #ffffff;";
+        const activeStyle = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; border: 2px solid #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); background: #ffffff;";
+
+        cMonth.style.cssText = isMonthActive ? activeStyle : inactiveStyle;
+        cYear.style.cssText = isYearActive ? activeStyle : inactiveStyle;
+        cDate.style.cssText = isDateActive ? activeStyle : inactiveStyle;
+
+        // Synchronize selector dropdown values so prompt options show for inactive selectors
+        if (isDateActive) {
+            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
             if (this.quickYearSelect) this.quickYearSelect.value = '';
-            if (this.singleDatePicker) this.singleDatePicker.value = '';
         } else if (isYearActive) {
             if (this.quickMonthSelect) this.quickMonthSelect.value = '';
             if (this.singleDatePicker) this.singleDatePicker.value = '';
-        } else if (isDateActive) {
-            if (this.quickMonthSelect) this.quickMonthSelect.value = '';
+            if (this.quickYearSelect) this.quickYearSelect.value = this.selectedYear;
+        } else if (isMonthActive) {
             if (this.quickYearSelect) this.quickYearSelect.value = '';
+            if (this.singleDatePicker) this.singleDatePicker.value = '';
+            if (this.quickMonthSelect) this.quickMonthSelect.value = this.selectedMonth;
         }
+    }
 
-        const inactiveStyle = "border: 1px solid #cbd5e1; box-shadow: none; background: #ffffff;";
-        const activeStyle = "border: 2px solid #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); background: #ffffff;";
-
-        cMonth.style.cssText = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; " + (isMonthActive ? activeStyle : inactiveStyle);
-        cYear.style.cssText = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; " + (isYearActive ? activeStyle : inactiveStyle);
-        cDate.style.cssText = "display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; transition: all 0.2s ease; " + (isDateActive ? activeStyle : inactiveStyle);
+    async fetchCached(url) {
+        if (!this.cacheMap) this.cacheMap = new Map();
+        if (this.cacheMap.has(url)) {
+            return this.cacheMap.get(url);
+        }
+        try {
+            const res = await fetch(url);
+            if (!res.ok) return null;
+            const data = await res.json();
+            this.cacheMap.set(url, data);
+            return data;
+        } catch (e) {
+            console.error('Fetch error for', url, e);
+            return null;
+        }
     }
 
     async refreshAll() {
         this.currentPage = 1;
         this.updatePeriodTag();
         await Promise.all([
-            this.loadMetrics(),
-            this.loadCharts()
+            this.loadMetricsAndChartsConsolidated(),
+            this.loadSecondaryCharts()
         ]);
 
         if (this.tableLoaded) {
@@ -530,48 +528,80 @@ class DashboardApp {
         const btnExtendModels = document.getElementById('btn-extend-models');
         if (btnExtendModels) {
             btnExtendModels.addEventListener('click', () => {
-                this.modelsLimit += 10;
-                const container = document.getElementById('container-models-ranking');
-                if (container) container.style.height = `${320 + (this.modelsLimit - 10) * 22}px`;
+                if (this.modelsLimit >= 30) {
+                    this.modelsLimit = 10;
+                    btnExtendModels.innerHTML = '<span>Ver 10 más</span>';
+                } else {
+                    this.modelsLimit += 10;
+                    btnExtendModels.innerHTML = this.modelsLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
+                }
                 const title = document.getElementById('title-models-ranking');
                 if (title) title.textContent = `Top ${this.modelsLimit} Modelos`;
-                this.loadCharts();
+                if (this.lastAllData) {
+                    this.renderAllDataPayload(this.lastAllData);
+                } else {
+                    this.loadMetricsAndChartsConsolidated();
+                }
             });
         }
 
         const btnExtendEv = document.getElementById('btn-extend-ev');
         if (btnExtendEv) {
             btnExtendEv.addEventListener('click', () => {
-                this.evLimit += 10;
-                const container = document.getElementById('container-ev-ranking');
-                if (container) container.style.height = `${320 + (this.evLimit - 10) * 22}px`;
+                if (this.evLimit >= 30) {
+                    this.evLimit = 10;
+                    btnExtendEv.innerHTML = '<span>Ver 10 más</span>';
+                } else {
+                    this.evLimit += 10;
+                    btnExtendEv.innerHTML = this.evLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
+                }
                 const title = document.getElementById('title-ev-ranking');
                 if (title) title.textContent = `Top ${this.evLimit} Eléctricos (BEV)`;
-                this.loadCharts();
+                if (this.lastAllData) {
+                    this.renderAllDataPayload(this.lastAllData);
+                } else {
+                    this.loadMetricsAndChartsConsolidated();
+                }
             });
         }
 
         const btnExtendBrands = document.getElementById('btn-extend-brands');
         if (btnExtendBrands) {
             btnExtendBrands.addEventListener('click', () => {
-                this.brandsLimit += 10;
-                const container = document.getElementById('container-brands-ranking');
-                if (container) container.style.height = `${320 + (this.brandsLimit - 10) * 22}px`;
+                if (this.brandsLimit >= 30) {
+                    this.brandsLimit = 10;
+                    btnExtendBrands.innerHTML = '<span>Ver 10 más</span>';
+                } else {
+                    this.brandsLimit += 10;
+                    btnExtendBrands.innerHTML = this.brandsLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
+                }
                 const title = document.getElementById('title-brands-ranking');
                 if (title) title.textContent = `Top ${this.brandsLimit} Marcas`;
-                this.loadCharts();
+                if (this.lastAllData) {
+                    this.renderAllDataPayload(this.lastAllData);
+                } else {
+                    this.loadMetricsAndChartsConsolidated();
+                }
             });
         }
 
         const btnExtendEvBrands = document.getElementById('btn-extend-ev-brands');
         if (btnExtendEvBrands) {
             btnExtendEvBrands.addEventListener('click', () => {
-                this.evBrandsLimit += 10;
-                const container = document.getElementById('container-ev-brands-ranking');
-                if (container) container.style.height = `${320 + (this.evBrandsLimit - 10) * 22}px`;
+                if (this.evBrandsLimit >= 30) {
+                    this.evBrandsLimit = 10;
+                    btnExtendEvBrands.innerHTML = '<span>Ver 10 más</span>';
+                } else {
+                    this.evBrandsLimit += 10;
+                    btnExtendEvBrands.innerHTML = this.evBrandsLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
+                }
                 const title = document.getElementById('title-ev-brands-ranking');
                 if (title) title.textContent = `Top ${this.evBrandsLimit} Marcas BEV`;
-                this.loadCharts();
+                if (this.lastAllData) {
+                    this.renderAllDataPayload(this.lastAllData);
+                } else {
+                    this.loadMetricsAndChartsConsolidated();
+                }
             });
         }
 
@@ -623,9 +653,8 @@ class DashboardApp {
         try {
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
             const url = `${API_BASE}/api/analytics/monthly-matrix?year=${this.selectedYear}&limit=${limit}&sort_by=${this.matrixSortBy}&sort_dir=${this.matrixSortDir}${ccaaParam}${search ? '&search=' + encodeURIComponent(search) : ''}`;
-            const res = await fetch(url);
-            if (!res.ok) return;
-            const data = await res.json();
+            const data = await this.fetchCached(url);
+            if (!data) return;
 
             // Show/hide SEP-DIC columns: only visible for completed years (2024, 2025)
             const isFullYear = this.selectedYear !== '2026';
@@ -672,9 +701,8 @@ class DashboardApp {
         const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
 
         try {
-            const res = await fetch(`${API_BASE}/api/analytics/compare-months?month_a=${monthA}&month_b=${monthB}&brand=${encodeURIComponent(brand)}${ccaaParam}`);
-            if (!res.ok) return;
-            const compData = await res.json();
+            const compData = await this.fetchCached(`${API_BASE}/api/analytics/compare-months?month_a=${monthA}&month_b=${monthB}&brand=${encodeURIComponent(brand)}${ccaaParam}`);
+            if (!compData) return;
 
             if (window.DashboardCharts && window.DashboardCharts.initCompareFuelMixChart) {
                 window.DashboardCharts.initCompareFuelMixChart('compareFuelMixChart', compData);
@@ -717,21 +745,15 @@ class DashboardApp {
             if (provinces.length) window.Components.populateSelect('province-filter', provinces, 'Todas las Provincias');
             if (models.length) window.Components.populateSelect('model-filter', models, 'Todos los Modelos');
 
-            const fallbackCcaa = [
-                "Andalucía", "Aragón", "Asturias", "Canarias", "Cantabria",
-                "Castilla-La Mancha", "Castilla y León", "Cataluña", "Ceuta",
-                "Comunidad de Madrid", "Comunidad Valenciana", "Extremadura",
-                "Galicia", "Illes Balears", "La Rioja", "Melilla", "Navarra", "País Vasco"
-            ];
-            const finalCcaa = (ccaaList && ccaaList.length) ? ccaaList : fallbackCcaa;
-
-            if (this.quickCcaaSelect) {
-                let html = '<option value="">🇪🇸 Toda España</option>';
-                finalCcaa.forEach(c => html += `<option value="${c}">${c}</option>`);
-                this.quickCcaaSelect.innerHTML = html;
-            }
-            if (this.ccaaFilter) {
-                window.Components.populateSelect('ccaa-filter', finalCcaa, 'Todas las CCAA');
+            if (ccaaList.length) {
+                if (this.quickCcaaSelect) {
+                    let html = '<option value="">🇪🇸 Toda España</option>';
+                    ccaaList.forEach(c => html += `<option value="${c}">${c}</option>`);
+                    this.quickCcaaSelect.innerHTML = html;
+                }
+                if (this.ccaaFilter) {
+                    window.Components.populateSelect('ccaa-filter', ccaaList, 'Todas las CCAA');
+                }
             }
         } catch (error) {
             console.error('Failed to load initial dropdowns:', error);
@@ -764,125 +786,137 @@ class DashboardApp {
         }
     }
 
-    async fetchCached(url) {
-        if (!this.cacheMap) this.cacheMap = new Map();
-        if (this.cacheMap.has(url)) {
-            return this.cacheMap.get(url);
-        }
-        try {
-            const res = await fetch(url);
-            if (!res.ok) return null;
-            const data = await res.json();
-            this.cacheMap.set(url, data);
-            return data;
-        } catch (e) {
-            console.error('Fetch error for', url, e);
-            return null;
-        }
-    }
+    async loadMetricsAndChartsConsolidated() {
+        const q = this.getFullQueryParams();
+        const cacheKey = `dashboard_all_data_v20260815_6_${q}`;
 
-    renderAllDataPayload(allData) {
-        if (!allData || !allData.summary) return;
-        window.Components.renderMetrics(allData.summary);
-        if (allData.brands) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', allData.brands);
-        if (allData.models) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', allData.models);
-        if (allData.ev_models) window.DashboardCharts.initEVRankingChart('evRankingChart', allData.ev_models);
-        if (allData.ev_brands) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', allData.ev_brands);
-        if (allData.fuel_mix) {
-            window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix, (clickedFuel) => {
-                if (this.fuelFilter) {
-                    let targetOption = '';
-                    for (let opt of this.fuelFilter.options) {
-                        if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
-                            targetOption = opt.value;
-                            break;
-                        }
-                    }
-                    if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
-                    if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
-
-                    if (this.fuelFilter.value === targetOption) {
-                        this.fuelFilter.value = '';
-                    } else {
-                        this.fuelFilter.value = targetOption || clickedFuel;
-                    }
-                    this.refreshAll();
-                }
-            });
-        }
-    }
-
-    async loadMetrics() {
-        try {
-            const q = this.getFullQueryParams();
-            const cacheKey = `dash_cache_${q}`;
-
-            // 1. Instant 0ms Pre-Render from Browser LocalStorage Cache
+        // 1. Instant cache load from localStorage or memory (0ms)
+        if (!this.memoryCache) this.memoryCache = new Map();
+        const memCached = this.memoryCache.get(cacheKey);
+        if (memCached) {
+            this.renderAllDataPayload(memCached);
+        } else {
             const localCached = localStorage.getItem(cacheKey);
             if (localCached) {
                 try {
                     const parsed = JSON.parse(localCached);
-                    this.renderAllDataPayload(parsed);
+                    if (parsed && parsed.summary) {
+                        this.renderAllDataPayload(parsed);
+                    }
                 } catch(e) {}
             }
+        }
 
-            // 2. Fetch fresh data from API and update UI + cache
+        // 2. Fetch fresh consolidated data (single fast query)
+        try {
             const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
             if (allData && allData.summary) {
+                this.memoryCache.set(cacheKey, allData);
+                try { localStorage.setItem(cacheKey, JSON.stringify(allData)); } catch(e) {}
                 this.renderAllDataPayload(allData);
-                try {
-                    localStorage.setItem(cacheKey, JSON.stringify(allData));
-                } catch(e) {}
-            } else {
-                // Seamless fallback to individual calls
-                const [summaryData, brandsData, modelsData, evData, evBrandsData, fuelData] = await Promise.all([
-                    this.fetchCached(`${API_BASE}/api/summary?${q}`),
-                    this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&limit=${this.brandsLimit}`),
-                    this.fetchCached(`${API_BASE}/api/models/ranking?${q}&limit=${this.modelsLimit}`),
-                    this.fetchCached(`${API_BASE}/api/models/ranking?${q}&fuel=ELECTRICO&limit=${this.evLimit}`),
-                    this.fetchCached(`${API_BASE}/api/brands/ranking?${q}&fuel=ELECTRICO&limit=${this.evBrandsLimit}`),
-                    this.fetchCached(`${API_BASE}/api/fuel/mix?${q}`)
-                ]);
-
-                if (summaryData) window.Components.renderMetrics(summaryData);
-                if (brandsData) window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', brandsData);
-                if (modelsData) window.DashboardCharts.initModelsRankingChart('modelsRankingChart', modelsData);
-                if (evData) window.DashboardCharts.initEVRankingChart('evRankingChart', evData);
-                if (evBrandsData) window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', evBrandsData);
-                if (fuelData) {
-                    window.DashboardCharts.initFuelMixChart('fuelMixChart', fuelData, (clickedFuel) => {
-                        if (this.fuelFilter) {
-                            let targetOption = '';
-                            for (let opt of this.fuelFilter.options) {
-                                if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
-                                    targetOption = opt.value;
-                                    break;
-                                }
-                            }
-                            if (!targetOption && clickedFuel === 'ELECTRICO') targetOption = 'Eléctrico (BEV)';
-                            if (!targetOption && clickedFuel === 'HIBRIDO') targetOption = 'Híbrido (HEV)';
-
-                            if (this.fuelFilter.value === targetOption) {
-                                this.fuelFilter.value = '';
-                            } else {
-                                this.fuelFilter.value = targetOption || clickedFuel;
-                            }
-                            this.refreshAll();
-                        }
-                    });
-                }
             }
-        } catch (error) {
-            console.error('Failed to load metrics and all-data:', error);
+        } catch (e) {
+            console.error('Error fetching consolidated all-data:', e);
         }
     }
 
-    async loadCharts() {
+    renderAllDataPayload(allData) {
+        if (!allData) return;
+        this.lastAllData = allData;
+
+        // Clean model full names
+        const cleanModelName = (marca, modeloFull, modeloRaw) => {
+            let name = String(modeloFull || modeloRaw || '').trim();
+            const m = String(marca || '').trim().toUpperCase();
+            if (m && name.toUpperCase().startsWith(m + ' ' + m + ' ')) {
+                name = name.substring(m.length + 1).trim();
+            } else if (m && name.toUpperCase().startsWith(m + ' ' + m)) {
+                name = name.substring(m.length).trim();
+            }
+            // Strip trailing homologation codes like 1LS6CMEO, 3JDAANB
+            name = name.replace(/\s+[0-9A-Z]{6,16}$/i, '').trim();
+
+            const uName = name.toUpperCase();
+            if (uName === 'DACIA' || uName === 'DACIA DACIA') name = 'DACIA SANDERO';
+            else if (uName === 'TOYOTA' || uName === 'TOYOTA TOYOTA') name = 'TOYOTA COROLLA';
+            else if (uName === 'SEAT' || uName === 'SEAT SEAT') name = 'SEAT ARONA';
+            else if (uName === 'VOLKSWAGEN' || uName === 'VOLKSWAGEN VOLKSWAGEN') name = 'VOLKSWAGEN GOLF';
+            else if (uName === 'AL S05' || uName === 'S05' || uName === 'DEEPAL') name = 'DEEPAL S05';
+
+            return name || `${marca} ${modeloRaw}`;
+        };
+
+        if (allData.summary) {
+            window.Components.renderMetrics(allData.summary);
+        }
+
+        const cleanBrands = (allData.brands || [])
+            .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
+            .slice(0, this.brandsLimit);
+        window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', cleanBrands);
+
+        const cleanModels = (allData.models || [])
+            .filter(m => {
+                const name = String(m.modelo_full || m.modelo || '');
+                const marca = String(m.marca || '');
+                return !name.toUpperCase().includes('DESCONOCIDO') && !marca.toUpperCase().includes('DESCONOCIDO') && !name.startsWith('202');
+            })
+            .map(m => ({
+                ...m,
+                modelo_full: cleanModelName(m.marca, m.modelo_full, m.modelo)
+            }))
+            .slice(0, this.modelsLimit);
+        window.DashboardCharts.initModelsRankingChart('modelsRankingChart', cleanModels);
+
+        const cleanEvModels = (allData.ev_models || [])
+            .filter(m => {
+                const name = String(m.modelo_full || m.modelo || '');
+                const marca = String(m.marca || '');
+                return !name.toUpperCase().includes('DESCONOCIDO') && !marca.toUpperCase().includes('DESCONOCIDO') && !name.startsWith('202');
+            })
+            .map(m => ({
+                ...m,
+                modelo_full: cleanModelName(m.marca, m.modelo_full, m.modelo)
+            }))
+            .slice(0, this.evLimit);
+        window.DashboardCharts.initEVRankingChart('evRankingChart', cleanEvModels);
+
+        const cleanEvBrands = (allData.ev_brands || [])
+            .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
+            .slice(0, this.evBrandsLimit);
+        window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', cleanEvBrands);
+
+        window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix || [], (clickedFuel) => {
+            if (this.fuelFilter) {
+                let targetOption = '';
+                for (let opt of this.fuelFilter.options) {
+                    if (opt.value && (opt.value.includes(clickedFuel) || clickedFuel.includes(opt.value))) {
+                        targetOption = opt.value;
+                        break;
+                    }
+                }
+                if (!targetOption && clickedFuel.includes('ELECTRICO')) targetOption = 'Eléctrico (BEV)';
+                if (!targetOption && clickedFuel.includes('HIBRIDO')) targetOption = 'Híbrido (HEV)';
+
+                if (this.fuelFilter.value === targetOption) {
+                    this.fuelFilter.value = '';
+                } else {
+                    this.fuelFilter.value = targetOption || clickedFuel;
+                }
+                this.refreshAll();
+            }
+        });
+
+        if (cleanBrands.length > 0 || cleanModels.length > 0) {
+            window.Components.patchMetricCardsIfMissing(cleanBrands, cleanModels);
+        }
+    }
+
+    async loadSecondaryCharts() {
         try {
             const q = this.getFullQueryParams();
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
 
-            // Execute secondary trend queries in parallel with fetchCached
             const [
                 dailyData,
                 monthlyEvolData,
@@ -897,6 +931,7 @@ class DashboardApp {
                 this.fetchCached(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`)
             ]);
 
+            // 1. Daily Evolution
             if (dailyData) {
                 window.DashboardCharts.initDailyEvolutionChart('dailyEvolutionChart', dailyData, (clickedDate) => {
                     if (this.dateFromFilter && this.dateToFilter) {
@@ -914,26 +949,31 @@ class DashboardApp {
                 });
             }
 
+            // 2. Monthly Evolution
             if (monthlyEvolData) {
                 window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', monthlyEvolData);
             }
 
+            // 3. Multi-year EV Quota Trend Chart
             if (evQuotaData) {
                 window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', evQuotaData);
             }
 
+            // 4. Multi-year EV Cumulative Trend Chart
             if (evCumData) {
                 window.DashboardCharts.initEVCumulativeTrendChart('evCumulativeTrendChart', evCumData);
             }
 
+            // 5. All Technologies Monthly Quota Trend Chart
             const allTechTitleEl = document.getElementById('all-tech-quota-title');
             if (allTechTitleEl) allTechTitleEl.textContent = `Cuota por Tecnología Mes a Mes (${this.selectedYear})`;
 
             if (techQuotaData) {
                 window.DashboardCharts.initAllTechQuotaChart('allTechQuotaChart', techQuotaData);
             }
+
         } catch (error) {
-            console.error('Failed to load charts:', error);
+            console.error('Failed to load secondary charts:', error);
         }
     }
 

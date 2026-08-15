@@ -1,4 +1,5 @@
-// charts.js - Chart.js configurations adapted for Premium Light Mode
+// BUILD_STAMP_20260815_1325_PRODUCTION_NEW
+// charts.js - Chart.js Initializations Premium Light Mode
 
 // Set global defaults for Light Mode
 Chart.defaults.color = '#475569';
@@ -142,13 +143,18 @@ function initMonthlyEvolutionChart(ctxId, data) {
         }
     });
 }
-
 function initBrandsRankingChart(ctxId, data) {
     const el = document.getElementById(ctxId);
     if (!el) return;
     const ctx = el.getContext('2d');
     
     if (charts[ctxId]) charts[ctxId].destroy();
+    if (el.parentElement) {
+        el.parentElement.style.height = (!data || data.length === 0) ? '320px' : `${Math.max(320, data.length * 28 + 20)}px`;
+    }
+    if (!data || data.length === 0) return;
+    
+    const maxVal = Math.max(...data.map(d => d.total), 10);
     
     charts[ctxId] = new Chart(ctx, {
         type: 'bar',
@@ -166,6 +172,7 @@ function initBrandsRankingChart(ctxId, data) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { left: 5, right: 40 } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -191,8 +198,8 @@ function initBrandsRankingChart(ctxId, data) {
                 }
             },
             scales: {
-                x: { grid: { color: '#f1f5f9' }, max: Math.max(...data.map(d => d.total)) * 1.15 },
-                y: { grid: { display: false } }
+                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.22 },
+                y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '600' }, autoSkip: false } }
             }
         }
     });
@@ -204,13 +211,17 @@ function initModelsRankingChart(ctxId, data) {
     const ctx = el.getContext('2d');
     
     if (charts[ctxId]) charts[ctxId].destroy();
+    if (el.parentElement) {
+        el.parentElement.style.height = (!data || data.length === 0) ? '320px' : `${Math.max(320, data.length * 28 + 20)}px`;
+    }
+    if (!data || data.length === 0) return;
     
     const maxVal = Math.max(...data.map(d => d.total), 10);
     
     charts[ctxId] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.map(d => d.modelo_full),
+            labels: data.map(d => d.modelo_full || `${d.marca} ${d.modelo}`),
             datasets: [{
                 label: 'Unidades',
                 data: data.map(d => d.total),
@@ -223,12 +234,13 @@ function initModelsRankingChart(ctxId, data) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { left: 5, right: 40 } },
             plugins: {
                 legend: { display: false }
             },
             scales: {
-                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.18 },
-                y: { grid: { display: false } }
+                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.22 },
+                y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '600' }, autoSkip: false } }
             }
         }
     });
@@ -240,13 +252,17 @@ function initEVRankingChart(ctxId, data) {
     const ctx = el.getContext('2d');
 
     if (charts[ctxId]) charts[ctxId].destroy();
+    if (el.parentElement) {
+        el.parentElement.style.height = (!data || data.length === 0) ? '320px' : `${Math.max(320, data.length * 28 + 20)}px`;
+    }
+    if (!data || data.length === 0) return;
 
     const maxVal = Math.max(...data.map(d => d.total), 10);
 
     charts[ctxId] = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: data.map(d => d.modelo_full),
+            labels: data.map(d => d.modelo_full || `${d.marca} ${d.modelo}`),
             datasets: [{
                 label: 'Unidades 100% Eléctrico',
                 data: data.map(d => d.total),
@@ -259,12 +275,13 @@ function initEVRankingChart(ctxId, data) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { left: 5, right: 40 } },
             plugins: {
                 legend: { display: false }
             },
             scales: {
-                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.18 },
-                y: { grid: { display: false } }
+                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.22 },
+                y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '600' }, autoSkip: false } }
             }
         }
     });
@@ -276,6 +293,10 @@ function initEVBrandsRankingChart(ctxId, data) {
     const ctx = el.getContext('2d');
 
     if (charts[ctxId]) charts[ctxId].destroy();
+    if (el.parentElement) {
+        el.parentElement.style.height = (!data || data.length === 0) ? '320px' : `${Math.max(320, data.length * 28 + 20)}px`;
+    }
+    if (!data || data.length === 0) return;
 
     const maxVal = Math.max(...data.map(d => d.total), 10);
 
@@ -295,6 +316,7 @@ function initEVBrandsRankingChart(ctxId, data) {
             indexAxis: 'y',
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { left: 5, right: 40 } },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -320,19 +342,42 @@ function initEVBrandsRankingChart(ctxId, data) {
                 }
             },
             scales: {
-                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.15 },
-                y: { grid: { display: false } }
+                x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.22 },
+                y: { grid: { display: false }, ticks: { color: '#0f172a', font: { size: 11, weight: '600' }, autoSkip: false } }
             }
         }
     });
 }
 
-function initFuelMixChart(ctxId, data, onFuelClick) {
+function initFuelMixChart(ctxId, rawData, onFuelClick) {
     const el = document.getElementById(ctxId);
     if (!el) return;
     const ctx = el.getContext('2d');
     
     if (charts[ctxId]) charts[ctxId].destroy();
+
+    if (!rawData || !Array.isArray(rawData) || rawData.length === 0) return;
+
+    function getFuelColor(fuelName) {
+        const s = String(fuelName || '').toUpperCase();
+        if (s.includes('GASOLINA')) return '#ef4444'; // Vibrant Red
+        if (s.includes('PHEV') || s.includes('ENCHUF')) return '#8b5cf6'; // Electric Purple
+        if (s.includes('HIBRID') || s.includes('HÍBRID') || s.includes('HEV') || s.includes('MHEV') || s.includes('HBRID')) return '#10b981'; // Emerald Green
+        if (s.includes('ELEC') || s.includes('BEV') || s.includes('ELÉC') || s.includes('ELC') || s === 'EV') return '#06b6d4'; // Cyan / Teal
+        if (s.includes('DIESEL') || s.includes('DIÉSEL') || s.includes('GASOIL')) return '#64748b'; // Slate Grey
+        if (s.includes('GAS') || s.includes('GLP') || s.includes('GNC')) return '#f59e0b'; // Amber Orange
+        if (s.includes('HIDRO') || s.includes('H2') || s.includes('FCEV')) return '#3b82f6'; // Sky Blue
+        return '#6366f1';
+    }
+
+    const data = rawData.map(d => {
+        const name = d.carburante || d.nombre || d.grupo || 'Otros';
+        const total = Number(d.total || d.unidades || 0);
+        const color = getFuelColor(name);
+        return { carburante: name, total, color };
+    }).filter(d => d.total > 0);
+
+    if (data.length === 0) return;
 
     const totalSum = data.reduce((acc, curr) => acc + curr.total, 0) || 1;
     
@@ -360,7 +405,7 @@ function initFuelMixChart(ctxId, data, onFuelClick) {
             plugins: {
                 legend: {
                     position: 'right',
-                    labels: { color: '#334155', font: { size: 12 } }
+                    labels: { color: '#334155', font: { size: 12, weight: '600' }, boxWidth: 16, padding: 12 }
                 },
                 tooltip: {
                     callbacks: {
@@ -372,7 +417,7 @@ function initFuelMixChart(ctxId, data, onFuelClick) {
                     }
                 }
             },
-            cutout: '70%'
+            cutout: '68%'
         }
     });
 }

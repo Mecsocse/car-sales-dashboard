@@ -22,27 +22,19 @@ function renderMetrics(summary) {
     const container = document.getElementById("metrics-container");
     if (!container || !summary) return;
 
-    // Handle backend error responses gracefully
-    if (summary.error) {
-        console.warn("Summary API returned an error:", summary.error);
-    }
+    const totalVal = summary.total_month ? summary.total_month.toLocaleString("es-ES") : "0";
+    const changeVal = summary.pct_change >= 0 ? `+${summary.pct_change}%` : `${summary.pct_change}%`;
+    const changeColor = summary.pct_change >= 0 ? "text-green" : "text-red";
+    const changeIcon = summary.pct_change >= 0 ? "trending-up" : "trending-down";
 
-    const rawTotal = (summary.total_month !== undefined && summary.total_month !== null && typeof summary.total_month === 'number') 
-        ? summary.total_month 
-        : ((summary.total_units !== undefined && summary.total_units !== null && typeof summary.total_units === 'number') ? summary.total_units : 0);
-    const totalVal = rawTotal > 0 ? rawTotal.toLocaleString("es-ES") : "0";
+    const evShareVal = summary.ev_share !== undefined ? `${summary.ev_share}%` : "0%";
+    const rawBrand = summary.top_brand || "N/A";
+    const topBrandVal = rawBrand.toUpperCase().includes('DESCONOCIDO') ? "N/A" : rawBrand;
+    const topBrandUnits = (topBrandVal !== "N/A" && summary.top_brand_units) ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
 
-    const rawPct = (summary.pct_change !== undefined && summary.pct_change !== null && typeof summary.pct_change === 'number') ? summary.pct_change : null;
-    const changeVal = rawPct !== null ? (rawPct >= 0 ? `+${rawPct}%` : `${rawPct}%`) : "N/A";
-    const changeColor = rawPct !== null ? (rawPct >= 0 ? "text-green" : "text-red") : "text-muted";
-    const changeIcon = rawPct !== null ? (rawPct >= 0 ? "trending-up" : "trending-down") : "minus";
-
-    const evShareVal = (summary.ev_share !== undefined && summary.ev_share !== null && typeof summary.ev_share === 'number') ? `${summary.ev_share}%` : "0%";
-    const topBrandVal = summary.top_brand || "N/A";
-    const topBrandUnits = (summary.top_brand_units !== undefined && summary.top_brand_units !== null && summary.top_brand_units > 0) ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
-
-    const topModelVal = summary.top_model || "N/A";
-    const topModelUnits = (summary.top_model_units !== undefined && summary.top_model_units !== null && summary.top_model_units > 0) ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
+    const rawModel = summary.top_model || "N/A";
+    const topModelVal = rawModel.toUpperCase().includes('DESCONOCIDO') ? "N/A" : rawModel;
+    const topModelUnits = (topModelVal !== "N/A" && summary.top_model_units) ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
 
     container.innerHTML = `
         ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, "vs período anterior", "car")}
@@ -114,10 +106,49 @@ function populateSelect(selectId, options, defaultText) {
     select.innerHTML = html;
 }
 
+function patchMetricCardsIfMissing(cleanBrands, cleanModels) {
+    const container = document.getElementById("metrics-container");
+    if (!container) return;
+
+    const cards = container.querySelectorAll(".metric-card");
+    if (cards.length >= 4) {
+        // Card 3: Marca Ganadora
+        const brandCard = cards[2];
+        const brandValEl = brandCard.querySelector(".metric-value");
+        const brandFootEl = brandCard.querySelector(".metric-footer span:first-child");
+        if (cleanBrands && cleanBrands.length > 0) {
+            const topB = cleanBrands[0];
+            if (brandValEl && (brandValEl.textContent.trim() === "N/A" || brandValEl.textContent.toUpperCase().includes("DESCONOCIDO") || brandValEl.textContent.startsWith("202"))) {
+                brandValEl.textContent = topB.marca;
+                if (brandFootEl && topB.total) {
+                    brandFootEl.innerHTML = `<i data-lucide="award" style="width:14px; height:14px;"></i> ${topB.total.toLocaleString("es-ES")} un.`;
+                }
+            }
+        }
+
+        // Card 4: Modelo Ganador
+        const modelCard = cards[3];
+        const modelValEl = modelCard.querySelector(".metric-value");
+        const modelFootEl = modelCard.querySelector(".metric-footer span:first-child");
+        if (cleanModels && cleanModels.length > 0) {
+            const topM = cleanModels[0];
+            if (modelValEl && (modelValEl.textContent.trim() === "N/A" || modelValEl.textContent.toUpperCase().includes("DESCONOCIDO") || modelValEl.textContent.startsWith("202"))) {
+                modelValEl.textContent = topM.modelo_full || `${topM.marca} ${topM.modelo}`;
+                if (modelFootEl && topM.total) {
+                    modelFootEl.innerHTML = `<i data-lucide="trophy" style="width:14px; height:14px;"></i> ${topM.total.toLocaleString("es-ES")} un.`;
+                }
+            }
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
 window.Components = {
     createMetricCard,
     renderMetrics,
+    patchMetricCardsIfMissing,
     renderTable,
     populateSelect,
     getFuelColor
 };
+
