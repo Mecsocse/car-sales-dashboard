@@ -833,14 +833,15 @@ class DashboardApp {
             } else if (m && name.toUpperCase().startsWith(m + ' ' + m)) {
                 name = name.substring(m.length).trim();
             }
-            // Strip trailing homologation codes like 1LS6CMEO, 3JDAANB
-            name = name.replace(/\s+[0-9A-Z]{6,16}$/i, '').trim();
+            // Strip trailing homologation codes like 1LS6CMEO, 3JDAANB (must contain at least one digit)
+            name = name.replace(/\s+(?=[0-9A-Z]*\d)[0-9A-Z]{4,16}$/i, '').trim();
 
             const uName = name.toUpperCase();
             if (uName === 'DACIA' || uName === 'DACIA DACIA') name = 'DACIA SANDERO';
             else if (uName === 'TOYOTA' || uName === 'TOYOTA TOYOTA') name = 'TOYOTA COROLLA';
             else if (uName === 'SEAT' || uName === 'SEAT SEAT') name = 'SEAT ARONA';
             else if (uName === 'VOLKSWAGEN' || uName === 'VOLKSWAGEN VOLKSWAGEN') name = 'VOLKSWAGEN GOLF';
+            else if (uName === 'RENAULT' || uName === 'RENAULT RENAULT') name = 'RENAULT TWINGO';
             else if (uName === 'AL S05' || uName === 'S05' || uName === 'DEEPAL') name = 'DEEPAL S05';
 
             return name || `${marca} ${modeloRaw}`;
