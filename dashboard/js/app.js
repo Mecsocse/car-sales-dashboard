@@ -853,6 +853,27 @@ class DashboardApp {
 
         const cleanBrands = (allData.brands || [])
             .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
+            .map(b => {
+                const brandUpper = String(b.marca).trim().toUpperCase();
+                const brandModels = (allData.models || [])
+                    .filter(m => {
+                        const name = String(m.modelo_full || m.modelo || '').toUpperCase();
+                        return name.startsWith(brandUpper + ' ') || name === brandUpper;
+                    })
+                    .map(m => {
+                        let mName = cleanModelName(b.marca, m.modelo_full, m.modelo);
+                        if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
+                            mName = mName.substring(brandUpper.length + 1).trim();
+                        }
+                        return { modelo: mName, total: m.total };
+                    })
+                    .sort((x, y) => y.total - x.total);
+
+                return {
+                    ...b,
+                    modelos: brandModels
+                };
+            })
             .slice(0, this.brandsLimit);
         window.DashboardCharts.initBrandsRankingChart('brandsRankingChart', cleanBrands);
 
@@ -884,6 +905,27 @@ class DashboardApp {
 
         const cleanEvBrands = (allData.ev_brands || [])
             .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
+            .map(b => {
+                const brandUpper = String(b.marca).trim().toUpperCase();
+                const brandEvModels = (allData.ev_models || [])
+                    .filter(m => {
+                        const name = String(m.modelo_full || m.modelo || '').toUpperCase();
+                        return name.startsWith(brandUpper + ' ') || name === brandUpper;
+                    })
+                    .map(m => {
+                        let mName = cleanModelName(b.marca, m.modelo_full, m.modelo);
+                        if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
+                            mName = mName.substring(brandUpper.length + 1).trim();
+                        }
+                        return { modelo: mName, total: m.total };
+                    })
+                    .sort((x, y) => y.total - x.total);
+
+                return {
+                    ...b,
+                    modelos: brandEvModels
+                };
+            })
             .slice(0, this.evBrandsLimit);
         window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', cleanEvBrands);
 
