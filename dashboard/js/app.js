@@ -6,8 +6,8 @@ const isFile = window.location.protocol === 'file:' || window.location.hostname 
 const API_BASE = isLocal ? '' : (isFile ? 'http://127.0.0.1:8000' : 'https://car-sales-api-jafd.onrender.com');
 
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new DashboardApp();
-    app.init();
+    window.App = new DashboardApp();
+    window.App.init();
 });
 
 class DashboardApp {
@@ -82,7 +82,7 @@ class DashboardApp {
             // Invalidate and remove old local storage caches
             try {
                 Object.keys(localStorage).forEach(k => {
-                    if (k.startsWith('dashboard_all_data_') && !k.startsWith('dashboard_all_data_v20260815_6_')) {
+                    if (k.startsWith('dashboard_all_data_') && !k.startsWith('dashboard_all_data_v20260816_valdes_v5_')) {
                         localStorage.removeItem(k);
                     }
                 });
@@ -94,6 +94,7 @@ class DashboardApp {
             this.bindEvents();
             this.bindCompareEvents();
             this.bindMatrixEvents();
+            this.bindBrandModalEvents();
 
             await this.loadInitialDropdowns();
             await this.refreshAll();
@@ -650,6 +651,7 @@ class DashboardApp {
             evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
         }
 
+        this.showLoading('Cargando matriz...');
         try {
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
             const url = `${API_BASE}/api/analytics/monthly-matrix?year=${this.selectedYear}&limit=${limit}&sort_by=${this.matrixSortBy}&sort_dir=${this.matrixSortDir}${ccaaParam}${search ? '&search=' + encodeURIComponent(search) : ''}`;
@@ -690,6 +692,8 @@ class DashboardApp {
             this.matrixTableBody.innerHTML = html || '<tr><td colspan="15" class="text-center">No se encontraron modelos.</td></tr>';
         } catch (e) {
             console.error('Error loading monthly matrix table:', e);
+        } finally {
+            this.hideLoading();
         }
     }
 
@@ -786,9 +790,48 @@ class DashboardApp {
         }
     }
 
+    showLoading(text = 'Actualizando datos...') {
+        const spinner = document.getElementById('global-loading-spinner');
+        if (spinner) {
+            const span = spinner.querySelector('span');
+            if (span) span.textContent = text;
+            spinner.classList.add('active');
+        }
+        const containers = document.querySelectorAll('.metric-card, .chart-card, .table-card');
+        containers.forEach(c => c.classList.add('content-loading'));
+
+        // In-chart loading overlays
+        const chartContainers = document.querySelectorAll('.chart-container');
+        chartContainers.forEach(container => {
+            let overlay = container.querySelector('.chart-loading-overlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.className = 'chart-loading-overlay';
+                overlay.innerHTML = `
+                    <div class="chart-spinner-ring"></div>
+                    <span class="chart-loading-label">Cargando datos...</span>
+                `;
+                container.appendChild(overlay);
+            }
+            overlay.classList.add('active');
+        });
+    }
+
+    hideLoading() {
+        const spinner = document.getElementById('global-loading-spinner');
+        if (spinner) {
+            spinner.classList.remove('active');
+        }
+        const containers = document.querySelectorAll('.metric-card, .chart-card, .table-card');
+        containers.forEach(c => c.classList.remove('content-loading'));
+
+        const overlays = document.querySelectorAll('.chart-loading-overlay');
+        overlays.forEach(overlay => overlay.classList.remove('active'));
+    }
+
     async loadMetricsAndChartsConsolidated() {
         const q = this.getFullQueryParams();
-        const cacheKey = `dashboard_all_data_v20260815_6_${q}`;
+        const cacheKey = `dashboard_all_data_v20260816_valdes_v5_${q}`;
 
         // 1. Instant cache load from localStorage or memory (0ms)
         if (!this.memoryCache) this.memoryCache = new Map();
@@ -807,6 +850,8 @@ class DashboardApp {
             }
         }
 
+        this.showLoading('Actualizando datos...');
+
         // 2. Fetch fresh consolidated data (single fast query)
         try {
             const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
@@ -817,6 +862,8 @@ class DashboardApp {
             }
         } catch (e) {
             console.error('Error fetching consolidated all-data:', e);
+        } finally {
+            this.hideLoading();
         }
     }
 
@@ -827,7 +874,11 @@ class DashboardApp {
         // Clean model full names
         const cleanModelName = (marca, modeloFull, modeloRaw) => {
             let name = String(modeloFull || modeloRaw || '').trim();
-            const m = String(marca || '').trim().toUpperCase();
+            let m = String(marca || '').trim().toUpperCase();
+
+            // Normalize accents (LEÓN -> LEON, etc.)
+            name = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
             if (m && name.toUpperCase().startsWith(m + ' ' + m + ' ')) {
                 name = name.substring(m.length + 1).trim();
             } else if (m && name.toUpperCase().startsWith(m + ' ' + m)) {
@@ -869,11 +920,23 @@ class DashboardApp {
                         mName = mName.substring(brandUpper.length + 1).trim();
                     }
                     if (!mName || mName.toUpperCase().includes('DESCONOCIDO')) return;
+
+                    // Reclassify CUPRA dedicated models if they appear under SEAT
+                    if (brandUpper === 'SEAT' && (mName.toUpperCase().includes('FORMENTOR') || mName.toUpperCase().includes('TERRAMAR') || mName.toUpperCase().includes('TAVASCAN') || mName.toUpperCase().includes('BORN') || mName.toUpperCase().includes('RAVAL'))) {
+                        return;
+                    }
+
+                    // Canonical model mergers
+                    if (mName.toUpperCase() === 'LEON SP' || mName.toUpperCase() === 'LEON SPORTSTOURER' || mName.toUpperCase() === 'LEON SPORTS TOURER') {
+                        mName = 'LEON';
+                    }
+
                     merged[mName] = (merged[mName] || 0) + m.total;
                 });
 
                 const sortedModels = Object.entries(merged)
                     .map(([modelo, total]) => ({ modelo, total }))
+                    .filter(x => x.total > 0 && !x.modelo.startsWith('202') && x.modelo !== '-' && x.modelo !== '--' && x.modelo !== '----')
                     .sort((x, y) => y.total - x.total);
 
                 return {
@@ -1060,5 +1123,199 @@ class DashboardApp {
 
     exportCSV() {
         alert('Esta es una función Premium. Actualiza tu plan para exportar los datos en CSV.');
+    }
+
+    // -------------------------------------------------------------
+    // BRAND DEEP DIVE & COMPARATOR MODAL LOGIC
+    // -------------------------------------------------------------
+    bindBrandModalEvents() {
+        const modal = document.getElementById('brand-deepdive-modal');
+        const closeBtn = document.getElementById('close-brand-modal');
+        const compareSelect = document.getElementById('modal-compare-brand-select');
+        const tabBtns = document.querySelectorAll('.brand-tab-btn');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeBrandModal());
+        }
+
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) this.closeBrandModal();
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+                this.closeBrandModal();
+            }
+        });
+
+        if (compareSelect) {
+            compareSelect.addEventListener('change', (e) => {
+                const targetBrandB = e.target.value;
+                if (this.currentBrandA) {
+                    this.openBrandModal(this.currentBrandA, targetBrandB);
+                }
+            });
+        }
+
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                if (tab) this.renderBrandModalTab(tab);
+            });
+        });
+    }
+
+    async openBrandModal(brandA, brandB = '') {
+        const modal = document.getElementById('brand-deepdive-modal');
+        if (!modal) return;
+
+        this.currentBrandA = brandA;
+        this.currentBrandB = brandB;
+        this.currentBrandTab = this.currentBrandTab || 'monthly';
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        // Populate Comparator Dropdown with Top 100 brands
+        const compareSelect = document.getElementById('modal-compare-brand-select');
+        if (compareSelect) {
+            try {
+                const res = await fetch(`${API_BASE}/api/brands/list?limit=100`);
+                if (res.ok) {
+                    const brands = await res.json();
+                    let html = '<option value="">➕ Comparar con otra marca...</option>';
+                    brands.filter(b => b && b !== brandA && !b.startsWith('202')).forEach(b => {
+                        const sel = b === brandB ? 'selected' : '';
+                        html += `<option value="${b}" ${sel}>${b}</option>`;
+                    });
+                    compareSelect.innerHTML = html;
+                }
+            } catch (err) {
+                console.error('Failed to load brands for comparison dropdown:', err);
+            }
+            compareSelect.value = brandB || '';
+        }
+
+        // Set Header Title & Badges
+        const badgeA = document.getElementById('modal-brand-badge-a');
+        if (badgeA) badgeA.textContent = brandA;
+
+        const title = document.getElementById('modal-brand-title');
+        if (title) {
+            title.textContent = brandB ? `${brandA} (Azul) vs ${brandB} (Rojo)` : `Análisis Integral: ${brandA}`;
+        }
+
+        // Fetch brand deepdive data
+        const yearParam = this.selectedYear || (this.selectedMonth ? this.selectedMonth.split('-')[0] : '2026');
+        const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
+        const compParam = brandB ? `&brand_b=${encodeURIComponent(brandB)}` : '';
+        const url = `${API_BASE}/api/analytics/brand-deepdive?brand_a=${encodeURIComponent(brandA)}${compParam}&year=${yearParam}${ccaaParam}`;
+
+        const subtitle = document.getElementById('modal-period-subtitle');
+        if (subtitle) {
+            const cText = this.selectedCcaa || 'Toda España';
+            subtitle.textContent = `Año ${yearParam} Completo (Ene - Dic) • ${cText}`;
+        }
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('API Error');
+            const data = await res.json();
+            this.brandDeepDiveData = data;
+
+            // Render KPI Strip
+            this.renderBrandModalKPIs(data);
+
+            // Render Active Tab Chart
+            this.renderBrandModalTab(this.currentBrandTab);
+
+            if (window.lucide) lucide.createIcons();
+        } catch (err) {
+            console.error('Error fetching brand deepdive:', err);
+        }
+    }
+
+    closeBrandModal() {
+        const modal = document.getElementById('brand-deepdive-modal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+        this.currentBrandB = '';
+        const compareSelect = document.getElementById('modal-compare-brand-select');
+        if (compareSelect) compareSelect.value = '';
+    }
+
+    renderBrandModalKPIs(data) {
+        const kpiContainer = document.getElementById('modal-brand-kpis');
+        if (!kpiContainer || !data.brand_a) return;
+
+        const ba = data.brand_a;
+        const bb = data.brand_b;
+        const yr = data.year || '2026';
+
+        let html = `
+            <div class="brand-kpi-item">
+                <span class="kpi-lbl">Ventas Totales (${yr})</span>
+                <span class="kpi-val" style="color: #2563eb;">${ba.total_units.toLocaleString('es-ES')} un.</span>
+                ${bb ? `<span class="kpi-sub" style="color: #dc2626; font-weight:700;">vs ${bb.marca}: ${bb.total_units.toLocaleString('es-ES')} un.</span>` : `<span class="kpi-sub">Total acumulado año ${yr}</span>`}
+            </div>
+            <div class="brand-kpi-item">
+                <span class="kpi-lbl">Cuota de Mercado (${yr})</span>
+                <span class="kpi-val" style="color: #2563eb;">${ba.market_share}%</span>
+                ${bb ? `<span class="kpi-sub" style="color: #dc2626; font-weight:700;">vs ${bb.marca}: ${bb.market_share}%</span>` : `<span class="kpi-sub">Sobre total España</span>`}
+            </div>
+            <div class="brand-kpi-item">
+                <span class="kpi-lbl">Top Modelo (${ba.marca})</span>
+                <span class="kpi-val" style="font-size: 16px; color: #2563eb;">${ba.models && ba.models[0] ? ba.models[0].modelo : 'N/A'}</span>
+                <span class="kpi-sub">${ba.models && ba.models[0] ? `${ba.models[0].total.toLocaleString('es-ES')} un. (${ba.models[0].pct}%)` : ''}</span>
+            </div>
+            <div class="brand-kpi-item">
+                <span class="kpi-lbl">Tecnología Principal</span>
+                <span class="kpi-val" style="font-size: 16px; color: #2563eb;">${ba.fuel_mix && ba.fuel_mix[0] ? ba.fuel_mix[0].carburante : 'N/A'}</span>
+                <span class="kpi-sub">${ba.fuel_mix && ba.fuel_mix[0] ? `${ba.fuel_mix[0].pct}% de sus ventas` : ''}</span>
+            </div>
+        `;
+        kpiContainer.innerHTML = html;
+    }
+
+    renderBrandModalTab(tabId) {
+        if (!this.brandDeepDiveData) return;
+        const data = this.brandDeepDiveData;
+        const ba = data.brand_a;
+        const bb = data.brand_b;
+        const yr = data.year || '2026';
+
+        // Show/hide tab panes
+        const panes = document.querySelectorAll('.brand-tab-pane');
+        panes.forEach(p => {
+            p.style.display = p.id === `brand-tab-${tabId}` ? 'block' : 'none';
+        });
+
+        // Update active tab buttons and tab titles with year
+        const tabBtns = document.querySelectorAll('.brand-tab-btn');
+        tabBtns.forEach(btn => {
+            const isTarget = btn.dataset.tab === tabId;
+            btn.classList.toggle('active', isTarget);
+            if (btn.dataset.tab === 'monthly') {
+                btn.querySelector('span').textContent = `Mes a Mes (${yr})`;
+            }
+        });
+
+        this.currentBrandTab = tabId;
+
+        // Render appropriate chart with explicit year in legend/tooltips
+        const labelA = `${ba.marca} (${yr})`;
+        const labelB = bb ? `${bb.marca} (${yr})` : null;
+
+        if (tabId === 'monthly') {
+            window.DashboardCharts.initBrandMonthlyChart('brandMonthlyChart', ba.monthly, bb ? bb.monthly : null, labelA, labelB);
+        } else if (tabId === 'yearly') {
+            window.DashboardCharts.initBrandYearlyChart('brandYearlyChart', ba.yearly, bb ? bb.yearly : null, ba.marca, bb ? bb.marca : null);
+        } else if (tabId === 'models') {
+            window.DashboardCharts.initBrandModelsChart('brandModelsChart', ba.models, bb ? bb.models : null, labelA, labelB);
+        } else if (tabId === 'fuels') {
+            window.DashboardCharts.initBrandFuelMixChart('brandFuelMixChart', ba.fuel_mix, bb ? bb.fuel_mix : null, labelA, labelB);
+        }
     }
 }

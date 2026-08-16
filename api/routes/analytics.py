@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 import sqlite3
-from typing import Optional, List
+from typing import Optional, List, Any, Dict
 from datetime import datetime
 import sys
 import os
@@ -733,14 +733,43 @@ def get_province_ranking(conn: sqlite3.Connection = Depends(get_db)):
     return []
 
 @router.get("/brands/list")
-def get_brands_list(conn: sqlite3.Connection = Depends(get_db)):
-    if "brands_list" in _LIST_CACHE:
-        return _LIST_CACHE["brands_list"]
+def get_brands_list(limit: int = 100, conn: sqlite3.Connection = Depends(get_db)):
+    cache_key = f"brands_list_clean_{limit}"
+    if cache_key in _LIST_CACHE:
+        return _LIST_CACHE[cache_key]
     c = conn.cursor()
-    exec_query(c, "SELECT DISTINCT COALESCE(marca_clean, marca_raw) as nombre FROM ventas_registradas WHERE marca_clean IS NOT NULL ORDER BY nombre")
-    res = [r['nombre'] for r in c.fetchall() if r['nombre']]
-    _LIST_CACHE["brands_list"] = res
-    return res
+    exec_query(c, """
+        SELECT marca_clean as nombre, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE marca_clean IS NOT NULL
+          AND marca_clean != ''
+          AND UPPER(marca_clean) != 'DESCONOCIDO'
+          AND marca_clean NOT LIKE '202%'
+          AND UPPER(marca_clean) NOT LIKE '%CARROC%'
+          AND UPPER(marca_clean) NOT LIKE '%VOLQUE%'
+          AND UPPER(marca_clean) NOT LIKE '%REMOLQ%'
+          AND UPPER(marca_clean) NOT LIKE '%CAYVOL%'
+          AND UPPER(marca_clean) NOT LIKE '%SEMITRAILER%'
+          AND UPPER(marca_clean) NOT LIKE 'VOLKSWAGEN %'
+          AND UPPER(marca_clean) NOT LIKE 'SEAT %'
+          AND UPPER(marca_clean) NOT LIKE 'RENAULT %'
+        GROUP BY marca_clean
+        ORDER BY total DESC
+        LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    
+    def _val(r, col_name, idx=0):
+        if isinstance(r, dict):
+            return r.get(col_name)
+        if hasattr(r, 'keys') and col_name in r.keys():
+            return r[col_name]
+        return r[idx] if len(r) > idx else None
+
+    # Sort the top selling brands alphabetically for clean UX in dropdowns
+    names = sorted([_val(r, 'nombre', 0) for r in rows if _val(r, 'nombre', 0)])
+    _LIST_CACHE[cache_key] = names
+    return names
 
 @router.get("/models/list")
 def get_models_list(brand: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
@@ -951,14 +980,40 @@ def get_dashboard_all_data(
             where_res += " AND v.carburante_std = ?"
             res_params.append(fuel)
 
-    # 1. Brands ranking (Top 50)
+    # 1. Brands ranking (Top 50) with complete model breakdown
     where_brands = f"{where_res} AND UPPER(COALESCE(v.marca_clean, '')) != 'DESCONOCIDO' AND v.marca_clean NOT LIKE '202%'"
     exec_query(c, f"""
         SELECT v.marca_clean as marca, SUM({units_col}) as total
         FROM {from_table} v WHERE {where_brands}
         GROUP BY marca ORDER BY total DESC LIMIT 50
     """, res_params)
-    brands = c.fetchall()
+    brand_rows = c.fetchall()
+
+    # Query complete models per brand
+    exec_query(c, f"""
+        SELECT v.marca_clean as marca,
+               COALESCE(NULLIF(v.modelo_clean, ''), v.marca_clean) as modelo,
+               SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_brands}
+        GROUP BY marca, modelo
+        ORDER BY marca, total DESC
+    """, res_params)
+    brand_model_rows = c.fetchall()
+
+    brand_models_map = {}
+    for r in brand_model_rows:
+        b_m = r['marca'] if isinstance(r, dict) else r[0]
+        m_m = r['modelo'] if isinstance(r, dict) else r[1]
+        t_m = r['total'] if isinstance(r, dict) else r[2]
+        if b_m not in brand_models_map:
+            brand_models_map[b_m] = []
+        brand_models_map[b_m].append({"modelo": m_m, "total": t_m})
+
+    brands = [{
+        "marca": r['marca'] if isinstance(r, dict) else r[0],
+        "total": r['total'] if isinstance(r, dict) else r[1],
+        "modelos": brand_models_map.get(r['marca'] if isinstance(r, dict) else r[0], [])
+    } for r in brand_rows]
 
     # 2. Models ranking (Top 50)
     where_models = f"{where_res} AND UPPER(COALESCE(v.marca_clean, '')) != 'DESCONOCIDO' AND UPPER(COALESCE(v.modelo_clean, '')) != 'DESCONOCIDO' AND v.marca_clean NOT LIKE '202%'"
@@ -982,14 +1037,39 @@ def get_dashboard_all_data(
     """, res_params)
     ev_models = c.fetchall()
 
-    # 4. EV Brands ranking (Top 50)
+    # 4. EV Brands ranking (Top 50) with complete EV model breakdown
     where_ev_brands = f"{where_brands} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
     exec_query(c, f"""
         SELECT v.marca_clean as marca, SUM({units_col}) as total
         FROM {from_table} v WHERE {where_ev_brands}
         GROUP BY marca ORDER BY total DESC LIMIT 50
     """, res_params)
-    ev_brands = c.fetchall()
+    ev_brand_rows = c.fetchall()
+
+    exec_query(c, f"""
+        SELECT v.marca_clean as marca,
+               COALESCE(NULLIF(v.modelo_clean, ''), v.marca_clean) as modelo,
+               SUM({units_col}) as total
+        FROM {from_table} v WHERE {where_ev_brands}
+        GROUP BY marca, modelo
+        ORDER BY marca, total DESC
+    """, res_params)
+    ev_brand_model_rows = c.fetchall()
+
+    ev_brand_models_map = {}
+    for r in ev_brand_model_rows:
+        b_m = r['marca'] if isinstance(r, dict) else r[0]
+        m_m = r['modelo'] if isinstance(r, dict) else r[1]
+        t_m = r['total'] if isinstance(r, dict) else r[2]
+        if b_m not in ev_brand_models_map:
+            ev_brand_models_map[b_m] = []
+        ev_brand_models_map[b_m].append({"modelo": m_m, "total": t_m})
+
+    ev_brands = [{
+        "marca": r['marca'] if isinstance(r, dict) else r[0],
+        "total": r['total'] if isinstance(r, dict) else r[1],
+        "modelos": ev_brand_models_map.get(r['marca'] if isinstance(r, dict) else r[0], [])
+    } for r in ev_brand_rows]
 
     # 5. Fuel Mix
     exec_query(c, f"""
@@ -1028,6 +1108,7 @@ def get_dashboard_all_data(
                 elif marca.upper() == 'TOYOTA': modelo = 'COROLLA'
                 elif marca.upper() == 'SEAT': modelo = 'ARONA'
                 elif marca.upper() == 'VOLKSWAGEN': modelo = 'GOLF'
+                elif marca.upper() == 'RENAULT': modelo = 'TWINGO'
                 elif marca.upper() == 'DEEPAL': modelo = 'S05'
                 else: modelo = marca
 
@@ -1039,20 +1120,189 @@ def get_dashboard_all_data(
         return [{"modelo_full": mf, "total": tot} for mf, tot in sorted(m_totals.items(), key=lambda x: x[1], reverse=True)[:50]]
 
     def _format_brands_res(b_rows):
-        b_totals = {}
+        formatted = []
         for r in b_rows:
             b = r['marca'] if isinstance(r, dict) else r[0]
             tot = r['total'] if isinstance(r, dict) else r[1]
-            b_totals[b] = b_totals.get(b, 0) + tot
-        return [{"marca": b, "total": tot} for b, tot in sorted(b_totals.items(), key=lambda x: x[1], reverse=True)[:50]]
+            modelos = r.get('modelos', []) if isinstance(r, dict) else []
+            formatted.append({"marca": b, "total": tot, "modelos": modelos})
+        formatted.sort(key=lambda x: x['total'], reverse=True)
+        return formatted[:50]
+
+    fmt_models = _format_models_res(models)
+    fmt_brands = _format_brands_res(brands)
+    fmt_ev_models = _format_models_res(ev_models)
+    fmt_ev_brands = _format_brands_res(ev_brands)
+
+    # Ensure summary totals are 100% accurate and never None
+    if not summary_data: summary_data = {}
+    if not summary_data.get('total_registrations'):
+        exec_query(c, f"SELECT SUM({units_col}) as total FROM {from_table} v WHERE {where_res}", res_params)
+        s_row = c.fetchone()
+        summary_data['total_registrations'] = (s_row['total'] if isinstance(s_row, dict) else s_row[0]) if s_row else sum(b['total'] for b in fmt_brands)
+    
+    if fmt_brands:
+        summary_data['top_brand'] = fmt_brands[0]['marca']
+        summary_data['top_brand_units'] = fmt_brands[0]['total']
+    if fmt_models:
+        summary_data['top_model'] = fmt_models[0]['modelo_full']
+        summary_data['top_model_units'] = fmt_models[0]['total']
+
+    # EV share calculation
+    bev_total = sum(f['total'] for f in fuel_mix if 'ELÉCTRICO' in str(f['carburante']).upper())
+    total_all = summary_data.get('total_registrations') or 1
+    summary_data['ev_quota'] = round((bev_total / total_all) * 100, 1)
 
     res_payload = {
         "summary": summary_data,
-        "brands": _format_brands_res(brands),
-        "models": _format_models_res(models),
-        "ev_models": _format_models_res(ev_models),
-        "ev_brands": _format_brands_res(ev_brands),
+        "brands": fmt_brands,
+        "models": fmt_models,
+        "ev_models": fmt_ev_models,
+        "ev_brands": fmt_ev_brands,
         "fuel_mix": fuel_mix
     }
     _ALL_DATA_CACHE[cache_key] = (res_payload, now)
     return res_payload
+
+
+@router.get("/analytics/brand-deepdive")
+def get_brand_deepdive(
+    brand_a: str = Query(..., description="Nombre de la marca principal"),
+    brand_b: Optional[str] = Query(None, description="Nombre de la marca secundaria para comparar"),
+    year: str = Query("2026", description="Año de análisis"),
+    ccaa: Optional[str] = Query(None, description="CCAA opcional"),
+    conn: Any = Depends(get_db)
+):
+    """
+    Devuelve métricas detalladas para una o dos marcas:
+    - Ventas mes a mes (Ene-Dic)
+    - Ventas año a año (2023-2026)
+    - Desglose y ranking completo de modelos
+    - Mix de carburantes y tecnologías
+    - Cuota de mercado sobre el total nacional
+    """
+    c = conn.cursor()
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+
+    def _val(r, col_name=None, idx=0, default=0):
+        if not r: return default
+        if isinstance(r, (list, tuple)): return r[idx] if len(r) > idx else default
+        if isinstance(r, dict): return r.get(col_name, default) if col_name else list(r.values())[idx]
+        try:
+            return r[col_name] if col_name and col_name in r.keys() else r[idx]
+        except Exception:
+            try: return r[idx]
+            except Exception: return default
+
+    # Total nacional en el año
+    p_nat = [year, ccaa.strip()] if where_ccaa else [year]
+    exec_query(c, f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE anio_str = ? {where_ccaa}", p_nat)
+    nat_row = c.fetchone()
+    national_total = _val(nat_row, 'total', 0, 1) or 1
+
+    meses_nombres = [
+        ("01", "Ene"), ("02", "Feb"), ("03", "Mar"), ("04", "Abr"),
+        ("05", "May"), ("06", "Jun"), ("07", "Jul"), ("08", "Ago"),
+        ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dic")
+    ]
+
+    def _fetch_brand_metrics(b_name):
+        if not b_name: return None
+        b_clean = b_name.strip().upper()
+        
+        # 1. Total anual y cuota
+        p_tot = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]
+        exec_query(c, f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE anio_str = ? AND UPPER(marca_clean) = ? {where_ccaa}", p_tot)
+        t_row = c.fetchone()
+        tot_units = _val(t_row, 'total', 0, 0)
+        market_share = round((tot_units / national_total * 100), 2) if national_total > 0 else 0
+
+        # 2. Ventas mes a mes
+        p_m = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]
+        exec_query(c, f"""
+            SELECT substr(mes_str, 6, 2) as m_num, SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE anio_str = ? AND UPPER(marca_clean) = ? {where_ccaa}
+            GROUP BY m_num
+            ORDER BY m_num ASC
+        """, p_m)
+        m_rows = { _val(r, 'm_num', 0): _val(r, 'total', 1, 0) for r in c.fetchall() }
+        monthly_data = [{
+            "mes": code,
+            "mes_nombre": nombre,
+            "total": m_rows.get(code, 0)
+        } for code, nombre in meses_nombres]
+
+        # 3. Ventas año a año (2023, 2024, 2025, 2026)
+        p_y = [b_clean, ccaa.strip()] if where_ccaa else [b_clean]
+        exec_query(c, f"""
+            SELECT anio_str, SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE anio_str IN ('2023', '2024', '2025', '2026') AND UPPER(marca_clean) = ? {where_ccaa}
+            GROUP BY anio_str
+            ORDER BY anio_str ASC
+        """, p_y)
+        y_rows = { _val(r, 'anio_str', 0): _val(r, 'total', 1, 0) for r in c.fetchall() }
+        yearly_data = [{
+            "anio": yr,
+            "total": y_rows.get(yr, 0)
+        } for yr in ['2023', '2024', '2025', '2026']]
+
+        # 4. Desglose de Modelos
+        p_mod = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]
+        exec_query(c, f"""
+            SELECT modelo_clean, SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE anio_str = ? AND UPPER(marca_clean) = ? {where_ccaa}
+            GROUP BY modelo_clean
+            ORDER BY total DESC
+        """, p_mod)
+        mod_rows = c.fetchall()
+        models_data = [{
+            "modelo": _val(r, 'modelo_clean', 0),
+            "total": _val(r, 'total', 1, 0),
+            "pct": round((_val(r, 'total', 1, 0) / (tot_units or 1) * 100), 1)
+        } for r in mod_rows if _val(r, 'modelo_clean', 0) and _val(r, 'total', 1, 0) > 0]
+
+        # 5. Mix de Carburantes
+        p_f = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]
+        exec_query(c, f"""
+            SELECT 
+                CASE
+                    WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'Eléctrico (BEV)'
+                    WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'Híbrido Enchufable (PHEV)'
+                    WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'Híbrido (HEV/MHEV)'
+                    WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'Diésel'
+                    WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'Gas (GLP/GNC)'
+                    ELSE 'Gasolina'
+                END as carb,
+                SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE anio_str = ? AND UPPER(marca_clean) = ? {where_ccaa}
+            GROUP BY carb
+            ORDER BY total DESC
+        """, p_f)
+        f_rows = c.fetchall()
+        fuel_data = [{
+            "carburante": _val(r, 'carb', 0),
+            "total": _val(r, 'total', 1, 0),
+            "pct": round((_val(r, 'total', 1, 0) / (tot_units or 1) * 100), 1)
+        } for r in f_rows]
+
+        return {
+            "marca": b_clean,
+            "total_units": tot_units,
+            "market_share": market_share,
+            "monthly": monthly_data,
+            "yearly": yearly_data,
+            "models": models_data,
+            "fuel_mix": fuel_data
+        }
+
+    return {
+        "year": year,
+        "national_total": national_total,
+        "brand_a": _fetch_brand_metrics(brand_a),
+        "brand_b": _fetch_brand_metrics(brand_b) if brand_b else None
+    }
+

@@ -79,9 +79,10 @@ def build_full_where(
         clauses = ["(v.pais_id = ? OR v.pais_id = 1)"]
         params = [country_code]
 
-    clauses.append("(v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL)")
-    clauses.append("(v.modelo_clean NOT LIKE 'CAMION%')")
-    clauses.append("(v.es_nuevo = 1 OR v.es_nuevo IS NULL)")
+    if not os.environ.get("DATABASE_URL"):
+        clauses.append("(v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL)")
+        clauses.append("(v.modelo_clean NOT LIKE 'CAMION%')")
+        clauses.append("(v.es_nuevo = 1 OR v.es_nuevo IS NULL)")
 
     if date_from:
         clauses.append("v.fecha >= ?")
@@ -184,6 +185,16 @@ def get_summary(
 
     try:
         c = conn.cursor()
+        if os.environ.get("DATABASE_URL"):
+            exec_query(c, "SELECT get_dashboard_metrics(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                       [period, month if month else '2026-08', year if year else '2026', ccaa, province, brand, fuel, date_from, date_to])
+            r_row = c.fetchone()
+            if r_row:
+                rpc_data = r_row['get_dashboard_metrics'] if isinstance(r_row, dict) and 'get_dashboard_metrics' in r_row else (r_row[0] if isinstance(r_row, (list, tuple)) else None)
+                if rpc_data and isinstance(rpc_data, dict) and rpc_data.get('summary'):
+                    _SUMMARY_CACHE[cache_key] = (rpc_data['summary'], now)
+                    return rpc_data['summary']
+
         where_sql, params, _ = build_full_where(
             country, period, month, year, brand, model, fuel, province, ccaa, date_from, date_to, conn
         )
@@ -192,24 +203,31 @@ def get_summary(
         max_row = c.fetchone()
         latest_date = _get_val(max_row, 'max_date', 0) or "2026-08-04"
 
-        exec_query(c, "SELECT SUM(unidades) as total FROM ventas_registradas WHERE fecha = ? AND (tipo_vehiculo = 'TURISMO' OR tipo_vehiculo IS NULL) AND modelo_clean NOT LIKE 'CAMION%'", (latest_date,))
+        exec_query(c, "SELECT SUM(unidades) as total FROM ventas_registradas WHERE fecha = ?", (latest_date,))
         today_row = c.fetchone()
         total_today = _get_val(today_row, 'total', 0) or 0
 
         target_m = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
         target_y = year if year else "2026"
 
-        where_cond = "1=1"
-        res_params = []
         if date_from and date_to:
-            where_cond += " AND v.fecha >= ? AND v.fecha <= ?"
-            res_params.extend([date_from, date_to])
+            from_table = "ventas_registradas"
+            where_cond = "v.fecha >= ? AND v.fecha <= ?"
+            res_params = [date_from, date_to]
+            units_col = "v.unidades"
+            model_full_expr = "COALESCE(v.marca_clean, v.marca_raw) || ' ' || COALESCE(v.modelo_clean, v.modelo_raw)"
         elif period == 'year':
-            where_cond += " AND v.anio_str = ?"
-            res_params.append(target_y)
+            from_table = "ventas_mensuales_resumen"
+            where_cond = "v.anio_str = ?"
+            res_params = [target_y]
+            units_col = "v.total_unidades"
+            model_full_expr = "v.modelo_full"
         else:
-            where_cond += " AND v.mes_str = ?"
-            res_params.append(target_m)
+            from_table = "ventas_mensuales_resumen"
+            where_cond = "v.mes_str = ?"
+            res_params = [target_m]
+            units_col = "v.total_unidades"
+            model_full_expr = "v.modelo_full"
 
         if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', ''):
             where_cond += " AND LOWER(v.ccaa) = LOWER(?)"
@@ -223,7 +241,7 @@ def get_summary(
             where_cond += " AND v.carburante_std = ?"
             res_params.append(fuel)
 
-        query_total = f"SELECT SUM(v.total_unidades) as total FROM ventas_mensuales_resumen v WHERE {where_cond}"
+        query_total = f"SELECT SUM({units_col}) as total FROM {from_table} v WHERE {where_cond}"
         exec_query(c, query_total, res_params)
         total_row = c.fetchone()
         total_month = _get_val(total_row, 'total', 0) or 0
@@ -232,19 +250,19 @@ def get_summary(
         prev_month = int(total_month * 0.95)
         pct_change = 5.2
 
-        query_ev = f"SELECT SUM(v.total_unidades) as total_ev FROM ventas_mensuales_resumen v WHERE {where_cond} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
+        query_ev = f"SELECT SUM({units_col}) as total_ev FROM {from_table} v WHERE {where_cond} AND v.carburante_std IN ('ELECTRICO', 'EV', 'BEV')"
         exec_query(c, query_ev, res_params)
         ev_row = c.fetchone()
         ev_units = _get_val(ev_row, 'total_ev', 0) or 0
         ev_share = round((ev_units / (total_month or 1) * 100), 1) if total_month > 0 else 0.0
 
-        query_brand = f"SELECT v.marca_clean as marca, SUM(v.total_unidades) as total FROM ventas_mensuales_resumen v WHERE {where_cond} GROUP BY marca ORDER BY total DESC LIMIT 1"
+        query_brand = f"SELECT v.marca_clean as marca, SUM({units_col}) as total FROM {from_table} v WHERE {where_cond} AND UPPER(COALESCE(v.marca_clean,'')) != 'DESCONOCIDO' AND v.marca_clean NOT LIKE '202%' GROUP BY marca ORDER BY total DESC LIMIT 1"
         exec_query(c, query_brand, res_params)
         top_b_row = c.fetchone()
         top_brand = _get_val(top_b_row, 'marca', 0) or "N/A"
         top_brand_units = _get_val(top_b_row, 'total', 1) or 0
 
-        query_model = f"SELECT v.modelo_full as modelo_full, SUM(v.total_unidades) as total FROM ventas_mensuales_resumen v WHERE {where_cond} GROUP BY modelo_full ORDER BY total DESC LIMIT 1"
+        query_model = f"SELECT {model_full_expr} as modelo_full, SUM({units_col}) as total FROM {from_table} v WHERE {where_cond} AND UPPER(COALESCE(v.marca_clean,'')) != 'DESCONOCIDO' AND UPPER(COALESCE(v.modelo_clean,'')) != 'DESCONOCIDO' AND v.marca_clean NOT LIKE '202%' GROUP BY modelo_full ORDER BY total DESC LIMIT 1"
         exec_query(c, query_model, res_params)
         top_m_row = c.fetchone()
         top_model = _get_val(top_m_row, 'modelo_full', 0) or "N/A"

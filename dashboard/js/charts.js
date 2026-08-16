@@ -173,6 +173,28 @@ function initBrandsRankingChart(ctxId, data) {
             responsive: true,
             maintainAspectRatio: false,
             layout: { padding: { left: 5, right: 40 } },
+            onClick: (e, activeElements, chart) => {
+                let elements = activeElements;
+                if ((!elements || elements.length === 0) && chart && chart.getElementsAtEventForMode) {
+                    elements = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                }
+                if (elements && elements.length > 0) {
+                    const index = elements[0].index;
+                    const brandObj = data[index];
+                    if (brandObj && brandObj.marca && window.App && window.App.openBrandModal) {
+                        window.App.openBrandModal(brandObj.marca);
+                    }
+                }
+            },
+            onHover: (e, activeElements, chart) => {
+                let elements = activeElements;
+                if ((!elements || elements.length === 0) && chart && chart.getElementsAtEventForMode) {
+                    elements = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                }
+                if (e.native && e.native.target) {
+                    e.native.target.style.cursor = (elements && elements.length > 0) ? 'pointer' : 'default';
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -180,7 +202,7 @@ function initBrandsRankingChart(ctxId, data) {
                         title: (tooltipItems) => {
                             const item = tooltipItems[0];
                             const brandObj = data[item.dataIndex];
-                            return `${brandObj.marca}: ${brandObj.total.toLocaleString('es-ES')} unidades`;
+                            return `${brandObj.marca}: ${brandObj.total.toLocaleString('es-ES')} unidades (Click para analizar)`;
                         },
                         label: () => null,
                         afterBody: (tooltipItems) => {
@@ -317,6 +339,28 @@ function initEVBrandsRankingChart(ctxId, data) {
             responsive: true,
             maintainAspectRatio: false,
             layout: { padding: { left: 5, right: 40 } },
+            onClick: (e, activeElements, chart) => {
+                let elements = activeElements;
+                if ((!elements || elements.length === 0) && chart && chart.getElementsAtEventForMode) {
+                    elements = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                }
+                if (elements && elements.length > 0) {
+                    const index = elements[0].index;
+                    const brandObj = data[index];
+                    if (brandObj && brandObj.marca && window.App && window.App.openBrandModal) {
+                        window.App.openBrandModal(brandObj.marca);
+                    }
+                }
+            },
+            onHover: (e, activeElements, chart) => {
+                let elements = activeElements;
+                if ((!elements || elements.length === 0) && chart && chart.getElementsAtEventForMode) {
+                    elements = chart.getElementsAtEventForMode(e, 'nearest', { intersect: false }, true);
+                }
+                if (e.native && e.native.target) {
+                    e.native.target.style.cursor = (elements && elements.length > 0) ? 'pointer' : 'default';
+                }
+            },
             plugins: {
                 legend: { display: false },
                 tooltip: {
@@ -324,7 +368,7 @@ function initEVBrandsRankingChart(ctxId, data) {
                         title: (tooltipItems) => {
                             const item = tooltipItems[0];
                             const brandObj = data[item.dataIndex];
-                            return `${brandObj.marca}: ${brandObj.total.toLocaleString('es-ES')} unidades (BEV)`;
+                            return `${brandObj.marca}: ${brandObj.total.toLocaleString('es-ES')} unidades BEV (Click para analizar)`;
                         },
                         label: () => null,
                         afterBody: (tooltipItems) => {
@@ -473,6 +517,83 @@ function initCompareFuelMixChart(ctxId, compData) {
     });
 }
 
+// Plugin to draw annual mean quota reference lines with badges for all years
+const annualAvgQuotaPlugin = {
+    id: 'annualAvgQuota',
+    afterDraw(chart) {
+        const { ctx, chartArea, scales: { y } } = chart;
+        if (!y || !chartArea) return;
+        const { left, right, top, bottom } = chartArea;
+
+        const linesToDraw = [];
+        chart.data.datasets.forEach(dataset => {
+            if (dataset.annualAvg !== undefined && dataset.annualAvg !== null && dataset.showAvgLine) {
+                const yVal = dataset.annualAvg;
+                const yPos = y.getPixelForValue(yVal);
+                if (yPos >= top && yPos <= bottom) {
+                    linesToDraw.push({
+                        dataset,
+                        yVal,
+                        yPos,
+                        color: dataset.borderColor,
+                        txt: `Media ${dataset.yearLabel}: ${yVal.toFixed(1)}%`
+                    });
+                }
+            }
+        });
+
+        // 1. Draw dashed reference lines
+        linesToDraw.forEach(item => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.setLineDash([5, 4]);
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 0.65;
+            ctx.moveTo(left, item.yPos);
+            ctx.lineTo(right, item.yPos);
+            ctx.stroke();
+            ctx.restore();
+        });
+
+        // 2. Draw staggered pill badges on the right
+        linesToDraw.sort((a, b) => a.yPos - b.yPos);
+        let prevBadgeY = -999;
+        linesToDraw.forEach(item => {
+            ctx.save();
+            ctx.font = 'bold 11px Outfit, sans-serif';
+            const textWidth = ctx.measureText(item.txt).width;
+            const badgeW = textWidth + 14;
+            const badgeH = 20;
+            const badgeX = right - badgeW - 6;
+            
+            let targetY = item.yPos - (badgeH / 2);
+            if (targetY < prevBadgeY + badgeH + 2) {
+                targetY = prevBadgeY + badgeH + 2;
+            }
+            prevBadgeY = targetY;
+
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = item.color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(badgeX, targetY, badgeW, badgeH, 6);
+            } else {
+                ctx.rect(badgeX, targetY, badgeW, badgeH);
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = item.color;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(item.txt, badgeX + (badgeW / 2), targetY + (badgeH / 2));
+            ctx.restore();
+        });
+    }
+};
+
 function initEVQuotaTrendChart(ctxId, yearsData) {
     const el = document.getElementById(ctxId);
     if (!el) return;
@@ -490,14 +611,29 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
     };
 
     const datasets = [];
-    Object.keys(yearsData).sort().reverse().forEach(year => {
+    const sortedYears = Object.keys(yearsData).sort().reverse();
+    sortedYears.forEach(year => {
+        const validQuotas = [];
         const dataArr = monthCodes.map(m => {
             const item = yearsData[year] ? yearsData[year][m] : null;
-            return item ? item.quota : null;
+            if (item && item.quota !== null && item.quota !== undefined) {
+                validQuotas.push(Number(item.quota));
+                return item.quota;
+            }
+            return null;
         });
 
+        const avgQuota = validQuotas.length > 0
+            ? Number((validQuotas.reduce((a, b) => a + b, 0) / validQuotas.length).toFixed(1))
+            : null;
+
+        const labelText = avgQuota !== null ? `${year} (Media: ${avgQuota}%)` : year;
+
         datasets.push({
-            label: year,
+            label: labelText,
+            yearLabel: year,
+            annualAvg: avgQuota,
+            showAvgLine: true, // Show average line for all available years
             data: dataArr,
             borderColor: YEAR_COLORS[year] || '#2563eb',
             backgroundColor: YEAR_COLORS[year] || '#2563eb',
@@ -512,6 +648,7 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
     charts[ctxId] = new Chart(ctx, {
         type: 'line',
         data: { labels: monthLabels, datasets },
+        plugins: [annualAvgQuotaPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
@@ -527,7 +664,7 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
                 x: { grid: { display: false } },
                 y: {
                     grid: { color: '#f1f5f9' },
-                    ticks: { callback: (v) => `${v}%` }
+                    ticks: { callback: (v) => v.toLocaleString('es-ES') }
                 }
             }
         }
@@ -655,6 +792,235 @@ function initAllTechQuotaChart(ctxId, techData) {
     });
 }
 
+// -------------------------------------------------------------
+// BRAND DEEP DIVE MODAL CHARTS
+// -------------------------------------------------------------
+function initBrandMonthlyChart(ctxId, monthlyA, monthlyB, nameA, nameB) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    const labels = (monthlyA || []).map(m => m.mes_nombre);
+    const datasets = [{
+        label: nameA,
+        data: (monthlyA || []).map(m => m.total),
+        backgroundColor: '#2563eb', // Brand A: Blue
+        borderRadius: 4
+    }];
+
+    if (monthlyB && nameB) {
+        datasets.push({
+            label: nameB,
+            data: (monthlyB || []).map(m => m.total),
+            backgroundColor: '#dc2626', // Brand B: Red
+            borderRadius: 4
+        });
+    }
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: !!nameB, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v.toLocaleString('es-ES') } }
+            }
+        }
+    });
+}
+
+function initBrandYearlyChart(ctxId, yearlyA, yearlyB, nameA, nameB) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    const labels = (yearlyA || []).map(y => y.anio);
+    const datasets = [{
+        label: nameA,
+        data: (yearlyA || []).map(y => y.total),
+        backgroundColor: '#2563eb', // Brand A: Blue
+        borderRadius: 6
+    }];
+
+    if (yearlyB && nameB) {
+        datasets.push({
+            label: nameB,
+            data: (yearlyB || []).map(y => y.total),
+            backgroundColor: '#dc2626', // Brand B: Red
+            borderRadius: 6
+        });
+    }
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: !!nameB, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v.toLocaleString('es-ES') } }
+            }
+        }
+    });
+}
+
+function initBrandModelsChart(ctxId, modelsA, modelsB, nameA, nameB) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    if (!modelsB) {
+        // Single Brand Mode: Horizontal bar of all models
+        const topModels = (modelsA || []).slice(0, 15);
+        if (el.parentElement) {
+            el.parentElement.style.height = `${Math.max(280, topModels.length * 28 + 30)}px`;
+        }
+
+        charts[ctxId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: topModels.map(m => m.modelo),
+                datasets: [{
+                    label: nameA,
+                    data: topModels.map(m => m.total),
+                    backgroundColor: '#2563eb', // Brand A: Blue
+                    borderRadius: 5
+                }]
+            },
+            plugins: [alwaysShowValuesPlugin],
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: '#f1f5f9' } },
+                    y: { grid: { display: false }, ticks: { color: '#0f172a', font: { weight: '600' } } }
+                }
+            }
+        });
+    } else {
+        // Comparison Mode: Grouped models
+        const topA = (modelsA || []).slice(0, 8);
+        const topB = (modelsB || []).slice(0, 8);
+        const allModelNames = Array.from(new Set([...topA.map(m => m.modelo), ...topB.map(m => m.modelo)]));
+        const mapA = Object.fromEntries((modelsA || []).map(m => [m.modelo, m.total]));
+        const mapB = Object.fromEntries((modelsB || []).map(m => [m.modelo, m.total]));
+
+        if (el.parentElement) {
+            el.parentElement.style.height = `${Math.max(280, allModelNames.length * 32 + 30)}px`;
+        }
+
+        charts[ctxId] = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: allModelNames,
+                datasets: [
+                    {
+                        label: nameA,
+                        data: allModelNames.map(m => mapA[m] || 0),
+                        backgroundColor: '#2563eb', // Brand A: Blue
+                        borderRadius: 4
+                    },
+                    {
+                        label: nameB,
+                        data: allModelNames.map(m => mapB[m] || 0),
+                        backgroundColor: '#dc2626', // Brand B: Red
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.x.toLocaleString('es-ES')} un.`
+                        }
+                    }
+                },
+                scales: {
+                    x: { grid: { color: '#f1f5f9' } },
+                    y: { grid: { display: false }, ticks: { color: '#0f172a', font: { weight: '600' } } }
+                }
+            }
+        });
+    }
+}
+
+function initBrandFuelMixChart(ctxId, fuelA, fuelB, nameA, nameB) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    const allFuels = ['Gasolina', 'Diésel', 'Híbrido (HEV/MHEV)', 'Híbrido Enchufable (PHEV)', 'Eléctrico (BEV)', 'Gas (GLP/GNC)'];
+    const mapA = Object.fromEntries((fuelA || []).map(f => [f.carburante, f.pct]));
+    const mapB = Object.fromEntries((fuelB || []).map(f => [f.carburante, f.pct]));
+
+    const datasets = [{
+        label: nameA,
+        data: allFuels.map(f => mapA[f] || 0),
+        backgroundColor: '#2563eb', // Brand A: Blue
+        borderRadius: 4
+    }];
+
+    if (fuelB && nameB) {
+        datasets.push({
+            label: nameB,
+            data: allFuels.map(f => mapB[f] || 0),
+            backgroundColor: '#dc2626', // Brand B: Red
+            borderRadius: 4
+        });
+    }
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: allFuels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: !!nameB, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => `${v}%` } }
+            }
+        }
+    });
+}
+
 window.DashboardCharts = {
     initDailyEvolutionChart,
     initMonthlyEvolutionChart,
@@ -666,5 +1032,9 @@ window.DashboardCharts = {
     initCompareFuelMixChart,
     initEVQuotaTrendChart,
     initEVCumulativeTrendChart,
-    initAllTechQuotaChart
+    initAllTechQuotaChart,
+    initBrandMonthlyChart,
+    initBrandYearlyChart,
+    initBrandModelsChart,
+    initBrandFuelMixChart
 };

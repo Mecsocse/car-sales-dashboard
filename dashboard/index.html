@@ -18,9 +18,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/styles.css?v=20260815_v4">
-</head>
+    <link rel="stylesheet" href="css/styles.css?v=20260816_valdes_v5">
 <body>
+    <!-- Global Loading Clock Indicator -->
+    <div id="global-loading-spinner" class="global-loading-indicator">
+        <div class="spinner-clock-ring"></div>
+        <span>Actualizando datos...</span>
+    </div>
+
     <div class="app-container">
         <!-- Main Content (Full Width) -->
         <main class="main-content">
@@ -476,10 +481,93 @@
         </main>
     </div>
 
+    <!-- Brand Deep Dive & Comparator Modal -->
+    <div id="brand-deepdive-modal" class="brand-modal-backdrop" style="display: none;">
+        <div class="brand-modal-card">
+            <!-- Modal Header -->
+            <div class="brand-modal-header">
+                <div class="brand-modal-title-group">
+                    <div class="brand-modal-badge" id="modal-brand-badge-a">MARCA</div>
+                    <div class="brand-modal-info">
+                        <h2 id="modal-brand-title">Análisis de Marca</h2>
+                        <span id="modal-period-subtitle" class="text-muted">Período Seleccionado • Toda España</span>
+                    </div>
+                </div>
+                
+                <div class="brand-modal-actions">
+                    <!-- Comparator Selector -->
+                    <div class="comparator-select-wrapper">
+                        <i data-lucide="git-compare" style="width: 16px; height: 16px; color: #64748b;"></i>
+                        <select id="modal-compare-brand-select">
+                            <option value="">➕ Comparar con otra marca...</option>
+                        </select>
+                    </div>
+                    <button class="modal-close-btn" id="close-brand-modal"><i data-lucide="x"></i></button>
+                </div>
+            </div>
+
+            <!-- Brand KPI Cards Strip -->
+            <div class="brand-modal-kpis" id="modal-brand-kpis">
+                <!-- Injected dynamically via JS -->
+            </div>
+
+            <!-- Modal Nav Tabs -->
+            <div class="brand-modal-tabs" id="brand-modal-tab-bar">
+                <button class="brand-tab-btn active" data-tab="monthly">
+                    <i data-lucide="calendar"></i>
+                    <span>Mes a Mes</span>
+                </button>
+                <button class="brand-tab-btn" data-tab="yearly">
+                    <i data-lucide="trending-up"></i>
+                    <span>Año a Año</span>
+                </button>
+                <button class="brand-tab-btn" data-tab="models">
+                    <i data-lucide="car"></i>
+                    <span>Modelos</span>
+                </button>
+                <button class="brand-tab-btn" data-tab="fuels">
+                    <i data-lucide="zap"></i>
+                    <span>Mix Carburantes</span>
+                </button>
+            </div>
+
+            <!-- Modal Tab Content -->
+            <div class="brand-modal-body">
+                <!-- Tab 1: Monthly -->
+                <div class="brand-tab-pane" id="brand-tab-monthly">
+                    <div class="modal-chart-container" style="height: 320px;">
+                        <canvas id="brandMonthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Yearly -->
+                <div class="brand-tab-pane" id="brand-tab-yearly" style="display: none;">
+                    <div class="modal-chart-container" style="height: 320px;">
+                        <canvas id="brandYearlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Models -->
+                <div class="brand-tab-pane" id="brand-tab-models" style="display: none;">
+                    <div class="modal-chart-container" style="height: 340px;">
+                        <canvas id="brandModelsChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Fuels -->
+                <div class="brand-tab-pane" id="brand-tab-fuels" style="display: none;">
+                    <div class="modal-chart-container" style="height: 320px;">
+                        <canvas id="brandFuelMixChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
-    <script src="js/components.js?v=20260815_v4"></script>
-    <script src="js/charts.js?v=20260815_v4"></script>
-    <script src="js/insights.js?v=20260815_v4"></script>
-    <script src="js/app.js?v=20260815_v4"></script>
+    <script src="js/components.js?v=20260816_valdes_v5"></script>
+    <script src="js/charts.js?v=20260816_valdes_v5"></script>
+    <script src="js/insights.js?v=20260816_valdes_v5"></script>
+    <script src="js/app.js?v=20260816_valdes_v5"></script>
 </body>
 </html>
