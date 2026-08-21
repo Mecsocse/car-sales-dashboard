@@ -415,14 +415,20 @@ class DashboardApp {
 
     async fetchCached(url) {
         if (!this.cacheMap) this.cacheMap = new Map();
+        const now = Date.now();
         if (this.cacheMap.has(url)) {
-            return this.cacheMap.get(url);
+            const { data, timestamp } = this.cacheMap.get(url);
+            if (now - timestamp < 30000 && data && data.summary && data.summary.total_month > 0) {
+                return data;
+            }
         }
         try {
             const res = await fetch(url);
             if (!res.ok) return null;
             const data = await res.json();
-            this.cacheMap.set(url, data);
+            if (data && (!data.summary || data.summary.total_month > 0)) {
+                this.cacheMap.set(url, { data, timestamp: now });
+            }
             return data;
         } catch (e) {
             console.error('Fetch error for', url, e);
@@ -831,22 +837,26 @@ class DashboardApp {
 
     async loadMetricsAndChartsConsolidated() {
         const q = this.getFullQueryParams();
-        const cacheKey = `dashboard_all_data_v20260816_valdes_v5_${q}`;
+        const cacheKey = `dashboard_all_data_v20260821_official_v2_${q}`;
 
-        // 1. Instant cache load from localStorage or memory (0ms)
+        // 1. Instant cache load from localStorage or memory (0ms) - only if valid and populated
         if (!this.memoryCache) this.memoryCache = new Map();
         const memCached = this.memoryCache.get(cacheKey);
-        if (memCached) {
+        if (memCached && memCached.summary && memCached.summary.total_month > 0 && memCached.summary.top_brand !== 'N/A') {
             this.renderAllDataPayload(memCached);
         } else {
             const localCached = localStorage.getItem(cacheKey);
             if (localCached) {
                 try {
                     const parsed = JSON.parse(localCached);
-                    if (parsed && parsed.summary) {
+                    if (parsed && parsed.summary && parsed.summary.total_month > 0 && parsed.summary.top_brand !== 'N/A') {
                         this.renderAllDataPayload(parsed);
+                    } else {
+                        localStorage.removeItem(cacheKey);
                     }
-                } catch(e) {}
+                } catch(e) {
+                    localStorage.removeItem(cacheKey);
+                }
             }
         }
 
@@ -855,9 +865,11 @@ class DashboardApp {
         // 2. Fetch fresh consolidated data (single fast query)
         try {
             const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
-            if (allData && allData.summary) {
+            if (allData && allData.summary && allData.summary.total_month > 0) {
                 this.memoryCache.set(cacheKey, allData);
                 try { localStorage.setItem(cacheKey, JSON.stringify(allData)); } catch(e) {}
+                this.renderAllDataPayload(allData);
+            } else if (allData) {
                 this.renderAllDataPayload(allData);
             }
         } catch (e) {
@@ -1171,12 +1183,26 @@ class DashboardApp {
         const modal = document.getElementById('brand-deepdive-modal');
         if (!modal) return;
 
+        const loader = document.getElementById('brand-modal-loader');
+        if (loader) loader.style.display = 'flex';
+
         this.currentBrandA = brandA;
         this.currentBrandB = brandB;
         this.currentBrandTab = this.currentBrandTab || 'monthly';
 
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+
+        // Clear stale KPI cards and show clean skeleton placeholders while fetching
+        const kpiContainer = document.getElementById('modal-brand-kpis');
+        if (kpiContainer) {
+            kpiContainer.innerHTML = `
+                <div class="brand-kpi-item" style="opacity: 0.6;"><span class="kpi-lbl">Ventas Totales</span><span class="kpi-val" style="color: #94a3b8;">...</span><span class="kpi-sub">Cargando...</span></div>
+                <div class="brand-kpi-item" style="opacity: 0.6;"><span class="kpi-lbl">Cuota de Mercado</span><span class="kpi-val" style="color: #94a3b8;">...</span><span class="kpi-sub">Cargando...</span></div>
+                <div class="brand-kpi-item" style="opacity: 0.6;"><span class="kpi-lbl">Top Modelo (${brandA})</span><span class="kpi-val" style="color: #94a3b8;">...</span><span class="kpi-sub">Cargando...</span></div>
+                <div class="brand-kpi-item" style="opacity: 0.6;"><span class="kpi-lbl">Tecnología Principal</span><span class="kpi-val" style="color: #94a3b8;">...</span><span class="kpi-sub">Cargando...</span></div>
+            `;
+        }
 
         // Populate Comparator Dropdown with Top 100 brands
         const compareSelect = document.getElementById('modal-compare-brand-select');
@@ -1234,6 +1260,8 @@ class DashboardApp {
             if (window.lucide) lucide.createIcons();
         } catch (err) {
             console.error('Error fetching brand deepdive:', err);
+        } finally {
+            if (loader) loader.style.display = 'none';
         }
     }
 
