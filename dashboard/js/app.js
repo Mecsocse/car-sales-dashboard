@@ -1144,6 +1144,7 @@ class DashboardApp {
         const modal = document.getElementById('brand-deepdive-modal');
         const closeBtn = document.getElementById('close-brand-modal');
         const compareSelect = document.getElementById('modal-compare-brand-select');
+        const yearSelect = document.getElementById('modal-brand-year-select');
         const tabBtns = document.querySelectorAll('.brand-tab-btn');
 
         if (closeBtn) {
@@ -1162,11 +1163,20 @@ class DashboardApp {
             }
         });
 
+        if (yearSelect) {
+            yearSelect.addEventListener('change', (e) => {
+                this.currentModalYear = e.target.value;
+                if (this.currentBrandA) {
+                    this.openBrandModal(this.currentBrandA, this.currentBrandB, this.currentModalYear);
+                }
+            });
+        }
+
         if (compareSelect) {
             compareSelect.addEventListener('change', (e) => {
                 const targetBrandB = e.target.value;
                 if (this.currentBrandA) {
-                    this.openBrandModal(this.currentBrandA, targetBrandB);
+                    this.openBrandModal(this.currentBrandA, targetBrandB, this.currentModalYear);
                 }
             });
         }
@@ -1179,7 +1189,7 @@ class DashboardApp {
         });
     }
 
-    async openBrandModal(brandA, brandB = '') {
+    async openBrandModal(brandA, brandB = '', customYear = null) {
         const modal = document.getElementById('brand-deepdive-modal');
         if (!modal) return;
 
@@ -1189,6 +1199,10 @@ class DashboardApp {
         this.currentBrandA = brandA;
         this.currentBrandB = brandB;
         this.currentBrandTab = this.currentBrandTab || 'monthly';
+        this.currentModalYear = customYear || this.currentModalYear || this.selectedYear || (this.selectedMonth ? this.selectedMonth.split('-')[0] : '2026');
+
+        const yearSelect = document.getElementById('modal-brand-year-select');
+        if (yearSelect) yearSelect.value = this.currentModalYear;
 
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
@@ -1233,8 +1247,8 @@ class DashboardApp {
             title.textContent = brandB ? `${brandA} (Azul) vs ${brandB} (Rojo)` : `Análisis Integral: ${brandA}`;
         }
 
-        // Fetch brand deepdive data
-        const yearParam = this.selectedYear || (this.selectedMonth ? this.selectedMonth.split('-')[0] : '2026');
+        // Fetch brand deepdive data for the chosen year
+        const yearParam = this.currentModalYear;
         const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
         const compParam = brandB ? `&brand_b=${encodeURIComponent(brandB)}` : '';
         const url = `${API_BASE}/api/analytics/brand-deepdive?brand_a=${encodeURIComponent(brandA)}${compParam}&year=${yearParam}${ccaaParam}`;
