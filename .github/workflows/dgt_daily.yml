@@ -2,9 +2,9 @@ name: Automated Bulletproof DGT Data Ingestion
 
 on:
   schedule:
-    # 4 Retries daily (Mon-Fri) at 07:30, 10:30, 14:30, 18:30 UTC (09:30, 12:30, 16:30, 20:30 CET)
-    - cron: '30 7,10,14,18 * * 1-5'
-  workflow_dispatch: # Manual trigger from GitHub UI anytime
+    # 4 Retries daily (Monday to Sunday) at 07:30, 10:30, 14:30, 18:30 UTC (09:30, 12:30, 16:30, 20:30 CET)
+    - cron: '30 7,10,14,18 * * *'
+  workflow_dispatch: # Manual trigger anytime from GitHub Actions UI
 
 jobs:
   run-ingestion:
@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Dependencies
         run: |
@@ -27,21 +27,4 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL || secrets.DATABASE_URL }}
         run: |
-          python -c "
-          import sys, os, logging
-          from datetime import datetime, timedelta
-          sys.path.insert(0, '.')
-          logging.basicConfig(level=logging.INFO)
-          
-          db_url = os.environ.get('DATABASE_URL')
-          print('DATABASE_URL is present:', bool(db_url))
-          
-          from agents.extractor.dgt_spain import DGTSpainExtractor
-          extractor = DGTSpainExtractor()
-          
-          end = datetime.now()
-          start = end - timedelta(days=7)
-          print(f'Starting DGT Catchup from {start.strftime(\"%Y-%m-%d\")} to {end.strftime(\"%Y-%m-%d\")}...')
-          extractor.run_range(start, end)
-          print('DGT Daily Ingestion Completed Successfully!')
-          "
+          python agents/extractor/dgt_spain.py --catchup 10
