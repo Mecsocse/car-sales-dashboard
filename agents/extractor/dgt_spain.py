@@ -68,7 +68,7 @@ CANONICAL_MODELS = {
     'JEEP': ['AVENGER', 'RENEGADE', 'COMPASS', 'WRANGLER', 'GRAND CHEROKEE'],
     'VOLVO': ['XC40', 'EX30', 'XC60', 'XC90', 'EX40', 'EC40', 'EX90', 'V60', 'V90', 'S60'],
     'MAZDA': ['CX-30', 'CX-5', 'MAZDA3', 'MAZDA2', 'CX-60', 'CX-80', 'MX-5', 'MX-30', '6E'],
-    'BYD': ['ATTO 3', 'DOLPHIN', 'SEAL', 'SEAL U', 'TANG', 'HAN', 'SEAGULL', 'SEAL 06', 'ATTO 2'],
+    'BYD': ['DOLPHIN SURF', 'DOLPHIN', 'SEALION 7', 'SEAL U', 'SEAL 06', 'SEAL', 'ATTO 2', 'ATTO 3', 'TANG', 'HAN', 'SEAGULL'],
     'OMODA': ['OMODA 5', 'OMODA 7', 'OMODA 9'],
     'JAECOO': ['JAECOO 7', 'JAECOO 8', 'JAECOO 5'],
     'EBRO': ['S700', 'S800', 'S400', 'S900'],
