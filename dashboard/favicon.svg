@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Rounded Background Tile -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)"/>
+  <rect width="500" height="500" x="6" y="6" rx="106" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="6"/>
+
+  <!-- Analytics Graph Trend Bars (Background) -->
+  <rect x="90" y="270" width="36" height="85" rx="8" fill="#3b82f6" opacity="0.35"/>
+  <rect x="146" y="215" width="36" height="140" rx="8" fill="#38bdf8" opacity="0.45"/>
+  <rect x="202" y="165" width="36" height="190" rx="8" fill="#3b82f6" opacity="0.55"/>
+  <rect x="258" y="125" width="36" height="230" rx="8" fill="#6366f1" opacity="0.65"/>
+
+  <!-- Stylized Modern Car Silhouette -->
+  <path d="M96 335 C96 315, 112 300, 132 300 L170 300 L225 210 C235 195, 255 185, 275 185 L370 185 C390 185, 405 195, 412 215 L445 300 C460 303, 470 315, 470 333 L470 365 C470 375, 462 383, 452 383 L440 383 C440 410, 415 430, 388 430 C360 430, 338 410, 338 383 L230 383 C230 410, 205 430, 178 430 C150 430, 128 410, 128 383 L108 383 C98 383, 96 375, 96 365 Z" fill="url(#brandGrad)"/>
+
+  <!-- Car Windows (Glass) -->
+  <path d="M235 225 L190 290 L285 290 L285 208 C265 208, 245 215, 235 225 Z" fill="#0f172a" opacity="0.85"/>
+  <path d="M305 208 L305 290 L415 290 L390 225 C385 215, 375 208, 360 208 Z" fill="#0f172a" opacity="0.85"/>
+
+  <!-- Wheels (Glowing) -->
+  <circle cx="178" cy="383" r="28" fill="#0f172a" stroke="#38bdf8" stroke-width="12"/>
+  <circle cx="178" cy="383" r="10" fill="#38bdf8"/>
+  
+  <circle cx="388" cy="383" r="28" fill="#0f172a" stroke="#38bdf8" stroke-width="12"/>
+  <circle cx="388" cy="383" r="10" fill="#38bdf8"/>
+
+  <!-- Electric Lightning Energy Badge -->
+  <path d="M330 95 L295 160 L330 160 L285 235 L355 150 L320 150 Z" fill="url(#boltGrad)"/>
+</svg>
