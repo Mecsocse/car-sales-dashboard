@@ -48,6 +48,37 @@ def read_root():
         return FileResponse(index_path)
     return {"message": "AutoMarket Intelligence API Running."}
 
+@app.get("/favicon.svg")
+def get_favicon_svg():
+    p = os.path.join(DASHBOARD_DIR, "favicon.svg")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
+@app.get("/favicon.ico")
+def get_favicon_ico():
+    p_ico = os.path.join(DASHBOARD_DIR, "favicon.ico")
+    if os.path.exists(p_ico):
+        return FileResponse(p_ico, media_type="image/x-icon")
+    p_svg = os.path.join(DASHBOARD_DIR, "favicon.svg")
+    if os.path.exists(p_svg):
+        return FileResponse(p_svg, media_type="image/svg+xml")
+    raise HTTPException(status_code=404, detail="Favicon not found")
+
+@app.get("/robots.txt")
+def get_robots_txt():
+    p = os.path.join(DASHBOARD_DIR, "robots.txt")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/plain")
+    raise HTTPException(status_code=404, detail="robots.txt not found")
+
+@app.get("/sitemap.xml")
+def get_sitemap_xml():
+    p = os.path.join(DASHBOARD_DIR, "sitemap.xml")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="application/xml")
+    raise HTTPException(status_code=404, detail="sitemap.xml not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
