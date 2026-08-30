@@ -35,6 +35,8 @@ def get_db():
     if db_url:
         import psycopg2
         from psycopg2.extras import RealDictCursor
+        if "pooler.supabase.com:5432" in db_url:
+            db_url = db_url.replace(":5432", ":6543")
         if "sslmode=" not in db_url:
             conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor, connect_timeout=10)
         else:
@@ -946,10 +948,10 @@ def get_dashboard_all_data(
         return '#3b82f6'
 
     if date_from and date_to:
-        from_table = "ventas_registradas"
+        from_table = "ventas_mensuales_resumen"
         where_res = "v.fecha >= ? AND v.fecha <= ?"
         res_params = [date_from, date_to]
-        units_col = "v.unidades"
+        units_col = "v.total_unidades"
     elif period == 'year':
         from_table = "ventas_mensuales_resumen"
         where_res = "v.anio_str = ?"
@@ -1075,9 +1077,11 @@ def get_dashboard_all_data(
     exec_query(c, f"""
         SELECT 
             CASE
-                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
+                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN '100% ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
-                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
+                WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'HIBRIDO GASOLINA') THEN 'HÍBRIDO GASOLINA'
+                WHEN carburante_std IN ('HEV_DIESEL', 'HIBRIDO_DIESEL', 'HIBRIDO DIESEL') THEN 'HÍBRIDO DIÉSEL'
+                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO GASOLINA'
                 WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
                 WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
                 ELSE 'GASOLINA'
@@ -1269,9 +1273,11 @@ def get_brand_deepdive(
         exec_query(c, f"""
             SELECT 
                 CASE
-                    WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'Eléctrico (BEV)'
+                    WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN '100% Eléctrico (BEV)'
                     WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'Híbrido Enchufable (PHEV)'
-                    WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'Híbrido (HEV/MHEV)'
+                    WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'HIBRIDO GASOLINA') THEN 'Híbrido Gasolina'
+                    WHEN carburante_std IN ('HEV_DIESEL', 'HIBRIDO_DIESEL', 'HIBRIDO DIESEL') THEN 'Híbrido Diésel'
+                    WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'Híbrido Gasolina'
                     WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'Diésel'
                     WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'Gas (GLP/GNC)'
                     ELSE 'Gasolina'
