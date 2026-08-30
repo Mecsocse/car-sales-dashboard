@@ -16,6 +16,8 @@ def get_db():
     if db_url:
         import psycopg2
         from psycopg2.extras import RealDictCursor
+        if "pooler.supabase.com:5432" in db_url:
+            db_url = db_url.replace(":5432", ":6543")
         if "sslmode=" not in db_url:
             conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor, connect_timeout=10)
         else:
