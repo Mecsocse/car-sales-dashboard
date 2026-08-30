@@ -11,22 +11,35 @@ from api.middleware.freemium import check_date_range, FreemiumLimitError
 
 router = APIRouter()
 
+_PG_POOL = None
+
+def get_pg_pool():
+    global _PG_POOL
+    if _PG_POOL is None:
+        db_url = os.environ.get("DATABASE_URL")
+        if db_url:
+            if "pooler.supabase.com:5432" in db_url:
+                db_url = db_url.replace(":5432", ":6543")
+            if "sslmode=" not in db_url:
+                db_url += ("&" if "?" in db_url else "?") + "sslmode=require"
+            try:
+                import psycopg2
+                from psycopg2.extras import RealDictCursor
+                from psycopg2 import pool
+                _PG_POOL = pool.ThreadedConnectionPool(minconn=1, maxconn=10, dsn=db_url, cursor_factory=RealDictCursor)
+            except Exception as e:
+                print("Error initializing ThreadedConnectionPool:", e)
+    return _PG_POOL
+
 def get_db():
-    db_url = os.environ.get("DATABASE_URL")
-    if db_url:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        if "pooler.supabase.com:5432" in db_url:
-            db_url = db_url.replace(":5432", ":6543")
-        if "sslmode=" not in db_url:
-            conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor, connect_timeout=10)
-        else:
-            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=10)
+    pg_pool = get_pg_pool()
+    if pg_pool:
+        conn = pg_pool.getconn()
         conn.autocommit = True
         try:
             yield conn
         finally:
-            conn.close()
+            pg_pool.putconn(conn)
     else:
         db_file = "matriculaciones.db" if os.path.exists("matriculaciones.db") else DB_PATH
         conn = sqlite3.connect(db_file, check_same_thread=False)
