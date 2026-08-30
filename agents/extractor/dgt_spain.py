@@ -47,32 +47,32 @@ INE_MAP = {
 
 CANONICAL_MODELS = {
     'DACIA': ['SANDERO', 'DUSTER', 'JOGGER', 'SPRING', 'BIGSTER', 'LOGAN', 'LODGY', 'DOKKER'],
-    'RENAULT': ['CLIO', 'CAPTUR', 'AUSTRAL', 'ARKANA', 'MEGANE', 'SCENIC', 'ESPACE', 'RAFALE', 'SYMBIOZ', '5 E-TECH', 'TWINGO', 'KANGOO', 'ZOE', 'KADJAR'],
+    'RENAULT': ['5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'CLIO', 'CAPTUR', 'AUSTRAL', 'ARKANA', 'MEGANE', 'SCENIC', 'ESPACE', 'RAFALE', 'SYMBIOZ', 'TWINGO', 'KANGOO', 'ZOE', 'KADJAR'],
     'MG': ['ZS', 'MG4', 'MG3', 'HS', 'EHS', 'CYBERSTER', 'MARVEL R', '5 ELECTRIC', 'S5', 'S6'],
     'SEAT': ['IBIZA', 'ARONA', 'ATECA', 'LEON', 'TARRACO', 'ALHAMBRA'],
-    'HYUNDAI': ['TUCSON', 'KONA', 'I20', 'I10', 'I30', 'BAYON', 'SANTA FE', 'IONIQ 5', 'IONIQ 6', 'STARIA', 'INSTER'],
-    'TOYOTA': ['YARIS CROSS', 'COROLLA', 'C-HR', 'YARIS', 'RAV4', 'AYGO X', 'BZ4X', 'HIGHLANDER', 'CAMRY', 'LAND CRUISER', 'GR YARIS', 'PROACE CITY', 'PROACE', 'AURIS'],
-    'VOLKSWAGEN': ['T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG'],
-    'KIA': ['SPORTAGE', 'NIRO', 'STONIC', 'XCEED', 'CEED', 'PICANTO', 'EV3', 'EV6', 'EV9', 'EV2', 'EV4', 'EV5', 'SORENTO', 'PROCEED', 'RIO'],
-    'PEUGEOT': ['2008', '208', '3008', '308', '5008', '408', '508', 'RIFTER', 'TRAVELLER', 'PARTNER'],
-    'CITROEN': ['C3', 'C4', 'C5 AIRCROSS', 'C3 AIRCROSS', 'C4 X', 'C5 X', 'BERLINGO', 'SPACETOURER'],
-    'CUPRA': ['FORMENTOR', 'LEON', 'TERRAMAR', 'BORN', 'TAVASCAN', 'ATECA', 'RAVAL'],
-    'BMW': ['X1', 'SERIE 1', 'SERIE 2', 'SERIE 3', 'X3', 'SERIE 4', 'X2', 'SERIE 5', 'IX1', 'IX2', 'I4', 'I5', 'X5', 'X4', 'X6', 'X7', 'Z4', 'M2', 'M3', 'M4'],
-    'MERCEDES-BENZ': ['GLC', 'GLA', 'CLASE A', 'CLASE C', 'CLA', 'GLB', 'CLASE E', 'GLE', 'EQA', 'EQB', 'EQE', 'EQS', 'CLE', 'CLASE B', 'CLASE S', 'GLS', 'CLASE V', 'CITAN'],
-    'AUDI': ['Q3', 'A3', 'A1', 'Q2', 'Q5', 'A4', 'A5', 'A6', 'Q4', 'Q6', 'Q7', 'Q8', 'E-TRON', 'TT', 'R8'],
-    'SKODA': ['KAMIQ', 'KAROQ', 'FABIA', 'OCTAVIA', 'KODIAQ', 'SCALA', 'SUPERB', 'ENYAQ', 'ELROQ'],
+    'HYUNDAI': ['IONIQ 5', 'IONIQ 6', 'IONIQ 9', 'TUCSON', 'KONA', 'I20', 'I10', 'I30', 'BAYON', 'SANTA FE', 'STARIA', 'INSTER'],
+    'TOYOTA': ['COROLLA CROSS', 'YARIS CROSS', 'COROLLA', 'C-HR EV', 'C-HR', 'GR YARIS', 'YARIS', 'RAV4', 'AYGO X', 'BZ4X', 'HIGHLANDER', 'CAMRY', 'LAND CRUISER', 'PROACE CITY', 'PROACE', 'AURIS'],
+    'VOLKSWAGEN': ['ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG', 'TAYRON'],
+    'KIA': ['EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'SPORTAGE', 'NIRO', 'STONIC', 'XCEED', 'CEED', 'PICANTO', 'SORENTO', 'PROCEED', 'RIO', 'PV5'],
+    'PEUGEOT': ['E-2008', 'E-208', 'E-3008', 'E-308', 'E-5008', '2008', '208', '3008', '308', '5008', '408', '508', 'RIFTER', 'TRAVELLER', 'PARTNER'],
+    'CITROEN': ['Ë-C3 AIRCROSS', 'C3 AIRCROSS', 'Ë-C4 X', 'C4 X', 'Ë-C4', 'Ë-C3', 'C3', 'C4', 'C5 AIRCROSS', 'C5 X', 'BERLINGO', 'SPACETOURER'],
+    'CUPRA': ['FORMENTOR', 'TERRAMAR', 'TAVASCAN', 'BORN', 'RAVAL', 'LEON', 'ATECA'],
+    'BMW': ['IX1', 'IX2', 'IX3', 'IX', 'I4', 'I5', 'I7', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'SERIE 1', 'SERIE 2', 'SERIE 3', 'SERIE 4', 'SERIE 5', 'Z4', 'M2', 'M3', 'M4', 'M5'],
+    'MERCEDES-BENZ': ['EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'GLC', 'GLA', 'GLB', 'GLE', 'GLS', 'CLA', 'CLE', 'CLASE A', 'CLASE C', 'CLASE E', 'CLASE S', 'CLASE B', 'CLASE V', 'CITAN'],
+    'AUDI': ['Q4', 'Q6', 'Q8', 'E-TRON', 'Q3', 'Q5', 'Q2', 'Q7', 'A3', 'A1', 'A4', 'A5', 'A6', 'TT', 'R8'],
+    'SKODA': ['ELROQ', 'ENYAQ', 'EPIQ', 'KAMIQ', 'KAROQ', 'FABIA', 'OCTAVIA', 'KODIAQ', 'SCALA', 'SUPERB'],
     'NISSAN': ['QASHQAI', 'JUKE', 'X-TRAIL', 'TOWNSTAR', 'ARIYA', 'LEAF', 'MICRA'],
     'TESLA': ['MODEL Y', 'MODEL 3', 'MODEL X', 'MODEL S', 'CYBERTRUCK'],
-    'FIAT': ['500', 'PANDA', '600', 'TIPO', '500X', 'TOPOLINO', 'DOBLO'],
+    'FIAT': ['500E', '500', 'PANDA', '600', 'TIPO', '500X', 'TOPOLINO', 'DOBLO'],
     'OPEL': ['CORSA', 'MOKKA', 'CROSSLAND', 'ASTRA', 'GRANDLAND', 'FRONTERA', 'COMBO'],
     'JEEP': ['AVENGER', 'RENEGADE', 'COMPASS', 'WRANGLER', 'GRAND CHEROKEE'],
-    'VOLVO': ['XC40', 'EX30', 'XC60', 'XC90', 'EX40', 'EC40', 'EX90', 'V60', 'V90', 'S60'],
-    'MAZDA': ['CX-30', 'CX-5', 'MAZDA3', 'MAZDA2', 'CX-60', 'CX-80', 'MX-5', 'MX-30', '6E'],
+    'VOLVO': ['EX30', 'EX40', 'EC40', 'EX90', 'XC40', 'XC60', 'XC90', 'V60', 'V90', 'S60'],
+    'MAZDA': ['6E', 'CX-30', 'CX-5', 'MAZDA3', 'MAZDA2', 'CX-60', 'CX-80', 'MX-5', 'MX-30'],
     'BYD': ['DOLPHIN SURF', 'DOLPHIN', 'SEALION 7', 'SEAL U', 'SEAL 06', 'SEAL', 'ATTO 2', 'ATTO 3', 'TANG', 'HAN', 'SEAGULL'],
     'OMODA': ['OMODA 5', 'OMODA 7', 'OMODA 9'],
     'JAECOO': ['JAECOO 7', 'JAECOO 8', 'JAECOO 5'],
     'EBRO': ['S700', 'S800', 'S400', 'S900'],
-    'LEAPMOTOR': ['B10', 'T03', 'C10']
+    'LEAPMOTOR': ['B10', 'T03', 'C10', 'B05']
 }
 
 def clean_brand(raw_b):
@@ -84,10 +84,36 @@ def clean_brand(raw_b):
     if b.startswith('SIN MARCA') or b == 'DESCONOCIDO' or b.startswith('202') or b.isdigit(): return ''
     return b
 
-def clean_model(raw_m, brand):
+def clean_model(raw_m, brand, prop=''):
     s = str(raw_m).strip().upper()
     b = clean_brand(brand)
     if not b: return ''
+    
+    # Specific brand distinctions
+    if b == 'CITROEN':
+        s_norm = s.replace('-', 'Ë-').replace('', 'Ë').replace('E-C3', 'Ë-C3').replace('E-C4', 'Ë-C4')
+        if ('AIRCROSS' in s_norm or 'AIRCR' in s_norm) and 'C3' in s_norm:
+            if prop in ('2', '9') or 'Ë-C3' in s_norm or 'ELÉCTRICO' in s_norm or 'ELECTRICO' in s_norm:
+                return 'Ë-C3 AIRCROSS'
+            return 'C3 AIRCROSS'
+        if ('C4X' in s_norm or 'C4 X' in s_norm):
+            if prop in ('2', '9') or 'Ë-C4' in s_norm or 'ELÉCTRICO' in s_norm or 'ELECTRICO' in s_norm:
+                return 'Ë-C4 X'
+            return 'C4 X'
+        if 'C4' in s_norm and not ('AIRCROSS' in s_norm or 'CACTUS' in s_norm):
+            if prop in ('2', '9') or 'Ë-C4' in s_norm or 'ELÉCTRICO' in s_norm or 'ELECTRICO' in s_norm:
+                return 'Ë-C4'
+            return 'C4'
+        if 'C3' in s_norm:
+            if prop in ('2', '9') or 'Ë-C3' in s_norm or 'ELÉCTRICO' in s_norm or 'ELECTRICO' in s_norm:
+                return 'Ë-C3'
+            return 'C3'
+            
+    if b == 'TOYOTA':
+        if 'COROLLA CROSS' in s or ('COROLLA' in s and '3JTN' in s):
+            return 'COROLLA CROSS'
+        if ('C-HR' in s or 'CHR' in s) and prop in ('2', '9'):
+            return 'C-HR EV'
     
     if b in CANONICAL_MODELS:
         for canon in CANONICAL_MODELS[b]:
@@ -252,7 +278,8 @@ class DGTSpainExtractor:
             if any(cm in model_raw.upper() for cm in ('FORMENTOR', 'TERRAMAR', 'TAVASCAN', 'BORN', 'RAVAL')) or b_clean == 'CUPRA':
                 b_clean = 'CUPRA'
                 
-            m_clean = clean_model(model_raw, b_clean)
+            prop_code = l[93:94].strip() if len(l) > 94 else ''
+            m_clean = clean_model(model_raw, b_clean, prop=prop_code)
             if not m_clean or m_clean == 'DESCONOCIDO': continue
             
             mf = f"{b_clean} {m_clean}"
