@@ -30,30 +30,7 @@ FUEL_COLOR_MAP = {
 
 _ALL_DATA_CACHE = {}
 
-def get_db():
-    db_url = os.environ.get("DATABASE_URL")
-    if db_url:
-        import psycopg2
-        from psycopg2.extras import RealDictCursor
-        if "pooler.supabase.com:5432" in db_url:
-            db_url = db_url.replace(":5432", ":6543")
-        if "sslmode=" not in db_url:
-            conn = psycopg2.connect(db_url, sslmode='require', cursor_factory=RealDictCursor, connect_timeout=10)
-        else:
-            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=10)
-        conn.autocommit = True
-        try:
-            yield conn
-        finally:
-            conn.close()
-    else:
-        db_file = "matriculaciones.db" if os.path.exists("matriculaciones.db") else DB_PATH
-        conn = sqlite3.connect(db_file, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        try:
-            yield conn
-        finally:
-            conn.close()
+from api.db import get_db
 
 _LIST_CACHE = {}
 
@@ -98,7 +75,7 @@ def get_brand_ranking(
     now = time.time()
     if cache_key in _RANKING_CACHE:
         val, ts = _RANKING_CACHE[cache_key]
-        if now - ts < 600:
+        if now - ts < 86400:
             return val
 
     c = conn.cursor()
@@ -195,7 +172,7 @@ def get_model_ranking(
     now = time.time()
     if cache_key in _RANKING_CACHE:
         val, ts = _RANKING_CACHE[cache_key]
-        if now - ts < 600:
+        if now - ts < 86400:
             return val
 
     c = conn.cursor()
@@ -888,19 +865,19 @@ def get_dashboard_all_data(
     if purge == 1:
         _ALL_DATA_CACHE.clear()
 
-    cache_key = f"{country}:{period}:{month}:{year}:{brand}:{model}:{fuel}:{province}:{ccaa}:{date_from}:{date_to}"
-    now = time.time()
-    if cache_key in _ALL_DATA_CACHE and purge != 1:
-        cached_res, ts = _ALL_DATA_CACHE[cache_key]
-        if now - ts < 600: # 10 minutes cache
-            return cached_res
-
     if date_from and len(date_from) >= 7:
         target_month = date_from[:7]
         target_year = date_from[:4]
     else:
         target_month = month if month else ("2026-08" if period in ("month", "custom_month") else "2026-08")
         target_year = year if year else "2026"
+
+    cache_key = f"{country}:{period}:{target_month}:{target_year}:{brand}:{model}:{fuel}:{province}:{ccaa}:{date_from}:{date_to}"
+    now = time.time()
+    if cache_key in _ALL_DATA_CACHE and purge != 1:
+        cached_res, ts = _ALL_DATA_CACHE[cache_key]
+        if now - ts < 86400: # 24 hours in-memory RAM cache
+            return cached_res
 
     # Fast-Path: Use Postgres RPC Function if available
     try:
