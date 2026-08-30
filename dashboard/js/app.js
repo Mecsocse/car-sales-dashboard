@@ -79,10 +79,11 @@ class DashboardApp {
 
     async init() {
         try {
-            // Invalidate and remove old local storage caches
+            // Invalidate and remove old local storage caches (keep only current version)
             try {
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260830_';
                 Object.keys(localStorage).forEach(k => {
-                    if (k.startsWith('dashboard_all_data_') && !k.startsWith('dashboard_all_data_v20260816_valdes_v5_')) {
+                    if (k.startsWith('dashboard_all_data_') && !k.startsWith(CURRENT_CACHE_PREFIX)) {
                         localStorage.removeItem(k);
                     }
                 });
@@ -418,12 +419,15 @@ class DashboardApp {
         const now = Date.now();
         if (this.cacheMap.has(url)) {
             const { data, timestamp } = this.cacheMap.get(url);
-            if (now - timestamp < 30000 && data && data.summary && data.summary.total_month > 0) {
+            if (now - timestamp < 10000 && data && data.summary && data.summary.total_month > 0) {
                 return data;
             }
         }
         try {
-            const res = await fetch(url);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+            const res = await fetch(url, { signal: controller.signal });
+            clearTimeout(timeoutId);
             if (!res.ok) return null;
             const data = await res.json();
             if (data && (!data.summary || data.summary.total_month > 0)) {
@@ -837,7 +841,7 @@ class DashboardApp {
 
     async loadMetricsAndChartsConsolidated() {
         const q = this.getFullQueryParams();
-        const cacheKey = `dashboard_all_data_v20260821_official_v2_${q}`;
+        const cacheKey = `dashboard_all_data_v20260830_${q}`;
 
         // 1. Instant cache load from localStorage or memory (0ms) - only if valid and populated
         if (!this.memoryCache) this.memoryCache = new Map();
@@ -862,9 +866,20 @@ class DashboardApp {
 
         this.showLoading('Actualizando datos...');
 
-        // 2. Fetch fresh consolidated data (single fast query)
+        // 2. Fetch fresh consolidated data with automatic retry for mobile reliability
+        const fetchUrl = `${API_BASE}/api/dashboard/all-data?${q}`;
+        let allData = null;
+        for (let attempt = 0; attempt < 2; attempt++) {
+            allData = await this.fetchCached(fetchUrl);
+            if (allData && allData.summary && allData.summary.total_month > 0) break;
+            if (attempt === 0) {
+                // Clear stale in-memory cache and retry
+                if (this.cacheMap) this.cacheMap.delete(fetchUrl);
+                await new Promise(r => setTimeout(r, 1000));
+            }
+        }
+
         try {
-            const allData = await this.fetchCached(`${API_BASE}/api/dashboard/all-data?${q}`);
             if (allData && allData.summary && allData.summary.total_month > 0) {
                 this.memoryCache.set(cacheKey, allData);
                 try { localStorage.setItem(cacheKey, JSON.stringify(allData)); } catch(e) {}
@@ -873,7 +888,7 @@ class DashboardApp {
                 this.renderAllDataPayload(allData);
             }
         } catch (e) {
-            console.error('Error fetching consolidated all-data:', e);
+            console.error('Error rendering consolidated all-data:', e);
         } finally {
             this.hideLoading();
         }
