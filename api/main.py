@@ -104,10 +104,8 @@ def get_sitemap_xml():
 
 @app.get("/ads.txt")
 def get_ads_txt():
-    p = os.path.join(DASHBOARD_DIR, "ads.txt")
-    if os.path.exists(p):
-        return FileResponse(p, media_type="text/plain")
-    raise HTTPException(status_code=404, detail="ads.txt not found")
+    from fastapi.responses import PlainTextResponse
+    return PlainTextResponse("google.com, pub-1171398586910114, DIRECT, f08c47fec0942fa0\n")
 
 if __name__ == "__main__":
     import uvicorn
