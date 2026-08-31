@@ -302,7 +302,7 @@ class DGTSpainExtractor:
         total_turismos = sum(daily_summary.values())
         
         # 1. PostgreSQL Supabase Save
-        db_url = os.environ.get("DATABASE_URL") or "postgresql://postgres.nmqclghnxmstpabcyugn:Apuig060489%3F@aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require"
+        db_url = os.environ.get("DATABASE_URL") or "postgresql://postgres.nmqclghnxmstpabcyugn:Apuig060489%3F@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
         if db_url:
             try:
                 import psycopg2
