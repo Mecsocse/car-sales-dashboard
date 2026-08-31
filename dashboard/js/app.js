@@ -1491,6 +1491,8 @@ class DashboardApp {
 
         if (footerPrivacyLink) footerPrivacyLink.addEventListener('click', openPrivacy);
         if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', closePrivacy);
+        const privacyBackdrop = document.getElementById('privacy-modal-backdrop');
+        if (privacyBackdrop) privacyBackdrop.addEventListener('click', closePrivacy);
         if (privacyModal) {
             privacyModal.addEventListener('click', (e) => {
                 if (e.target === privacyModal) closePrivacy();
