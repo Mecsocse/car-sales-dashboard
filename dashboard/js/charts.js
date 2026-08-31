@@ -404,13 +404,14 @@ function initFuelMixChart(ctxId, rawData, onFuelClick) {
 
     function getFuelColor(fuelName) {
         const s = String(fuelName || '').toUpperCase();
-        if (s.includes('GASOLINA')) return '#ef4444'; // Vibrant Red
-        if (s.includes('PHEV') || s.includes('ENCHUF')) return '#8b5cf6'; // Electric Purple
-        if (s.includes('HIBRID') || s.includes('HÍBRID') || s.includes('HEV') || s.includes('MHEV') || s.includes('HBRID')) return '#10b981'; // Emerald Green
-        if (s.includes('ELEC') || s.includes('BEV') || s.includes('ELÉC') || s.includes('ELC') || s === 'EV') return '#06b6d4'; // Cyan / Teal
-        if (s.includes('DIESEL') || s.includes('DIÉSEL') || s.includes('GASOIL')) return '#64748b'; // Slate Grey
-        if (s.includes('GAS') || s.includes('GLP') || s.includes('GNC')) return '#f59e0b'; // Amber Orange
-        if (s.includes('HIDRO') || s.includes('H2') || s.includes('FCEV')) return '#3b82f6'; // Sky Blue
+        if (s.includes('100%') || s.includes('ELÉCTRICO') || s.includes('ELECTRICO') || s.includes('BEV') || s === 'EV') return '#10b981'; // Emerald Green
+        if (s.includes('PHEV') || s.includes('ENCHUFABLE') || s.includes('PLUG-IN')) return '#06b6d4'; // Cyan
+        if (s.includes('HÍBRIDO GASOLINA') || s.includes('HIBRIDO GASOLINA') || s.includes('HEV_GASOLINA')) return '#3b82f6'; // Bright Blue
+        if (s.includes('HÍBRIDO DIÉSEL') || s.includes('HIBRIDO DIESEL') || s.includes('HEV_DIESEL')) return '#8b5cf6'; // Electric Purple
+        if (s.includes('HÍBRID') || s.includes('HIBRID') || s.includes('HEV') || s.includes('MHEV')) return '#3b82f6'; // Blue
+        if (s.includes('GASOLINA') || s.includes('BENZINA')) return '#f97316'; // Vibrant Orange
+        if (s.includes('DIESEL') || s.includes('DIÉSEL') || s.includes('GASOIL')) return '#eab308'; // Amber Yellow
+        if (s.includes('GAS') || s.includes('GLP') || s.includes('GNC')) return '#64748b'; // Slate Grey
         return '#6366f1';
     }
 
@@ -616,11 +617,14 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
         const validQuotas = [];
         const dataArr = monthCodes.map(m => {
             const item = yearsData[year] ? yearsData[year][m] : null;
-            if (item && item.quota !== null && item.quota !== undefined) {
-                validQuotas.push(Number(item.quota));
-                return item.quota;
+            // Support both formats: direct number (precomputed) or object {quota: N} (RPC)
+            const val = (item !== null && item !== undefined)
+                ? (typeof item === 'number' ? item : (item.quota !== null && item.quota !== undefined ? Number(item.quota) : null))
+                : null;
+            if (val !== null) {
+                validQuotas.push(val);
             }
-            return null;
+            return val;
         });
 
         const avgQuota = validQuotas.length > 0
@@ -664,7 +668,7 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
                 x: { grid: { display: false } },
                 y: {
                     grid: { color: '#f1f5f9' },
-                    ticks: { callback: (v) => v.toLocaleString('es-ES') }
+                    ticks: { callback: (v) => v + '%' }
                 }
             }
         }
@@ -741,14 +745,17 @@ function initAllTechQuotaChart(ctxId, techData) {
     const monthCodes = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
     const TECH_COLORS = {
-        "GASOLINA":                 "#dc2626", // red
-        "HÍBRIDO (HEV/MHEV)":       "#16a34a", // green
-        "HÍBRIDO ENCHUFABLE (PHEV)": "#7c3aed", // purple
-        "ELÉCTRICO (BEV)":          "#0284c7", // blue
-        "DIÉSEL":                   "#64748b"  // slate
+        "HÍBRIDO GASOLINA":         "#3b82f6", // blue
+        "GASOLINA":                 "#f97316", // orange
+        "100% ELÉCTRICO (BEV)":     "#10b981", // emerald green
+        "ELÉCTRICO (BEV)":          "#10b981", // emerald green
+        "HÍBRIDO ENCHUFABLE (PHEV)": "#06b6d4", // cyan
+        "DIÉSEL":                   "#eab308", // amber yellow
+        "HÍBRIDO DIÉSEL":           "#8b5cf6", // electric purple
+        "GAS (GLP/GNC)":            "#64748b"  // slate
     };
 
-    const allTechs = ["GASOLINA", "HÍBRIDO (HEV/MHEV)", "HÍBRIDO ENCHUFABLE (PHEV)", "ELÉCTRICO (BEV)", "DIÉSEL"];
+    const allTechs = ["HÍBRIDO GASOLINA", "GASOLINA", "100% ELÉCTRICO (BEV)", "HÍBRIDO ENCHUFABLE (PHEV)", "DIÉSEL", "HÍBRIDO DIÉSEL", "GAS (GLP/GNC)"];
 
     const datasets = allTechs.map(tech => {
         const dataArr = monthCodes.map(m => {
