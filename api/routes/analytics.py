@@ -511,8 +511,22 @@ def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection 
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
-        if now - ts < 120:
+        if now - ts < 86400:
             return val
+            
+    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+    if not ccaa:
+        fpath = os.path.join(PRECOMP_DIR, "multiyear_ev_quota.json")
+        if os.path.exists(fpath):
+            try:
+                import json
+                with open(fpath, 'r', encoding='utf-8') as pf:
+                    res = json.load(pf)
+                    _TRENDS_CACHE[cache_key] = (res, now)
+                    return res
+            except Exception:
+                pass
+
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [ccaa.strip()] if where_ccaa else []
@@ -549,8 +563,22 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
-        if now - ts < 120:
+        if now - ts < 86400:
             return val
+
+    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+    if not ccaa:
+        fpath = os.path.join(PRECOMP_DIR, "multiyear_ev_cumulative.json")
+        if os.path.exists(fpath):
+            try:
+                import json
+                with open(fpath, 'r', encoding='utf-8') as pf:
+                    res = json.load(pf)
+                    _TRENDS_CACHE[cache_key] = (res, now)
+                    return res
+            except Exception:
+                pass
+
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [ccaa.strip()] if where_ccaa else []
@@ -595,8 +623,22 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
-        if now - ts < 120:
+        if now - ts < 86400:
             return val
+
+    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+    if not ccaa and year == "2026":
+        fpath = os.path.join(PRECOMP_DIR, "monthly_tech_quota_2026.json")
+        if os.path.exists(fpath):
+            try:
+                import json
+                with open(fpath, 'r', encoding='utf-8') as pf:
+                    res = json.load(pf)
+                    _TRENDS_CACHE[cache_key] = (res, now)
+                    return res
+            except Exception:
+                pass
+
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [year, ccaa.strip()] if where_ccaa else [year]
@@ -647,7 +689,17 @@ def get_monthly_matrix(
     sort_dir: str = "desc",
     conn: sqlite3.Connection = Depends(get_db)
 ):
-    c = conn.cursor()
+    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+    if not ccaa and not search and year == "2026" and sort_by == "ago" and sort_dir == "desc" and limit <= 50:
+        fpath = os.path.join(PRECOMP_DIR, "monthly_matrix_2026.json")
+        if os.path.exists(fpath):
+            try:
+                import json
+                with open(fpath, 'r', encoding='utf-8') as pf:
+                    res = json.load(pf)
+                    return res[:limit]
+            except Exception:
+                pass
     where_extra = ""
     params = [year]
 
@@ -878,6 +930,21 @@ def get_dashboard_all_data(
         cached_res, ts = _ALL_DATA_CACHE[cache_key]
         if now - ts < 86400: # 24 hours in-memory RAM cache
             return cached_res
+    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+    is_standard_view = not brand and not model and not fuel and not province and not ccaa and not date_from and not date_to
+    if is_standard_view and purge != 1:
+        fname = f"all_data_month_{target_month}.json" if period in ("month", "custom_month") else (f"all_data_year_{target_year}.json" if period == "year" else None)
+        if fname:
+            fpath = os.path.join(PRECOMP_DIR, fname)
+            if os.path.exists(fpath):
+                try:
+                    import json
+                    with open(fpath, 'r', encoding='utf-8') as pf:
+                        cooked = json.load(pf)
+                        _ALL_DATA_CACHE[cache_key] = (cooked, now)
+                        return cooked
+                except Exception as e:
+                    print("Precomputed read notice:", e)
 
     # Fast-Path: Use Postgres RPC Function if available
     try:
