@@ -87,7 +87,7 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260831_v11_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260831_v15_';
                 Object.keys(localStorage).forEach(k => {
                     if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
                         if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
@@ -870,7 +870,7 @@ class DashboardApp {
 
     async loadMetricsAndChartsConsolidated() {
         const q = this.getFullQueryParams();
-        const cacheKey = `dashboard_all_data_v20260830_${q}`;
+        const cacheKey = `dashboard_all_data_v20260831_v15_${q}`;
 
         // 1. Instant cache load from localStorage or memory (0ms) - only if valid and populated
         if (!this.memoryCache) this.memoryCache = new Map();

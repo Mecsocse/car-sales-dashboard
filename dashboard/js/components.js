@@ -24,9 +24,20 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
 
     const totalNum = summary.total_month || summary.total_registrations || 0;
     const totalVal = totalNum ? totalNum.toLocaleString("es-ES") : "0";
-    const changeVal = summary.pct_change >= 0 ? `+${summary.pct_change}%` : `${summary.pct_change}%`;
-    const changeColor = summary.pct_change >= 0 ? "text-green" : "text-red";
-    const changeIcon = summary.pct_change >= 0 ? "trending-up" : "trending-down";
+    
+    let changeVal = "-";
+    let changeColor = "text-muted";
+    let changeIcon = "minus";
+    let compLabel = summary.comparison_label || "vs período anterior";
+
+    if (summary.pct_change !== undefined && summary.pct_change !== null) {
+        const numChange = Number(summary.pct_change);
+        if (!isNaN(numChange)) {
+            changeVal = numChange >= 0 ? `+${numChange}%` : `${numChange}%`;
+            changeColor = numChange >= 0 ? "text-green" : "text-red";
+            changeIcon = numChange >= 0 ? "trending-up" : "trending-down";
+        }
+    }
 
     // Compute EV & ZERO shares accurately with fuelMix fallback
     let evShare = (summary.ev_share !== undefined && summary.ev_share !== null) ? Number(summary.ev_share) : (summary.ev_quota !== undefined ? Number(summary.ev_quota) : 0);
@@ -83,7 +94,7 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
     `;
 
     container.innerHTML = `
-        ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, "vs período anterior", "car")}
+        ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, compLabel, "car")}
         ${quotaCardHtml}
         ${createMetricCard("Marca Ganadora", topBrandVal, topBrandUnits, "award", "text-green", "Líder de ventas", "award")}
         ${createMetricCard("Modelo Ganador", topModelVal, topModelUnits, "trophy", "text-purple", "Modelo más vendido", "trophy")}
