@@ -52,6 +52,35 @@ def get_ccaa_list(conn: sqlite3.Connection = Depends(get_db)):
     _LIST_CACHE["ccaa_list"] = res
     return res
 
+@router.get("/analytics/latest-plate")
+def get_latest_plate():
+    precomp_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+    fpath = os.path.join(precomp_dir, "latest_plate.json")
+    if os.path.exists(fpath):
+        try:
+            import json
+            with open(fpath, 'r', encoding='utf-8') as pf:
+                return json.load(pf)
+        except Exception:
+            pass
+    # Fallback response
+    return {
+        "latest_series": "NSD",
+        "latest_date": "2026-08-28",
+        "next_series": "NSF",
+        "format_example": "---- NSD",
+        "timeline": [
+            {"series": "NSD", "date": "2026-08-28"},
+            {"series": "NSC", "date": "2026-08-27"},
+            {"series": "NSB", "date": "2026-08-25"},
+            {"series": "NRZ", "date": "2026-08-21"},
+            {"series": "NRY", "date": "2026-08-19"},
+            {"series": "NRX", "date": "2026-08-17"}
+        ],
+        "dgt_source": "Dirección General de Tráfico (Microdatos oficiales)",
+        "updated_at": "2026-08-28"
+    }
+
 _RANKING_CACHE = {}
 
 @router.get("/brands/ranking")
@@ -504,10 +533,11 @@ def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: 
     return res
 
 @router.get("/analytics/multiyear-ev-quota")
-def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+def get_multiyear_ev_quota(mode: str = "bev", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly EV quota % across years (2024, 2025, 2026) for line charts."""
     import time
-    cache_key = f"ev_quota:{ccaa}"
+    mode_clean = "zero" if mode.lower() in ("zero", "phev", "total", "all") else "bev"
+    cache_key = f"ev_quota_{mode_clean}:{ccaa}"
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
@@ -516,7 +546,8 @@ def get_multiyear_ev_quota(ccaa: Optional[str] = None, conn: sqlite3.Connection 
             
     PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
     if not ccaa:
-        fpath = os.path.join(PRECOMP_DIR, "multiyear_ev_quota.json")
+        fname = "multiyear_zero_quota.json" if mode_clean == "zero" else "multiyear_ev_quota.json"
+        fpath = os.path.join(PRECOMP_DIR, fname)
         if os.path.exists(fpath):
             try:
                 import json
@@ -627,8 +658,8 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
             return val
 
     PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
-    if not ccaa and year == "2026":
-        fpath = os.path.join(PRECOMP_DIR, "monthly_tech_quota_2026.json")
+    if not ccaa and year in ("2024", "2025", "2026"):
+        fpath = os.path.join(PRECOMP_DIR, f"monthly_tech_quota_{year}.json")
         if os.path.exists(fpath):
             try:
                 import json
@@ -647,10 +678,13 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
         SELECT 
             substr(mes_str, 6, 2) as m,
             CASE
-                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
+                WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'MHEV_GASOLINA') THEN 'HÍBRIDO GASOLINA'
+                WHEN carburante_std IN ('GASOLINA') THEN 'GASOLINA'
+                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN '100% ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
-                WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
                 WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                WHEN carburante_std IN ('HEV_DIESEL', 'HIBRIDO_DIESEL', 'MHEV_DIESEL') THEN 'HÍBRIDO DIÉSEL'
+                WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
                 ELSE 'GASOLINA'
             END as tech,
             SUM(total_unidades) as units
@@ -1194,11 +1228,15 @@ def get_dashboard_all_data(
 
     # Ensure summary totals are 100% accurate and never None
     if not summary_data: summary_data = {}
-    if not summary_data.get('total_registrations'):
-        exec_query(c, f"SELECT SUM({units_col}) as total FROM {from_table} v WHERE {where_res}", res_params)
-        s_row = c.fetchone()
-        summary_data['total_registrations'] = (s_row['total'] if isinstance(s_row, dict) else s_row[0]) if s_row else sum(b['total'] for b in fmt_brands)
     
+    exec_query(c, f"SELECT SUM({units_col}) as total FROM {from_table} v WHERE {where_res}", res_params)
+    s_row = c.fetchone()
+    tot_un = (s_row['total'] if isinstance(s_row, dict) else s_row[0]) if s_row else sum(b['total'] for b in fmt_brands)
+    tot_un = tot_un or sum(b['total'] for b in fmt_brands) or 0
+    
+    summary_data['total_registrations'] = tot_un
+    summary_data['total_month'] = tot_un
+
     if fmt_brands:
         summary_data['top_brand'] = fmt_brands[0]['marca']
         summary_data['top_brand_units'] = fmt_brands[0]['total']
@@ -1206,10 +1244,18 @@ def get_dashboard_all_data(
         summary_data['top_model'] = fmt_models[0]['modelo_full']
         summary_data['top_model_units'] = fmt_models[0]['total']
 
-    # EV share calculation
+    # EV & ZERO share calculation
     bev_total = sum(f['total'] for f in fuel_mix if 'ELÉCTRICO' in str(f['carburante']).upper())
-    total_all = summary_data.get('total_registrations') or 1
+    phev_total = sum(f['total'] for f in fuel_mix if 'PHEV' in str(f['carburante']).upper() or 'ENCHUFABLE' in str(f['carburante']).upper())
+    total_all = tot_un or 1
+
+    summary_data['ev_units'] = bev_total
+    summary_data['phev_units'] = phev_total
+    summary_data['zero_units'] = bev_total + phev_total
     summary_data['ev_quota'] = round((bev_total / total_all) * 100, 1)
+    summary_data['zero_quota'] = round(((bev_total + phev_total) / total_all) * 100, 1)
+    summary_data['ev_share'] = summary_data['ev_quota']
+    summary_data['zero_share'] = summary_data['zero_quota']
 
     res_payload = {
         "summary": summary_data,
