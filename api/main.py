@@ -114,6 +114,26 @@ def get_og_image():
         return FileResponse(p, media_type="image/png")
     raise HTTPException(status_code=404, detail="og-image.png not found")
 
+@app.get("/og-card.png")
+def get_og_card():
+    p = os.path.join(DASHBOARD_DIR, "og-card.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    p_fallback = os.path.join(DASHBOARD_DIR, "og-image.png")
+    if os.path.exists(p_fallback):
+        return FileResponse(p_fallback, media_type="image/png")
+    raise HTTPException(status_code=404, detail="og-card.png not found")
+
+@app.get("/social-preview.png")
+def get_social_preview():
+    p = os.path.join(DASHBOARD_DIR, "social-preview.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    p_fallback = os.path.join(DASHBOARD_DIR, "og-image.png")
+    if os.path.exists(p_fallback):
+        return FileResponse(p_fallback, media_type="image/png")
+    raise HTTPException(status_code=404, detail="social-preview.png not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
