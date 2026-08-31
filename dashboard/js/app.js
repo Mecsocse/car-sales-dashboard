@@ -30,6 +30,12 @@ class DashboardApp {
         this.matrixSortDir = 'desc';
         this.tableLoaded = false; // Deferred DGT individual table loading
 
+        // Electrification Toggle States
+        this.kpiQuotaMode = 'bev';
+        this.evModelsMode = 'bev';
+        this.evBrandsMode = 'bev';
+        this.chartQuotaMode = 'bev';
+
         // Active filters state
         this.filters = {
             brand: '',
@@ -96,7 +102,10 @@ class DashboardApp {
             this.bindCompareEvents();
             this.bindMatrixEvents();
             this.bindBrandModalEvents();
+            this.bindAuxModalsEvents();
+            this.bindElectrificationToggles();
 
+            this.loadLatestPlate();
             await this.loadInitialDropdowns();
             await this.refreshAll();
             await this.loadMonthComparison();
@@ -272,6 +281,26 @@ class DashboardApp {
         }
 
         if (this.singleDatePicker) {
+            const triggerDatePicker = () => {
+                if (typeof this.singleDatePicker.showPicker === 'function') {
+                    try { this.singleDatePicker.showPicker(); } catch(err) { this.singleDatePicker.focus(); }
+                } else {
+                    this.singleDatePicker.focus();
+                }
+            };
+
+            const containerDate = document.getElementById('container-date-select');
+            if (containerDate) {
+                containerDate.style.cursor = 'pointer';
+                containerDate.addEventListener('click', (e) => {
+                    triggerDatePicker();
+                });
+            }
+
+            this.singleDatePicker.addEventListener('click', (e) => {
+                triggerDatePicker();
+            });
+
             this.singleDatePicker.addEventListener('change', (e) => {
                 const dateVal = e.target.value;
                 if (dateVal) {
@@ -926,7 +955,8 @@ class DashboardApp {
         };
 
         if (allData.summary) {
-            window.Components.renderMetrics(allData.summary);
+            window.Components.renderMetrics(allData.summary, this.kpiQuotaMode);
+            this.bindKpiQuotaToggle();
         }
 
         const cleanBrands = (allData.brands || [])
@@ -987,6 +1017,7 @@ class DashboardApp {
             .slice(0, this.modelsLimit);
         window.DashboardCharts.initModelsRankingChart('modelsRankingChart', cleanModels);
 
+        // 3. Top 10 Eléctricos (BEV) Models Ranking
         const cleanEvModels = (allData.ev_models || [])
             .filter(m => {
                 const name = String(m.modelo_full || m.modelo || '');
@@ -998,8 +1029,14 @@ class DashboardApp {
                 modelo_full: cleanModelName(m.marca, m.modelo_full, m.modelo)
             }))
             .slice(0, this.evLimit);
+
+        const titleEvModels = document.getElementById('title-ev-ranking');
+        if (titleEvModels) {
+            titleEvModels.textContent = `Top ${this.evLimit} Eléctricos (BEV)`;
+        }
         window.DashboardCharts.initEVRankingChart('evRankingChart', cleanEvModels);
 
+        // 4. Top 10 Marcas BEV Ranking
         const cleanEvBrands = (allData.ev_brands || [])
             .filter(b => b && b.marca && !String(b.marca).toUpperCase().includes('DESCONOCIDO') && !String(b.marca).startsWith('202'))
             .map(b => {
@@ -1031,6 +1068,11 @@ class DashboardApp {
                 };
             })
             .slice(0, this.evBrandsLimit);
+
+        const titleEvBrands = document.getElementById('title-ev-brands-ranking');
+        if (titleEvBrands) {
+            titleEvBrands.textContent = `Top ${this.evBrandsLimit} Marcas BEV`;
+        }
         window.DashboardCharts.initEVBrandsRankingChart('evBrandsRankingChart', cleanEvBrands);
 
         window.DashboardCharts.initFuelMixChart('fuelMixChart', allData.fuel_mix || [], (clickedFuel) => {
@@ -1070,8 +1112,8 @@ class DashboardApp {
             })
             .catch(e => console.warn('Monthly evolution load notice:', e));
 
-        // 2. Multi-year EV Quota Trend Chart
-        this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`)
+        // 2. Multi-year EV / ZERO Quota Trend Chart
+        this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?mode=${this.chartQuotaMode}${ccaaParam}`)
             .then(data => {
                 if (data) window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', data);
             })
@@ -1366,6 +1408,208 @@ class DashboardApp {
             window.DashboardCharts.initBrandModelsChart('brandModelsChart', ba.models, bb ? bb.models : null, labelA, labelB);
         } else if (tabId === 'fuels') {
             window.DashboardCharts.initBrandFuelMixChart('brandFuelMixChart', ba.fuel_mix, bb ? bb.fuel_mix : null, labelA, labelB);
+        }
+    }
+
+    // -------------------------------------------------------------
+    // DGT License Plate & About Project Modals
+    // -------------------------------------------------------------
+    bindAuxModalsEvents() {
+        // 1. Plate Modal
+        const plateModal = document.getElementById('modal-plate-info');
+        const openPlateBtn = document.getElementById('btn-open-plate-modal');
+        const closePlateBtn = document.getElementById('modal-plate-close');
+        const plateBackdrop = document.getElementById('modal-plate-backdrop');
+        const footerPlateLink = document.getElementById('footer-link-plate');
+
+        const openPlate = (e) => {
+            if (e) e.preventDefault();
+            if (plateModal) {
+                plateModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        const closePlate = () => {
+            if (plateModal) {
+                plateModal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        };
+
+        if (openPlateBtn) openPlateBtn.addEventListener('click', openPlate);
+        if (footerPlateLink) footerPlateLink.addEventListener('click', openPlate);
+        if (closePlateBtn) closePlateBtn.addEventListener('click', closePlate);
+        if (plateBackdrop) plateBackdrop.addEventListener('click', closePlate);
+
+        // 2. About Modal
+        const aboutModal = document.getElementById('modal-about-project');
+        const openAboutBtn = document.getElementById('btn-open-about-modal');
+        const closeAboutBtn = document.getElementById('modal-about-close');
+        const aboutBackdrop = document.getElementById('modal-about-backdrop');
+        const footerAboutLink = document.getElementById('footer-link-about');
+
+        const openAbout = (e) => {
+            if (e) e.preventDefault();
+            if (aboutModal) {
+                aboutModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        const closeAbout = () => {
+            if (aboutModal) {
+                aboutModal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        };
+
+        if (openAboutBtn) openAboutBtn.addEventListener('click', openAbout);
+        if (footerAboutLink) footerAboutLink.addEventListener('click', openAbout);
+        if (closeAboutBtn) closeAboutBtn.addEventListener('click', closeAbout);
+        if (aboutBackdrop) aboutBackdrop.addEventListener('click', closeAbout);
+
+        // Global ESC key listener for aux modals
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closePlate();
+                closeAbout();
+            }
+        });
+    }
+
+    async loadLatestPlate() {
+        try {
+            const data = await this.fetchCached(`${API_BASE}/api/analytics/latest-plate`);
+            if (!data) return;
+
+            const widgetLetters = document.getElementById('widget-plate-letters');
+            const widgetDate = document.getElementById('widget-plate-date');
+            const modalDisplay = document.getElementById('modal-plate-display');
+            const modalDate = document.getElementById('modal-plate-date');
+            const modalNext = document.getElementById('modal-plate-next');
+            const modalTimeline = document.getElementById('modal-plate-timeline');
+
+            const series = data.latest_series || 'NSD';
+            const dateStr = data.latest_date || '2026-08-28';
+            const nextSeries = data.next_series || 'NSF';
+
+            // Format date readable (e.g. 28 Ago 2026)
+            let formattedShort = dateStr;
+            let formattedLong = dateStr;
+            try {
+                const parts = dateStr.split('-');
+                const d = parseInt(parts[2], 10);
+                const m = parseInt(parts[1], 10);
+                const y = parts[0];
+                const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                const monthsLong = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                formattedShort = `${d} ${monthsShort[m-1]} ${y}`;
+                formattedLong = `${d} de ${monthsLong[m-1]} de ${y}`;
+            } catch (e) {}
+
+            const num = data.latest_number || '7160';
+            if (widgetLetters) widgetLetters.textContent = `${num} · ${series}`;
+            if (widgetDate) widgetDate.textContent = formattedShort;
+            if (modalDisplay) modalDisplay.textContent = `${num} · ${series}`;
+            if (modalDate) modalDate.textContent = formattedLong;
+            if (modalNext) modalNext.textContent = `0000 · ${nextSeries}`;
+
+            if (modalTimeline && Array.isArray(data.timeline)) {
+                let html = '';
+                data.timeline.forEach(item => {
+                    let dFmt = item.date;
+                    try {
+                        const [y, m, d] = item.date.split('-');
+                        const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                        dFmt = `${parseInt(d, 10)} ${monthsShort[parseInt(m, 10)-1]} ${y}`;
+                    } catch(e) {}
+                    const itemPlate = item.full_plate || `${item.number || '9999'} · ${item.series}`;
+                    html += `
+                        <div class="plate-timeline-item">
+                            <span style="font-weight: 800; font-family: monospace; font-size: 13px; background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; color: #0f172a;">
+                                ${itemPlate}
+                            </span>
+                            <span style="color: #64748b; font-weight: 500;">
+                                Registrada el <strong>${dFmt}</strong>
+                            </span>
+                        </div>
+                    `;
+                });
+                modalTimeline.innerHTML = html;
+            }
+
+            if (window.lucide) window.lucide.createIcons();
+        } catch (err) {
+            console.warn('Latest plate load notice:', err);
+        }
+    }
+
+    bindKpiQuotaToggle() {
+        const btnKpiBev = document.getElementById('btn-kpi-bev');
+        const btnKpiZero = document.getElementById('btn-kpi-zero');
+        if (btnKpiBev) {
+            btnKpiBev.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.kpiQuotaMode = 'bev';
+                if (this.lastAllData && this.lastAllData.summary) {
+                    window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode);
+                    this.bindKpiQuotaToggle();
+                }
+            });
+        }
+        if (btnKpiZero) {
+            btnKpiZero.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.kpiQuotaMode = 'zero';
+                if (this.lastAllData && this.lastAllData.summary) {
+                    window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode);
+                    this.bindKpiQuotaToggle();
+                }
+            });
+        }
+    }
+
+    bindElectrificationToggles() {
+        // Multi-year Quota Trend Chart Toggle (100% BEV vs BEV + PHEV)
+        const btnChartBev = document.getElementById('toggle-quota-chart-bev');
+        const btnChartZero = document.getElementById('toggle-quota-chart-zero');
+        if (btnChartBev && btnChartZero) {
+            btnChartBev.addEventListener('click', () => {
+                if (this.chartQuotaMode === 'bev') return;
+                this.chartQuotaMode = 'bev';
+                btnChartBev.classList.add('active');
+                btnChartZero.classList.remove('active');
+
+                const titleEl = document.getElementById('chart-ev-quota-title');
+                const subEl = document.getElementById('chart-ev-quota-sub');
+                if (titleEl) titleEl.textContent = 'Cuota 100% Eléctricos Mes a Mes';
+                if (subEl) subEl.textContent = '% BEV sobre total turismos';
+
+                const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
+                this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?mode=bev${ccaaParam}`)
+                    .then(data => {
+                        if (data) window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', data);
+                    });
+            });
+
+            btnChartZero.addEventListener('click', () => {
+                if (this.chartQuotaMode === 'zero') return;
+                this.chartQuotaMode = 'zero';
+                btnChartZero.classList.add('active');
+                btnChartBev.classList.remove('active');
+
+                const titleEl = document.getElementById('chart-ev-quota-title');
+                const subEl = document.getElementById('chart-ev-quota-sub');
+                if (titleEl) titleEl.textContent = 'Cuota Electrificada (BEV + PHEV) Mes a Mes';
+                if (subEl) subEl.textContent = '% Etiqueta ZERO (BEV + PHEV) sobre total turismos';
+
+                const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
+                this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?mode=zero${ccaaParam}`)
+                    .then(data => {
+                        if (data) window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', data);
+                    });
+            });
         }
     }
 }
