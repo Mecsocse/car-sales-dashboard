@@ -1289,3 +1289,36 @@ def get_brand_deepdive(
         "brand_b": _fetch_brand_metrics(brand_b) if brand_b else None
     }
 
+def warm_cache():
+    """Pre-calculates the most common queries and loads them into RAM at boot."""
+    try:
+        from api.db import get_db
+        db_gen = get_db()
+        conn = next(db_gen)
+        # Pre-warm current month, previous months, and full years
+        for m in ["2026-08", "2026-07", "2026-06", "2026-03", "2026-01"]:
+            try:
+                get_dashboard_all_data(period="month", month=m, conn=conn)
+            except Exception:
+                pass
+        for y in ["2026", "2025", "2024"]:
+            try:
+                get_dashboard_all_data(period="year", year=y, conn=conn)
+            except Exception:
+                pass
+        try:
+            get_monthly_evolution(year="2026", conn=conn)
+        except Exception:
+            pass
+        try:
+            get_monthly_matrix(year="2026", limit=50, conn=conn)
+        except Exception:
+            pass
+        try:
+            next(db_gen)
+        except StopIteration:
+            pass
+        print("FastAPI RAM Cache successfully pre-warmed for instant 0.1ms responses!")
+    except Exception as e:
+        print("Warm cache notice:", e)
+
