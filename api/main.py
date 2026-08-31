@@ -8,6 +8,11 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 from config import DB_PATH, DASHBOARD_DIR
 
+# Ensure production always connects to official Supabase database
+DEFAULT_SUPABASE_URL = "postgresql://postgres.nmqclghnxmstpabcyugn:Apuig060489%3F@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+if not os.environ.get("DATABASE_URL"):
+    os.environ["DATABASE_URL"] = DEFAULT_SUPABASE_URL
+
 from api.routes import registrations, analytics, export
 
 from starlette.middleware.base import BaseHTTPMiddleware

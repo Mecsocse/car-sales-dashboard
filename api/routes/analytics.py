@@ -972,27 +972,12 @@ def get_dashboard_all_data(
     now = time.time()
     if cache_key in _ALL_DATA_CACHE and purge != 1:
         cached_res, ts = _ALL_DATA_CACHE[cache_key]
-        if now - ts < 86400: # 24 hours in-memory RAM cache
+        if now - ts < 1800: # 30 min in-memory RAM cache
             return cached_res
-    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
-    is_standard_view = not brand and not model and not fuel and not province and not ccaa and not date_from and not date_to
-    if is_standard_view and purge != 1:
-        fname = f"all_data_month_{target_month}.json" if period in ("month", "custom_month") else (f"all_data_year_{target_year}.json" if period == "year" else None)
-        if fname:
-            fpath = os.path.join(PRECOMP_DIR, fname)
-            if os.path.exists(fpath):
-                try:
-                    import json
-                    with open(fpath, 'r', encoding='utf-8') as pf:
-                        cooked = json.load(pf)
-                        _ALL_DATA_CACHE[cache_key] = (cooked, now)
-                        return cooked
-                except Exception as e:
-                    print("Precomputed read notice:", e)
 
     # Fast-Path: Use Postgres RPC Function if available
     try:
-        if os.environ.get("DATABASE_URL"):
+        if True:
             c = conn.cursor()
             exec_query(c, "SELECT get_dashboard_metrics(?, ?, ?, ?, ?, ?, ?, ?, ?)",
                        [period, target_month, target_year, ccaa, province, brand, fuel, date_from, date_to])

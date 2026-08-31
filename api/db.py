@@ -8,7 +8,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 from config import DB_PATH
 
 def get_db():
-    db_url = os.environ.get("DATABASE_URL")
+    DEFAULT_SUPABASE_URL = "postgresql://postgres.nmqclghnxmstpabcyugn:Apuig060489%3F@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+    db_url = os.environ.get("DATABASE_URL") or DEFAULT_SUPABASE_URL
     if db_url:
         if "pooler.supabase.com:5432" in db_url:
             db_url = db_url.replace(":5432", ":6543")
