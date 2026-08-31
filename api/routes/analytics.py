@@ -1015,6 +1015,12 @@ def get_dashboard_all_data(
                         if str(rpc_res['summary'].get('top_model', '')).startswith('202') or 'DESCONOCIDO' in str(rpc_res['summary'].get('top_model', '')).upper():
                             rpc_res['summary']['top_model'] = rpc_res['models'][0]['modelo_full'] if rpc_res.get('models') else "N/A"
                             rpc_res['summary']['top_model_units'] = rpc_res['models'][0]['total'] if rpc_res.get('models') else 0
+                        
+                        fm = rpc_res.get('fuel_mix') or []
+                        phev_pct = sum(f.get('cuota', f.get('porcentaje', 0)) for f in fm if 'PHEV' in str(f.get('carburante', '')).upper() or 'ENCHUFABLE' in str(f.get('carburante', '')).upper())
+                        ev_pct = rpc_res['summary'].get('ev_share', 0) or sum(f.get('cuota', f.get('porcentaje', 0)) for f in fm if 'ELÉCTRICO' in str(f.get('carburante', '')).upper() or 'BEV' in str(f.get('carburante', '')).upper())
+                        rpc_res['summary']['phev_share'] = round(phev_pct, 1)
+                        rpc_res['summary']['zero_share'] = round(ev_pct + phev_pct, 1)
                     
                     _ALL_DATA_CACHE[cache_key] = (rpc_res, now)
                     return rpc_res

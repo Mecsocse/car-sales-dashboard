@@ -18,7 +18,7 @@ function createMetricCard(title, value, delta, deltaIcon, deltaColor, extraText,
     `;
 }
 
-function renderMetrics(summary, quotaMode = 'bev') {
+function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
     const container = document.getElementById("metrics-container");
     if (!container || !summary) return;
 
@@ -28,13 +28,30 @@ function renderMetrics(summary, quotaMode = 'bev') {
     const changeColor = summary.pct_change >= 0 ? "text-green" : "text-red";
     const changeIcon = summary.pct_change >= 0 ? "trending-up" : "trending-down";
 
+    // Compute EV & ZERO shares accurately with fuelMix fallback
+    let evShare = (summary.ev_share !== undefined && summary.ev_share !== null) ? Number(summary.ev_share) : (summary.ev_quota !== undefined ? Number(summary.ev_quota) : 0);
+    let zeroShare = (summary.zero_share !== undefined && summary.zero_share !== null) ? Number(summary.zero_share) : (summary.zero_quota !== undefined ? Number(summary.zero_quota) : 0);
+
+    if ((!zeroShare || zeroShare === 0) && Array.isArray(fuelMix) && fuelMix.length > 0) {
+        let phevShare = 0;
+        let bevShareFromMix = 0;
+        fuelMix.forEach(f => {
+            const name = String(f.carburante || f.nombre || '').toUpperCase();
+            const pct = Number(f.porcentaje !== undefined ? f.porcentaje : (f.cuota !== undefined ? f.cuota : 0));
+            if (name.includes('PHEV') || name.includes('ENCHUFABLE')) {
+                phevShare += pct;
+            }
+            if (name.includes('ELECTRICO') || name.includes('ELÉCTRICO') || name.includes('BEV')) {
+                bevShareFromMix += pct;
+            }
+        });
+        if (!evShare || evShare === 0) evShare = Number(bevShareFromMix.toFixed(1));
+        zeroShare = Number((evShare + phevShare).toFixed(1));
+    }
+
     const isZero = quotaMode === 'zero';
     const quotaTitle = isZero ? "Cuota Electrificada (Etiqueta 0)" : "Cuota Eléctrico Puro (BEV)";
-    const rawZero = (summary.zero_share !== undefined && summary.zero_share !== null) ? summary.zero_share : summary.zero_quota;
-    const rawEv = (summary.ev_share !== undefined && summary.ev_share !== null) ? summary.ev_share : summary.ev_quota;
-    const quotaVal = isZero 
-        ? (rawZero !== undefined && rawZero !== null ? `${rawZero}%` : "0%")
-        : (rawEv !== undefined && rawEv !== null ? `${rawEv}%` : "0%");
+    const quotaVal = isZero ? `${zeroShare}%` : `${evShare}%`;
     const quotaSub = isZero ? "BEV + PHEV enchufables" : "sobre total vehículo";
     const quotaBadge = isZero ? "ZERO" : "DGT";
 

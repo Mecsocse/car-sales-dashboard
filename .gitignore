@@ -1,0 +1,16 @@
+﻿matriculaciones.db
+matriculaciones.db-journal
+data/raw/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+.env
+SUBIR_A_GITHUB/
+.user_uploaded/
+scripts/test_*.py
+scripts/inspect_*.py
+scripts/verify_*.py
+scripts/find_*.py
+scripts/fast_*.py
+scripts/temp_*.py

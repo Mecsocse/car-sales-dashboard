@@ -87,10 +87,10 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260830_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260831_v11_';
                 Object.keys(localStorage).forEach(k => {
-                    if (k.startsWith('dashboard_all_data_') && !k.startsWith(CURRENT_CACHE_PREFIX)) {
-                        localStorage.removeItem(k);
+                    if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
+                        if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
                     }
                 });
             } catch(e) {}
@@ -955,7 +955,7 @@ class DashboardApp {
         };
 
         if (allData.summary) {
-            window.Components.renderMetrics(allData.summary, this.kpiQuotaMode);
+            window.Components.renderMetrics(allData.summary, this.kpiQuotaMode, allData.fuel_mix || []);
             this.bindKpiQuotaToggle();
         }
 
@@ -1553,7 +1553,7 @@ class DashboardApp {
                 e.stopPropagation();
                 this.kpiQuotaMode = 'bev';
                 if (this.lastAllData && this.lastAllData.summary) {
-                    window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode);
+                    window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode, this.lastAllData.fuel_mix || []);
                     this.bindKpiQuotaToggle();
                 }
             });
@@ -1563,7 +1563,7 @@ class DashboardApp {
                 e.stopPropagation();
                 this.kpiQuotaMode = 'zero';
                 if (this.lastAllData && this.lastAllData.summary) {
-                    window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode);
+                    window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode, this.lastAllData.fuel_mix || []);
                     this.bindKpiQuotaToggle();
                 }
             });
