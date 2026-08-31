@@ -224,34 +224,35 @@ def cook_all():
     with open(os.path.join(OUT_DIR, "monthly_tech_quota_2026.json"), 'w', encoding='utf-8') as f:
         json.dump(tech_quota_res, f, ensure_ascii=False)
 
-    # 7. Monthly Matrix 2026
-    c.execute("""
-        SELECT 
-            marca_clean as marca,
-            modelo_clean as modelo,
-            modelo_full,
-            SUM(CASE WHEN mes_str = '2026-01' THEN total_unidades ELSE 0 END) as ene,
-            SUM(CASE WHEN mes_str = '2026-02' THEN total_unidades ELSE 0 END) as feb,
-            SUM(CASE WHEN mes_str = '2026-03' THEN total_unidades ELSE 0 END) as mar,
-            SUM(CASE WHEN mes_str = '2026-04' THEN total_unidades ELSE 0 END) as abr,
-            SUM(CASE WHEN mes_str = '2026-05' THEN total_unidades ELSE 0 END) as may,
-            SUM(CASE WHEN mes_str = '2026-06' THEN total_unidades ELSE 0 END) as jun,
-            SUM(CASE WHEN mes_str = '2026-07' THEN total_unidades ELSE 0 END) as jul,
-            SUM(CASE WHEN mes_str = '2026-08' THEN total_unidades ELSE 0 END) as ago,
-            SUM(CASE WHEN mes_str = '2026-09' THEN total_unidades ELSE 0 END) as sep,
-            SUM(CASE WHEN mes_str = '2026-10' THEN total_unidades ELSE 0 END) as oct,
-            SUM(CASE WHEN mes_str = '2026-11' THEN total_unidades ELSE 0 END) as nov,
-            SUM(CASE WHEN mes_str = '2026-12' THEN total_unidades ELSE 0 END) as dic,
-            SUM(total_unidades) as total_2026
-        FROM ventas_mensuales_resumen
-        WHERE anio_str = '2026' AND UPPER(marca_clean) NOT LIKE '%DESCONOCIDO%' AND UPPER(modelo_clean) NOT LIKE '%DESCONOCIDO%' AND marca_clean NOT LIKE '202%'
-        GROUP BY marca_clean, modelo_clean, modelo_full
-        ORDER BY ago DESC
-        LIMIT 50
-    """)
-    matrix_res = [dict(r) for r in c.fetchall()]
-    with open(os.path.join(OUT_DIR, "monthly_matrix_2026.json"), 'w', encoding='utf-8') as f:
-        json.dump(matrix_res, f, ensure_ascii=False)
+    # 7. Monthly Matrix for each year
+    for y in ['2024', '2025', '2026']:
+        c.execute(f"""
+            SELECT 
+                marca_clean as marca,
+                modelo_clean as modelo,
+                modelo_full,
+                SUM(CASE WHEN mes_str = '{y}-01' THEN total_unidades ELSE 0 END) as ene,
+                SUM(CASE WHEN mes_str = '{y}-02' THEN total_unidades ELSE 0 END) as feb,
+                SUM(CASE WHEN mes_str = '{y}-03' THEN total_unidades ELSE 0 END) as mar,
+                SUM(CASE WHEN mes_str = '{y}-04' THEN total_unidades ELSE 0 END) as abr,
+                SUM(CASE WHEN mes_str = '{y}-05' THEN total_unidades ELSE 0 END) as may,
+                SUM(CASE WHEN mes_str = '{y}-06' THEN total_unidades ELSE 0 END) as jun,
+                SUM(CASE WHEN mes_str = '{y}-07' THEN total_unidades ELSE 0 END) as jul,
+                SUM(CASE WHEN mes_str = '{y}-08' THEN total_unidades ELSE 0 END) as ago,
+                SUM(CASE WHEN mes_str = '{y}-09' THEN total_unidades ELSE 0 END) as sep,
+                SUM(CASE WHEN mes_str = '{y}-10' THEN total_unidades ELSE 0 END) as oct,
+                SUM(CASE WHEN mes_str = '{y}-11' THEN total_unidades ELSE 0 END) as nov,
+                SUM(CASE WHEN mes_str = '{y}-12' THEN total_unidades ELSE 0 END) as dic,
+                SUM(total_unidades) as total_2026
+            FROM ventas_mensuales_resumen
+            WHERE anio_str = '{y}' AND UPPER(marca_clean) NOT LIKE '%DESCONOCIDO%' AND UPPER(modelo_clean) NOT LIKE '%DESCONOCIDO%' AND marca_clean NOT LIKE '202%'
+            GROUP BY marca_clean, modelo_clean, modelo_full
+            ORDER BY total_2026 DESC
+            LIMIT 50
+        """)
+        matrix_res = [dict(r) for r in c.fetchall()]
+        with open(os.path.join(OUT_DIR, f"monthly_matrix_{y}.json"), 'w', encoding='utf-8') as f:
+            json.dump(matrix_res, f, ensure_ascii=False)
 
     print(f"All pre-computed files generated in {OUT_DIR} successfully!")
 
