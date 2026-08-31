@@ -1,0 +1,132 @@
+{
+  "latest_series": "NSD",
+  "latest_number": "7160",
+  "latest_plate_full": "7160 NSD",
+  "latest_date": "2026-08-28",
+  "next_series": "NSF",
+  "format_example": "7160 NSD",
+  "timeline": [
+    {
+      "series": "NSD",
+      "number": "7160",
+      "full_plate": "7160 NSD",
+      "date": "2026-08-28"
+    },
+    {
+      "series": "NSC",
+      "number": "9999",
+      "full_plate": "9999 NSC",
+      "date": "2026-08-27"
+    },
+    {
+      "series": "NSB",
+      "number": "9999",
+      "full_plate": "9999 NSB",
+      "date": "2026-08-26"
+    },
+    {
+      "series": "NRZ",
+      "number": "9999",
+      "full_plate": "9999 NRZ",
+      "date": "2026-08-24"
+    },
+    {
+      "series": "NRY",
+      "number": "9999",
+      "full_plate": "9999 NRY",
+      "date": "2026-08-20"
+    },
+    {
+      "series": "NRX",
+      "number": "9999",
+      "full_plate": "9999 NRX",
+      "date": "2026-08-18"
+    },
+    {
+      "series": "NRW",
+      "number": "9999",
+      "full_plate": "9999 NRW",
+      "date": "2026-08-14"
+    },
+    {
+      "series": "NRV",
+      "number": "9999",
+      "full_plate": "9999 NRV",
+      "date": "2026-08-11"
+    },
+    {
+      "series": "NRT",
+      "number": "9999",
+      "full_plate": "9999 NRT",
+      "date": "2026-08-09"
+    },
+    {
+      "series": "NRS",
+      "number": "9999",
+      "full_plate": "9999 NRS",
+      "date": "2026-08-05"
+    },
+    {
+      "series": "NRR",
+      "number": "9999",
+      "full_plate": "9999 NRR",
+      "date": "2026-08-03"
+    },
+    {
+      "series": "NRN",
+      "number": "9999",
+      "full_plate": "9999 NRN",
+      "date": "2026-07-30"
+    },
+    {
+      "series": "NRM",
+      "number": "9999",
+      "full_plate": "9999 NRM",
+      "date": "2026-07-29"
+    },
+    {
+      "series": "NRL",
+      "number": "9999",
+      "full_plate": "9999 NRL",
+      "date": "2026-07-28"
+    },
+    {
+      "series": "NRK",
+      "number": "9999",
+      "full_plate": "9999 NRK",
+      "date": "2026-07-27"
+    },
+    {
+      "series": "NRJ",
+      "number": "9999",
+      "full_plate": "9999 NRJ",
+      "date": "2026-07-24"
+    },
+    {
+      "series": "NRH",
+      "number": "9999",
+      "full_plate": "9999 NRH",
+      "date": "2026-07-22"
+    },
+    {
+      "series": "NRG",
+      "number": "9999",
+      "full_plate": "9999 NRG",
+      "date": "2026-07-21"
+    },
+    {
+      "series": "NRF",
+      "number": "9999",
+      "full_plate": "9999 NRF",
+      "date": "2026-07-20"
+    },
+    {
+      "series": "NRD",
+      "number": "9999",
+      "full_plate": "9999 NRD",
+      "date": "2026-07-16"
+    }
+  ],
+  "dgt_source": "Dirección General de Tráfico (Microdatos oficiales)",
+  "updated_at": "2026-08-28"
+}
