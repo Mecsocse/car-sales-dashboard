@@ -23,13 +23,20 @@ def get_fuel_color(fuel_name):
     return '#94a3b8'
 
 def cook_all_data_payload(where_clause, params, period, target_month, target_year):
-    # 1. Total & EV
+    # 1. Total & EV & PHEV & ZERO
     c.execute(f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE {where_clause}", params)
     total_m = c.fetchone()['total'] or 0
     
     c.execute(f"SELECT SUM(total_unidades) as total_ev FROM ventas_mensuales_resumen WHERE {where_clause} AND carburante_std IN ('ELECTRICO','EV','BEV')", params)
     ev_u = c.fetchone()['total_ev'] or 0
     ev_share = round((ev_u / (total_m or 1) * 100), 1) if total_m > 0 else 0.0
+
+    c.execute(f"SELECT SUM(total_unidades) as total_phev FROM ventas_mensuales_resumen WHERE {where_clause} AND carburante_std IN ('PHEV','HIBRIDO_ENCHUFABLE')", params)
+    phev_u = c.fetchone()['total_phev'] or 0
+    phev_share = round((phev_u / (total_m or 1) * 100), 1) if total_m > 0 else 0.0
+
+    zero_u = ev_u + phev_u
+    zero_share = round((zero_u / (total_m or 1) * 100), 1) if total_m > 0 else 0.0
 
     # 2. Brands Ranking
     c.execute(f"""
@@ -53,7 +60,7 @@ def cook_all_data_payload(where_clause, params, period, target_month, target_yea
     """, params)
     models = [{'marca': r['marca'], 'modelo': r['modelo'], 'modelo_full': r['modelo_full'], 'total': r['total']} for r in c.fetchall()]
 
-    # 4. EV Models
+    # 4. EV Models (Pure BEV)
     c.execute(f"""
         SELECT marca_clean as marca, modelo_clean as modelo, modelo_full, SUM(total_unidades) as total
         FROM ventas_mensuales_resumen
@@ -64,7 +71,7 @@ def cook_all_data_payload(where_clause, params, period, target_month, target_yea
     """, params)
     ev_models = [{'marca': r['marca'], 'modelo': r['modelo'], 'modelo_full': r['modelo_full'], 'total': r['total']} for r in c.fetchall()]
 
-    # 5. EV Brands
+    # 5. EV Brands (Pure BEV)
     c.execute(f"""
         SELECT marca_clean as marca, SUM(total_unidades) as total
         FROM ventas_mensuales_resumen
@@ -74,6 +81,28 @@ def cook_all_data_payload(where_clause, params, period, target_month, target_yea
         LIMIT 50
     """, params)
     ev_brands = [{'marca': r['marca'], 'total': r['total']} for r in c.fetchall()]
+
+    # 4b. ZERO Models (BEV + PHEV)
+    c.execute(f"""
+        SELECT marca_clean as marca, modelo_clean as modelo, modelo_full, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE {where_clause} AND carburante_std IN ('ELECTRICO','EV','BEV','PHEV','HIBRIDO_ENCHUFABLE') AND UPPER(marca_clean) NOT LIKE '%DESCONOCIDO%' AND UPPER(modelo_clean) NOT LIKE '%DESCONOCIDO%' AND marca_clean NOT LIKE '202%'
+        GROUP BY marca_clean, modelo_clean, modelo_full
+        ORDER BY total DESC
+        LIMIT 50
+    """, params)
+    zero_models = [{'marca': r['marca'], 'modelo': r['modelo'], 'modelo_full': r['modelo_full'], 'total': r['total']} for r in c.fetchall()]
+
+    # 5b. ZERO Brands (BEV + PHEV)
+    c.execute(f"""
+        SELECT marca_clean as marca, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE {where_clause} AND carburante_std IN ('ELECTRICO','EV','BEV','PHEV','HIBRIDO_ENCHUFABLE') AND UPPER(marca_clean) NOT LIKE '%DESCONOCIDO%' AND marca_clean NOT LIKE '202%'
+        GROUP BY marca_clean
+        ORDER BY total DESC
+        LIMIT 50
+    """, params)
+    zero_brands = [{'marca': r['marca'], 'total': r['total']} for r in c.fetchall()]
 
     # 6. Fuel Mix
     c.execute(f"""
@@ -105,6 +134,11 @@ def cook_all_data_payload(where_clause, params, period, target_month, target_yea
         'total_month': total_m,
         'total_registrations': total_m,
         'ev_share': ev_share,
+        'phev_share': phev_share,
+        'zero_share': zero_share,
+        'ev_units': ev_u,
+        'phev_units': phev_u,
+        'zero_units': zero_u,
         'pct_change': 0.0,
         'top_brand': top_brand,
         'top_brand_units': top_brand_units,
@@ -119,6 +153,8 @@ def cook_all_data_payload(where_clause, params, period, target_month, target_yea
         'models': models,
         'ev_models': ev_models,
         'ev_brands': ev_brands,
+        'zero_models': zero_models,
+        'zero_brands': zero_brands,
         'fuel_mix': fuel_mix
     }
 
@@ -160,10 +196,11 @@ def cook_all():
         with open(out_file, 'w', encoding='utf-8') as f:
             json.dump(evo_data, f, ensure_ascii=False)
 
-    # 4. Multiyear EV Quota
+    # 4. Multiyear EV Quota (Pure BEV) & Multiyear ZERO Quota (BEV + PHEV)
     c.execute("""
         SELECT anio_str, mes_str,
                SUM(CASE WHEN carburante_std IN ('ELECTRICO','EV','BEV') THEN total_unidades ELSE 0 END) as ev,
+               SUM(CASE WHEN carburante_std IN ('PHEV','HIBRIDO_ENCHUFABLE') THEN total_unidades ELSE 0 END) as phev,
                SUM(total_unidades) as total
         FROM ventas_mensuales_resumen
         WHERE anio_str IN ('2024','2025','2026')
@@ -171,12 +208,18 @@ def cook_all():
         ORDER BY anio_str ASC, mes_str ASC
     """)
     ev_quota_res = {}
+    zero_quota_res = {}
     for r in c.fetchall():
-        y, m, ev, tot = r['anio_str'], r['mes_str'][-2:], r['ev'], r['total']
+        y, m, ev, phev, tot = r['anio_str'], r['mes_str'][-2:], r['ev'], r['phev'], r['total']
         if y not in ev_quota_res: ev_quota_res[y] = {}
+        if y not in zero_quota_res: zero_quota_res[y] = {}
         ev_quota_res[y][m] = round((ev / (tot or 1) * 100), 1) if tot > 0 else 0.0
+        zero_quota_res[y][m] = round(((ev + phev) / (tot or 1) * 100), 1) if tot > 0 else 0.0
+
     with open(os.path.join(OUT_DIR, "multiyear_ev_quota.json"), 'w', encoding='utf-8') as f:
         json.dump(ev_quota_res, f, ensure_ascii=False)
+    with open(os.path.join(OUT_DIR, "multiyear_zero_quota.json"), 'w', encoding='utf-8') as f:
+        json.dump(zero_quota_res, f, ensure_ascii=False)
 
     # 5. Multiyear EV Cumulative
     ev_cum_res = {}
@@ -194,35 +237,39 @@ def cook_all():
     with open(os.path.join(OUT_DIR, "multiyear_ev_cumulative.json"), 'w', encoding='utf-8') as f:
         json.dump(ev_cum_res, f, ensure_ascii=False)
 
-    # 6. Monthly Tech Quota 2026
-    c.execute("""
-        SELECT substr(mes_str, 6, 2) as m,
-               CASE
-                   WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'ELÉCTRICO (BEV)'
-                   WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
-                   WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'HÍBRIDO (HEV/MHEV)'
-                   WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
-                   ELSE 'GASOLINA'
-               END as tech,
-               SUM(total_unidades) as units
-        FROM ventas_mensuales_resumen
-        WHERE anio_str = '2026'
-        GROUP BY m, tech
-        ORDER BY m, units DESC
-    """)
-    m_techs = {}
-    m_tots = {}
-    for r in c.fetchall():
-        m, tech, u = r['m'], r['tech'], r['units']
-        if m not in m_techs: m_techs[m] = {}; m_tots[m] = 0
-        m_techs[m][tech] = u
-        m_tots[m] += u
-    tech_quota_res = {}
-    for m, techs in m_techs.items():
-        tot = m_tots[m] or 1
-        tech_quota_res[m] = {tech: round((units / tot * 100), 1) for tech, units in techs.items()}
-    with open(os.path.join(OUT_DIR, "monthly_tech_quota_2026.json"), 'w', encoding='utf-8') as f:
-        json.dump(tech_quota_res, f, ensure_ascii=False)
+    # 6. Monthly Tech Quota for 2024, 2025, 2026
+    for y in ['2026', '2025', '2024']:
+        c.execute("""
+            SELECT substr(mes_str, 6, 2) as m,
+                   CASE
+                       WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'MHEV_GASOLINA') THEN 'HÍBRIDO GASOLINA'
+                       WHEN carburante_std IN ('GASOLINA') THEN 'GASOLINA'
+                       WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN '100% ELÉCTRICO (BEV)'
+                       WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
+                       WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
+                       WHEN carburante_std IN ('HEV_DIESEL', 'HIBRIDO_DIESEL', 'MHEV_DIESEL') THEN 'HÍBRIDO DIÉSEL'
+                       WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
+                       ELSE 'GASOLINA'
+                   END as tech,
+                   SUM(total_unidades) as units
+            FROM ventas_mensuales_resumen
+            WHERE anio_str = ?
+            GROUP BY m, tech
+            ORDER BY m, units DESC
+        """, (y,))
+        m_techs = {}
+        m_tots = {}
+        for r in c.fetchall():
+            m, tech, u = r['m'], r['tech'], r['units']
+            if m not in m_techs: m_techs[m] = {}; m_tots[m] = 0
+            m_techs[m][tech] = u
+            m_tots[m] += u
+        tech_quota_res = {}
+        for m, techs in m_techs.items():
+            tot = m_tots[m] or 1
+            tech_quota_res[m] = {tech: round((units / tot * 100), 1) for tech, units in techs.items()}
+        with open(os.path.join(OUT_DIR, f"monthly_tech_quota_{y}.json"), 'w', encoding='utf-8') as f:
+            json.dump(tech_quota_res, f, ensure_ascii=False)
 
     # 7. Monthly Matrix for each year
     for y in ['2024', '2025', '2026']:
@@ -253,6 +300,13 @@ def cook_all():
         matrix_res = [dict(r) for r in c.fetchall()]
         with open(os.path.join(OUT_DIR, f"monthly_matrix_{y}.json"), 'w', encoding='utf-8') as f:
             json.dump(matrix_res, f, ensure_ascii=False)
+
+    # 8. Latest Plate Data
+    try:
+        from generate_plate_data import generate_latest_plate_data
+        generate_latest_plate_data()
+    except Exception:
+        pass
 
     print(f"All pre-computed files generated in {OUT_DIR} successfully!")
 
