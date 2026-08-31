@@ -7,6 +7,7 @@ import sqlite3
 import logging
 import re
 import time
+import json
 from datetime import datetime, timedelta
 import argparse
 
@@ -375,12 +376,114 @@ class DGTSpainExtractor:
             current += timedelta(days=1)
         return total
 
+    def recook_precomputed_from_db(self, affected_months=None):
+        """Re-generates precomputed JSON files for the affected months.
+        
+        Reads from Supabase via get_dashboard_metrics RPC, writes to data/precomputed/.
+        This ensures the web always shows fresh data after each bot run,
+        with ZERO live database queries from user traffic.
+        """
+        precomp_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
+        os.makedirs(precomp_dir, exist_ok=True)
+        
+        db_url = os.environ.get("DATABASE_URL") or "postgresql://postgres.nmqclghnxmstpabcyugn:Apuig060489%3F@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+        
+        if not affected_months:
+            now = datetime.now()
+            affected_months = [now.strftime('%Y-%m')]
+            # If we're in the first 3 days, also recook previous month
+            if now.day <= 3:
+                prev = now.replace(day=1) - timedelta(days=1)
+                affected_months.append(prev.strftime('%Y-%m'))
+        
+        try:
+            import psycopg2
+            from psycopg2.extras import RealDictCursor
+            conn = psycopg2.connect(db_url, cursor_factory=RealDictCursor, connect_timeout=30)
+            cursor = conn.cursor()
+            
+            for month_str in affected_months:
+                year_str = month_str[:4]
+                try:
+                    # Cook this month via the RPC function
+                    cursor.execute(
+                        "SELECT get_dashboard_metrics(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                        ['month', month_str, year_str, '', '', '', '', None, None]
+                    )
+                    row = cursor.fetchone()
+                    if row and row.get('get_dashboard_metrics'):
+                        month_data = row['get_dashboard_metrics']
+                        fpath = os.path.join(precomp_dir, f"all_data_month_{month_str}.json")
+                        with open(fpath, 'w', encoding='utf-8') as f:
+                            json.dump(month_data, f, ensure_ascii=False)
+                        total = month_data.get('summary', {}).get('total_month', 0)
+                        logging.info(f"[COOK] Re-cooked month {month_str} -> {total:,} un.")
+                except Exception as e:
+                    logging.error(f"[COOK] Error cooking month {month_str}: {e}")
+            
+            # Also recook the current year
+            current_year = datetime.now().strftime('%Y')
+            try:
+                cursor.execute(
+                    "SELECT get_dashboard_metrics(%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                    ['year', f'{current_year}-12', current_year, '', '', '', '', None, None]
+                )
+                row = cursor.fetchone()
+                if row and row.get('get_dashboard_metrics'):
+                    year_data = row['get_dashboard_metrics']
+                    fpath = os.path.join(precomp_dir, f"all_data_year_{current_year}.json")
+                    with open(fpath, 'w', encoding='utf-8') as f:
+                        json.dump(year_data, f, ensure_ascii=False)
+                    total = year_data.get('summary', {}).get('total_month', 0)
+                    logging.info(f"[COOK] Re-cooked year {current_year} -> {total:,} un.")
+            except Exception as e:
+                logging.error(f"[COOK] Error cooking year {current_year}: {e}")
+            
+            conn.close()
+            
+            # Invalidate in-memory cache so warm_cache picks up fresh data
+            try:
+                from api.routes.analytics import _ALL_DATA_CACHE
+                _ALL_DATA_CACHE.clear()
+                logging.info("[COOK] Cleared in-memory API cache")
+            except Exception:
+                pass  # Not running inside FastAPI process, that's fine
+                
+            logging.info("[COOK] Pre-computed data refresh complete!")
+            
+        except Exception as e:
+            logging.error(f"[COOK] Could not connect to Supabase for re-cooking: {e}")
+            # Fallback: try cooking from local SQLite
+            try:
+                scripts_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts'))
+                sys.path.insert(0, scripts_dir)
+                from cook_all_data import cook_all
+                cook_all()
+                logging.info("[COOK] Fallback: cooked from local SQLite successfully")
+            except Exception as e2:
+                logging.error(f"[COOK] Fallback SQLite cooking also failed: {e2}")
+
     def auto_catchup(self, days_back=10):
         """Automatically checks recent days and downloads any missing or updated DGT files."""
         end = datetime.now()
         start = end - timedelta(days=days_back)
         logging.info(f"Starting DGT Spain Auto Catchup from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}...")
-        return self.run_range(start, end)
+        total = self.run_range(start, end)
+        
+        # After ingesting new data, re-cook precomputed JSONs for instant web serving
+        if total > 0:
+            logging.info(f"Ingested {total:,} new records. Re-cooking precomputed data...")
+            # Determine which months were affected
+            affected = set()
+            d = start
+            while d <= end:
+                affected.add(d.strftime('%Y-%m'))
+                d += timedelta(days=1)
+            self.recook_precomputed_from_db(list(affected))
+        else:
+            logging.info("No new records ingested, skipping re-cook.")
+        
+        return total
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="DGT Spain Automated Ingestion Extractor")
