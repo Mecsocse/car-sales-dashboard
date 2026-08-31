@@ -87,7 +87,7 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260831_v15_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260831_v16_';
                 Object.keys(localStorage).forEach(k => {
                     if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
                         if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
@@ -870,7 +870,7 @@ class DashboardApp {
 
     async loadMetricsAndChartsConsolidated() {
         const q = this.getFullQueryParams();
-        const cacheKey = `dashboard_all_data_v20260831_v15_${q}`;
+        const cacheKey = `dashboard_all_data_v20260831_v16_${q}`;
 
         // 1. Instant cache load from localStorage or memory (0ms) - only if valid and populated
         if (!this.memoryCache) this.memoryCache = new Map();
@@ -940,8 +940,15 @@ class DashboardApp {
             } else if (m && name.toUpperCase().startsWith(m + ' ' + m)) {
                 name = name.substring(m.length).trim();
             }
-            // Strip trailing homologation codes like 1LS6CMEO, 3JDAANB (must contain at least one digit)
-            name = name.replace(/\s+(?=[0-9A-Z]*\d)[0-9A-Z]{4,16}$/i, '').trim();
+            // Strip trailing homologation technical codes like 1LS6CMEO, 3JDAANB (contains letters and digits and length >= 6)
+            // NEVER strip purely numeric models like 2008, 3008, 5008, 208, 308, 508, 500, 600, 320, 911
+            const parts = name.split(/\s+/);
+            if (parts.length > 1) {
+                const last = parts[parts.length - 1];
+                if (!/^\d{2,4}$/.test(last) && /[a-zA-Z]/.test(last) && /\d/.test(last) && last.length >= 6) {
+                    name = parts.slice(0, -1).join(' ').trim();
+                }
+            }
 
             const uName = name.toUpperCase();
             if (uName === 'DACIA' || uName === 'DACIA DACIA') name = 'DACIA SANDERO';
