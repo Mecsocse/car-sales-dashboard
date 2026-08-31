@@ -1060,68 +1060,61 @@ class DashboardApp {
     }
 
     async loadSecondaryCharts() {
-        try {
-            const q = this.getFullQueryParams();
-            const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
+        const q = this.getFullQueryParams();
+        const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
 
-            const [
-                dailyData,
-                monthlyEvolData,
-                evQuotaData,
-                evCumData,
-                techQuotaData
-            ] = await Promise.all([
-                this.fetchCached(`${API_BASE}/api/registrations/daily?${q}&days=30`),
-                this.fetchCached(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`),
-                this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`),
-                this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-cumulative?${ccaaParam}`),
-                this.fetchCached(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`)
-            ]);
+        // 1. Monthly Evolution Chart
+        this.fetchCached(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`)
+            .then(data => {
+                if (data) window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', data);
+            })
+            .catch(e => console.warn('Monthly evolution load notice:', e));
 
-            // 1. Daily Evolution
-            if (dailyData) {
-                window.DashboardCharts.initDailyEvolutionChart('dailyEvolutionChart', dailyData, (clickedDate) => {
-                    if (this.dateFromFilter && this.dateToFilter) {
-                        if (this.dateFromFilter.value === clickedDate) {
-                            this.dateFromFilter.value = '';
-                            this.dateToFilter.value = '';
-                            if (this.singleDatePicker) this.singleDatePicker.value = '';
-                        } else {
-                            this.dateFromFilter.value = clickedDate;
-                            this.dateToFilter.value = clickedDate;
-                            if (this.singleDatePicker) this.singleDatePicker.value = clickedDate;
+        // 2. Multi-year EV Quota Trend Chart
+        this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-quota?${ccaaParam}`)
+            .then(data => {
+                if (data) window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', data);
+            })
+            .catch(e => console.warn('EV quota trend load notice:', e));
+
+        // 3. Multi-year EV Cumulative Trend Chart
+        this.fetchCached(`${API_BASE}/api/analytics/multiyear-ev-cumulative?${ccaaParam}`)
+            .then(data => {
+                if (data) window.DashboardCharts.initEVCumulativeTrendChart('evCumulativeTrendChart', data);
+            })
+            .catch(e => console.warn('EV cumulative trend load notice:', e));
+
+        // 4. All Technologies Monthly Quota Trend Chart
+        const allTechTitleEl = document.getElementById('all-tech-quota-title');
+        if (allTechTitleEl) allTechTitleEl.textContent = `Cuota por Tecnología Mes a Mes (${this.selectedYear})`;
+
+        this.fetchCached(`${API_BASE}/api/analytics/monthly-tech-quota?year=${this.selectedYear}${ccaaParam}`)
+            .then(data => {
+                if (data) window.DashboardCharts.initAllTechQuotaChart('allTechQuotaChart', data);
+            })
+            .catch(e => console.warn('All tech quota load notice:', e));
+
+        // 5. Daily Evolution (if applicable)
+        this.fetchCached(`${API_BASE}/api/registrations/daily?${q}&days=30`)
+            .then(data => {
+                if (data && Array.isArray(data) && data.length > 0) {
+                    window.DashboardCharts.initDailyEvolutionChart('dailyEvolutionChart', data, (clickedDate) => {
+                        if (this.dateFromFilter && this.dateToFilter) {
+                            if (this.dateFromFilter.value === clickedDate) {
+                                this.dateFromFilter.value = '';
+                                this.dateToFilter.value = '';
+                                if (this.singleDatePicker) this.singleDatePicker.value = '';
+                            } else {
+                                this.dateFromFilter.value = clickedDate;
+                                this.dateToFilter.value = clickedDate;
+                                if (this.singleDatePicker) this.singleDatePicker.value = clickedDate;
+                            }
+                            this.refreshAll();
                         }
-                        this.refreshAll();
-                    }
-                });
-            }
-
-            // 2. Monthly Evolution
-            if (monthlyEvolData) {
-                window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', monthlyEvolData);
-            }
-
-            // 3. Multi-year EV Quota Trend Chart
-            if (evQuotaData) {
-                window.DashboardCharts.initEVQuotaTrendChart('evQuotaTrendChart', evQuotaData);
-            }
-
-            // 4. Multi-year EV Cumulative Trend Chart
-            if (evCumData) {
-                window.DashboardCharts.initEVCumulativeTrendChart('evCumulativeTrendChart', evCumData);
-            }
-
-            // 5. All Technologies Monthly Quota Trend Chart
-            const allTechTitleEl = document.getElementById('all-tech-quota-title');
-            if (allTechTitleEl) allTechTitleEl.textContent = `Cuota por Tecnología Mes a Mes (${this.selectedYear})`;
-
-            if (techQuotaData) {
-                window.DashboardCharts.initAllTechQuotaChart('allTechQuotaChart', techQuotaData);
-            }
-
-        } catch (error) {
-            console.error('Failed to load secondary charts:', error);
-        }
+                    });
+                }
+            })
+            .catch(e => console.warn('Daily evolution load notice:', e));
     }
 
     async loadTableData() {
