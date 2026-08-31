@@ -108,8 +108,11 @@
       });
     </script>
 
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1171398586910114" crossorigin="anonymous"></script>
+
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/styles.css?v=20260831_v12">
+    <link rel="stylesheet" href="css/styles.css?v=20260831_v13">
 </head>
 <body>
     <!-- Global Loading Clock Indicator -->
@@ -818,6 +821,44 @@
         </div>
     </div>
 
+    <!-- Modal: Privacidad y Cookies -->
+    <div id="privacy-modal" class="modal-overlay">
+        <div class="modal-card" style="max-width: 650px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="background: #eff6ff; color: #2563eb; padding: 8px; border-radius: 10px;">
+                        <i data-lucide="shield-check" style="width: 22px; height: 22px;"></i>
+                    </div>
+                    <div>
+                        <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin: 0;">Política de Privacidad y Cookies</h3>
+                        <span style="font-size: 12px; color: #64748b;">Cumplimiento RGPD / ePrivacy y Google AdSense</span>
+                    </div>
+                </div>
+                <button class="modal-close-btn" id="close-privacy-modal">
+                    <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+                </button>
+            </div>
+            <div class="modal-body" style="padding: 20px 24px; max-height: 70vh; overflow-y: auto; font-size: 13px; color: #475569; line-height: 1.6;">
+                <h4 style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 0;">1. Responsable del Tratamiento</h4>
+                <p>El portal <strong>CarDataSales</strong> es un proyecto independiente de análisis de datos de automoción. Contacto: <a href="mailto:cardatasales01@gmail.com" style="color: #2563eb; font-weight: 600;">cardatasales01@gmail.com</a>.</p>
+
+                <h4 style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 16px;">2. Datos y Fuentes Oficiales</h4>
+                <p>Este sitio web utiliza exclusivamente microdatos públicos y anonimizados publicados oficialmente por la Dirección General de Tráfico (DGT) y el portal del Gobierno de España (datos.gob.es). No recopilamos datos personales privados ni números de bastidor completos.</p>
+
+                <h4 style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 16px;">3. Cookies y Publicidad de Terceros (Google AdSense)</h4>
+                <p>Utilizamos proveedores externos, incluido <strong>Google</strong>, para publicar anuncios cuando visita nuestro sitio web:</p>
+                <ul style="padding-left: 20px; margin: 8px 0;">
+                    <li>Google y sus socios utilizan cookies para publicar anuncios basados en las visitas anteriores de los usuarios a este u otros sitios web en Internet.</li>
+                    <li>Los usuarios pueden inhabilitar la publicidad personalizada a través de la <a href="https://adssettings.google.com" target="_blank" rel="noopener" style="color: #2563eb;">Configuración de Anuncios de Google</a>.</li>
+                    <li>También puede consultar cómo utiliza Google la información de los sitios web en <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener" style="color: #2563eb;">Google Privacy & Terms</a>.</li>
+                </ul>
+
+                <h4 style="font-size: 14px; font-weight: 700; color: #0f172a; margin-top: 16px;">4. Analítica Web (Google Analytics 4)</h4>
+                <p>Utilizamos Google Analytics 4 para recopilar métricas de uso agregadas con anonimización de IP para optimizar el rendimiento y la calidad del dashboard.</p>
+            </div>
+        </div>
+    </div>
+
     <!-- Application Footer -->
     <footer class="app-footer">
         <div>
@@ -825,6 +866,7 @@
         </div>
         <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
             <a href="#" id="footer-link-about">Sobre el proyecto</a>
+            <a href="#" id="footer-link-privacy">Privacidad y Cookies</a>
             <a href="#" id="footer-link-plate">Última matrícula</a>
             <a href="mailto:cardatasales01@gmail.com">Contacto</a>
             <a href="https://datos.gob.es" target="_blank" rel="noopener">Fuente: datos.gob.es</a>
@@ -832,9 +874,9 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260831_v12"></script>
-    <script src="js/components.js?v=20260831_v12"></script>
-    <script src="js/insights.js?v=20260831_v12"></script>
-    <script src="js/app.js?v=20260831_v12"></script>
+    <script src="js/charts.js?v=20260831_v13"></script>
+    <script src="js/components.js?v=20260831_v13"></script>
+    <script src="js/insights.js?v=20260831_v13"></script>
+    <script src="js/app.js?v=20260831_v13"></script>
 </body>
 </html>

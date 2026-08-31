@@ -1469,11 +1469,40 @@ class DashboardApp {
         if (closeAboutBtn) closeAboutBtn.addEventListener('click', closeAbout);
         if (aboutBackdrop) aboutBackdrop.addEventListener('click', closeAbout);
 
+        // 3. Privacy & Cookies Modal
+        const privacyModal = document.getElementById('privacy-modal');
+        const footerPrivacyLink = document.getElementById('footer-link-privacy');
+        const closePrivacyBtn = document.getElementById('close-privacy-modal');
+
+        const openPrivacy = (e) => {
+            if (e) e.preventDefault();
+            if (privacyModal) {
+                privacyModal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+            }
+        };
+
+        const closePrivacy = () => {
+            if (privacyModal) {
+                privacyModal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        };
+
+        if (footerPrivacyLink) footerPrivacyLink.addEventListener('click', openPrivacy);
+        if (closePrivacyBtn) closePrivacyBtn.addEventListener('click', closePrivacy);
+        if (privacyModal) {
+            privacyModal.addEventListener('click', (e) => {
+                if (e.target === privacyModal) closePrivacy();
+            });
+        }
+
         // Global ESC key listener for aux modals
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 closePlate();
                 closeAbout();
+                closePrivacy();
             }
         });
     }
