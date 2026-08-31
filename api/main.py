@@ -107,6 +107,13 @@ def get_ads_txt():
     from fastapi.responses import PlainTextResponse
     return PlainTextResponse("google.com, pub-1171398586910114, DIRECT, f08c47fec0942fa0\n")
 
+@app.get("/og-image.png")
+def get_og_image():
+    p = os.path.join(DASHBOARD_DIR, "og-image.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    raise HTTPException(status_code=404, detail="og-image.png not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
