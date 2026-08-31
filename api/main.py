@@ -102,6 +102,13 @@ def get_sitemap_xml():
         return FileResponse(p, media_type="application/xml")
     raise HTTPException(status_code=404, detail="sitemap.xml not found")
 
+@app.get("/ads.txt")
+def get_ads_txt():
+    p = os.path.join(DASHBOARD_DIR, "ads.txt")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/plain")
+    raise HTTPException(status_code=404, detail="ads.txt not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
