@@ -10,7 +10,21 @@ from config import DB_PATH, DASHBOARD_DIR
 
 from api.routes import registrations, analytics, export
 
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+import threading
+
 app = FastAPI(title="AutoMarket Intelligence API")
+
+# Cache-Control middleware for Edge / CDN / Browser caching
+class CacheControlMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "public, max-age=300, s-maxage=3600"
+        return response
+
+app.add_middleware(CacheControlMiddleware)
 
 # CORS
 app.add_middleware(
@@ -26,11 +40,20 @@ app.include_router(registrations.router, prefix="/api", tags=["registrations"])
 app.include_router(analytics.router, prefix="/api", tags=["analytics"])
 app.include_router(export.router, prefix="/api/export", tags=["export"])
 
-# Ensure DB exists
+# Ensure DB exists & warm up RAM cache in background
 @app.on_event("startup")
 def startup_event():
     if not os.path.exists(DB_PATH):
         print("Database not found. Please run the init_db script.")
+    
+    def _run_warm():
+        try:
+            from api.routes.analytics import warm_cache
+            warm_cache()
+        except Exception as e:
+            print("Cache warming notice:", e)
+            
+    threading.Thread(target=_run_warm, daemon=True).start()
 
 # Serve static dashboard files safely without shadowing /api
 css_dir = os.path.join(DASHBOARD_DIR, "css")
