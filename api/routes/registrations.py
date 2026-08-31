@@ -86,13 +86,17 @@ def build_full_where(
     date_to: Optional[str] = None,
     conn: sqlite3.Connection = None
 ):
-    country_code = country.upper()
-    if country_code in ('ES', 'ESP', 'ESPAÑA'):
-        clauses = ["(v.pais_id = 'ESP' OR v.pais_id = 1)"]
+    country_code = country.upper() if country else "ES"
+    if os.environ.get("DATABASE_URL"):
+        clauses = ["1=1"]
         params = []
     else:
-        clauses = ["(v.pais_id = ? OR v.pais_id = 1)"]
-        params = [country_code]
+        if country_code in ('ES', 'ESP', 'ESPAÑA'):
+            clauses = ["(v.pais_id = 'ESP' OR v.pais_id = 1)"]
+            params = []
+        else:
+            clauses = ["(v.pais_id = ? OR v.pais_id = 1)"]
+            params = [country_code]
 
     if not os.environ.get("DATABASE_URL"):
         clauses.append("(v.tipo_vehiculo = 'TURISMO' OR v.tipo_vehiculo IS NULL)")
