@@ -497,11 +497,11 @@ def compare_months(
 _TRENDS_CACHE = {}
 
 @router.get("/analytics/monthly-evolution")
-def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, purge: Optional[int] = Query(None), conn: sqlite3.Connection = Depends(get_db)):
     import time
     cache_key = f"evol:{year}:{ccaa}"
     now = time.time()
-    if year != "2024" and cache_key in _TRENDS_CACHE:
+    if year != "2024" and cache_key in _TRENDS_CACHE and purge != 1:
         val, ts = _TRENDS_CACHE[cache_key]
         if now - ts < 120:
             return val
@@ -533,13 +533,13 @@ def get_monthly_evolution(year: str = "2026", ccaa: Optional[str] = None, conn: 
     return res
 
 @router.get("/analytics/multiyear-ev-quota")
-def get_multiyear_ev_quota(mode: str = "bev", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+def get_multiyear_ev_quota(mode: str = "bev", ccaa: Optional[str] = None, purge: Optional[int] = Query(None), conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly EV quota % across years (2024, 2025, 2026) for line charts."""
     import time
     mode_clean = "zero" if mode.lower() in ("zero", "phev", "total", "all") else "bev"
     cache_key = f"ev_quota_{mode_clean}:{ccaa}"
     now = time.time()
-    if cache_key in _TRENDS_CACHE:
+    if cache_key in _TRENDS_CACHE and purge != 1:
         val, ts = _TRENDS_CACHE[cache_key]
         if now - ts < 300:
             return val
@@ -575,12 +575,12 @@ def get_multiyear_ev_quota(mode: str = "bev", ccaa: Optional[str] = None, conn: 
     return years_data
 
 @router.get("/analytics/multiyear-ev-cumulative")
-def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, purge: Optional[int] = Query(None), conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly cumulative EV sales units across years (2024, 2025, 2026)."""
     import time
     cache_key = f"ev_cum:{ccaa}"
     now = time.time()
-    if cache_key in _TRENDS_CACHE:
+    if cache_key in _TRENDS_CACHE and purge != 1:
         val, ts = _TRENDS_CACHE[cache_key]
         if now - ts < 300:
             return val
@@ -622,12 +622,12 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
     return result
 
 @router.get("/analytics/monthly-tech-quota")
-def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn: sqlite3.Connection = Depends(get_db)):
+def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, purge: Optional[int] = Query(None), conn: sqlite3.Connection = Depends(get_db)):
     """Returns monthly market share quota % for all propulsion technologies in a selected year."""
     import time
     cache_key = f"tech_quota:{year}:{ccaa}"
     now = time.time()
-    if cache_key in _TRENDS_CACHE:
+    if cache_key in _TRENDS_CACHE and purge != 1:
         val, ts = _TRENDS_CACHE[cache_key]
         if now - ts < 300:
             return val
