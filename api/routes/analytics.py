@@ -541,32 +541,20 @@ def get_multiyear_ev_quota(mode: str = "bev", ccaa: Optional[str] = None, conn: 
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
-        if now - ts < 86400:
+        if now - ts < 300:
             return val
-            
-    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
-    if not ccaa:
-        fname = "multiyear_zero_quota.json" if mode_clean == "zero" else "multiyear_ev_quota.json"
-        fpath = os.path.join(PRECOMP_DIR, fname)
-        if os.path.exists(fpath):
-            try:
-                import json
-                with open(fpath, 'r', encoding='utf-8') as pf:
-                    res = json.load(pf)
-                    _TRENDS_CACHE[cache_key] = (res, now)
-                    return res
-            except Exception:
-                pass
 
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
     params = [ccaa.strip()] if where_ccaa else []
 
+    fuel_filter = "('ELECTRICO','EV','BEV','PHEV','HIBRIDO_ENCHUFABLE')" if mode_clean == "zero" else "('ELECTRICO','EV','BEV')"
+
     exec_query(c, f"""
         SELECT 
             anio_str as y,
             substr(mes_str, 6, 2) as m,
-            SUM(CASE WHEN carburante_std IN ('ELECTRICO','EV','BEV') THEN total_unidades ELSE 0 END) as ev_units,
+            SUM(CASE WHEN carburante_std IN {fuel_filter} THEN total_unidades ELSE 0 END) as ev_units,
             SUM(total_unidades) as total_units
         FROM ventas_mensuales_resumen
         WHERE anio_str >= '2024' {where_ccaa}
@@ -594,21 +582,8 @@ def get_multiyear_ev_cumulative(ccaa: Optional[str] = None, conn: sqlite3.Connec
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
-        if now - ts < 86400:
+        if now - ts < 300:
             return val
-
-    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
-    if not ccaa:
-        fpath = os.path.join(PRECOMP_DIR, "multiyear_ev_cumulative.json")
-        if os.path.exists(fpath):
-            try:
-                import json
-                with open(fpath, 'r', encoding='utf-8') as pf:
-                    res = json.load(pf)
-                    _TRENDS_CACHE[cache_key] = (res, now)
-                    return res
-            except Exception:
-                pass
 
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
@@ -654,21 +629,8 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
     now = time.time()
     if cache_key in _TRENDS_CACHE:
         val, ts = _TRENDS_CACHE[cache_key]
-        if now - ts < 86400:
+        if now - ts < 300:
             return val
-
-    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
-    if not ccaa and year in ("2024", "2025", "2026"):
-        fpath = os.path.join(PRECOMP_DIR, f"monthly_tech_quota_{year}.json")
-        if os.path.exists(fpath):
-            try:
-                import json
-                with open(fpath, 'r', encoding='utf-8') as pf:
-                    res = json.load(pf)
-                    _TRENDS_CACHE[cache_key] = (res, now)
-                    return res
-            except Exception:
-                pass
 
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
@@ -678,14 +640,14 @@ def get_monthly_tech_quota(year: str = "2026", ccaa: Optional[str] = None, conn:
         SELECT 
             substr(mes_str, 6, 2) as m,
             CASE
-                WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'MHEV_GASOLINA') THEN 'HÍBRIDO GASOLINA'
+                WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'MHEV_GASOLINA', 'HEV', 'MHEV') THEN 'HÍBRIDO GASOLINA'
                 WHEN carburante_std IN ('GASOLINA') THEN 'GASOLINA'
                 WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN '100% ELÉCTRICO (BEV)'
                 WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'HÍBRIDO ENCHUFABLE (PHEV)'
                 WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'DIÉSEL'
                 WHEN carburante_std IN ('HEV_DIESEL', 'HIBRIDO_DIESEL', 'MHEV_DIESEL') THEN 'HÍBRIDO DIÉSEL'
                 WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'GAS (GLP/GNC)'
-                ELSE 'GASOLINA'
+                ELSE 'OTROS'
             END as tech,
             SUM(total_unidades) as units
         FROM ventas_mensuales_resumen
@@ -723,27 +685,8 @@ def get_monthly_matrix(
     sort_dir: str = "desc",
     conn: sqlite3.Connection = Depends(get_db)
 ):
-    PRECOMP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
-    if not ccaa and not search and year in ("2024", "2025", "2026"):
-        fpath = os.path.join(PRECOMP_DIR, f"monthly_matrix_{year}.json")
-        if os.path.exists(fpath):
-            try:
-                import json
-                with open(fpath, 'r', encoding='utf-8') as pf:
-                    res = json.load(pf)
-                    # Sort by requested column
-                    valid_sort_key = sort_by.lower() if sort_by.lower() in ('ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic','total_2026') else 'ago'
-                    reverse = sort_dir.lower() != 'asc'
-                    res.sort(key=lambda x: x.get(valid_sort_key, 0) or 0, reverse=reverse)
-                    res = res[:limit]
-                    # Add rank field
-                    for idx, r in enumerate(res):
-                        r['rank'] = idx + 1
-                        if 'modelo_full' not in r and 'marca' in r and 'modelo' in r:
-                            r['modelo_full'] = f"{r['marca']} {r['modelo']}"
-                    return res
-            except Exception:
-                pass
+    """Returns a full pivot matrix: Brand + Model x 12 months with totals."""
+    c = conn.cursor()
     where_extra = ""
     params = [year]
 
