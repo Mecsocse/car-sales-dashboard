@@ -87,7 +87,7 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260831_v16_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260901_v1_';
                 Object.keys(localStorage).forEach(k => {
                     if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
                         if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
@@ -226,19 +226,29 @@ class DashboardApp {
         this.filters.fuel = this.fuelFilter ? this.fuelFilter.value : '';
         this.filters.province = this.provinceFilter ? this.provinceFilter.value : '';
         this.filters.ccaa = this.selectedCcaa || (this.ccaaFilter ? this.ccaaFilter.value : '');
-        this.filters.date_from = this.dateFromFilter ? this.dateFromFilter.value : '';
-        this.filters.date_to = this.dateToFilter ? this.dateToFilter.value : '';
+
+        if (this.singleDatePicker && this.singleDatePicker.value) {
+            this.filters.date_from = this.singleDatePicker.value;
+            this.filters.date_to = this.singleDatePicker.value;
+        } else {
+            this.filters.date_from = this.dateFromFilter ? this.dateFromFilter.value : '';
+            this.filters.date_to = this.dateToFilter ? this.dateToFilter.value : '';
+        }
     }
 
     getFullQueryParams() {
         this.readFiltersFromDOM();
+        const isDateMode = !!(this.filters.date_from || this.filters.date_to || this.currentPeriod === 'custom_date');
         const params = {
             country: this.currentCountry,
-            period: this.currentPeriod,
+            period: isDateMode ? 'date' : this.currentPeriod,
             mode: this.currentMode
         };
 
-        if (this.currentPeriod === 'month' || this.currentPeriod === 'custom_month') {
+        if (isDateMode) {
+            if (this.filters.date_from) params.date_from = this.filters.date_from;
+            if (this.filters.date_to) params.date_to = this.filters.date_to;
+        } else if (this.currentPeriod === 'month' || this.currentPeriod === 'custom_month') {
             params.month = this.selectedMonth;
         } else if (this.currentPeriod === 'year') {
             params.year = this.selectedYear;
@@ -249,8 +259,6 @@ class DashboardApp {
         if (this.filters.model) params.model = this.filters.model;
         if (this.filters.fuel) params.fuel = this.filters.fuel;
         if (this.filters.province) params.province = this.filters.province;
-        if (this.filters.date_from) params.date_from = this.filters.date_from;
-        if (this.filters.date_to) params.date_to = this.filters.date_to;
 
         return new URLSearchParams(params).toString();
     }
@@ -870,7 +878,7 @@ class DashboardApp {
 
     async loadMetricsAndChartsConsolidated() {
         const q = this.getFullQueryParams();
-        const cacheKey = `dashboard_all_data_v20260831_v16_${q}`;
+        const cacheKey = `dashboard_all_data_v20260901_v1_${q}`;
 
         // 1. Instant cache load from localStorage or memory (0ms) - only if valid and populated
         if (!this.memoryCache) this.memoryCache = new Map();
