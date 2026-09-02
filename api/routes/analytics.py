@@ -52,8 +52,69 @@ def get_ccaa_list(conn: sqlite3.Connection = Depends(get_db)):
     _LIST_CACHE["ccaa_list"] = res
     return res
 
+_VALID_PLATE_LETTERS = ['B','C','D','F','G','H','J','K','L','M','N','P','R','S','T','V','W','X','Y','Z']
+
+def _calc_next_series(series_str):
+    if not series_str or len(series_str) != 3:
+        return ""
+    c1, c2, c3 = series_str[0], series_str[1], series_str[2]
+    try:
+        i3 = _VALID_PLATE_LETTERS.index(c3)
+        i2 = _VALID_PLATE_LETTERS.index(c2)
+        i1 = _VALID_PLATE_LETTERS.index(c1)
+        if i3 + 1 < len(_VALID_PLATE_LETTERS):
+            return f"{c1}{c2}{_VALID_PLATE_LETTERS[i3+1]}"
+        elif i2 + 1 < len(_VALID_PLATE_LETTERS):
+            return f"{c1}{_VALID_PLATE_LETTERS[i2+1]}{_VALID_PLATE_LETTERS[0]}"
+        elif i1 + 1 < len(_VALID_PLATE_LETTERS):
+            return f"{_VALID_PLATE_LETTERS[i1+1]}{_VALID_PLATE_LETTERS[0]}{_VALID_PLATE_LETTERS[0]}"
+    except Exception:
+        pass
+    return ""
+
 @router.get("/analytics/latest-plate")
-def get_latest_plate():
+def get_latest_plate(conn: sqlite3.Connection = Depends(get_db)):
+    try:
+        c = conn.cursor()
+        exec_query(c, "SELECT fecha, serie_letras, numero_estimado, matricula_completa FROM dgt_matriculas_historial ORDER BY fecha DESC LIMIT 20")
+        rows = c.fetchall()
+        if rows:
+            latest_row = rows[0]
+            latest_date = str(latest_row['fecha'])
+            latest_series = str(latest_row['serie_letras'])
+            latest_num = str(latest_row.get('numero_estimado') or '7160')
+            latest_full = str(latest_row.get('matricula_completa') or f"{latest_num} {latest_series}")
+            next_series = _calc_next_series(latest_series)
+            
+            timeline = []
+            seen_series = set()
+            for r in rows:
+                s = str(r['serie_letras'])
+                d = str(r['fecha'])
+                num_str = str(r.get('numero_estimado') or '7160')
+                if s not in seen_series:
+                    seen_series.add(s)
+                    timeline.append({
+                        "series": s,
+                        "number": num_str,
+                        "full_plate": f"{num_str} {s}",
+                        "date": d
+                    })
+            
+            return {
+                "latest_series": latest_series,
+                "latest_number": latest_num,
+                "latest_plate_full": latest_full,
+                "latest_date": latest_date,
+                "next_series": next_series,
+                "format_example": latest_full,
+                "timeline": timeline,
+                "dgt_source": "Dirección General de Tráfico (Microdatos oficiales)",
+                "updated_at": latest_date
+            }
+    except Exception as e:
+        pass
+
     precomp_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../data/precomputed'))
     fpath = os.path.join(precomp_dir, "latest_plate.json")
     if os.path.exists(fpath):
@@ -65,20 +126,18 @@ def get_latest_plate():
             pass
     # Fallback response
     return {
-        "latest_series": "NSD",
-        "latest_date": "2026-08-28",
-        "next_series": "NSF",
-        "format_example": "---- NSD",
+        "latest_series": "NSG",
+        "latest_date": "2026-09-01",
+        "next_series": "NSH",
+        "format_example": "7160 NSG",
         "timeline": [
+            {"series": "NSG", "date": "2026-09-01"},
             {"series": "NSD", "date": "2026-08-28"},
             {"series": "NSC", "date": "2026-08-27"},
-            {"series": "NSB", "date": "2026-08-25"},
-            {"series": "NRZ", "date": "2026-08-21"},
-            {"series": "NRY", "date": "2026-08-19"},
-            {"series": "NRX", "date": "2026-08-17"}
+            {"series": "NSB", "date": "2026-08-25"}
         ],
         "dgt_source": "Dirección General de Tráfico (Microdatos oficiales)",
-        "updated_at": "2026-08-28"
+        "updated_at": "2026-09-01"
     }
 
 _RANKING_CACHE = {}

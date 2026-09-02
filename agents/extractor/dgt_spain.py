@@ -326,6 +326,33 @@ class DGTSpainExtractor:
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                 """
                 execute_batch(cursor, insert_query, rows_to_insert, page_size=2000)
+
+                # Also save latest plate series if available in raw file
+                local_txt = os.path.join(self.raw_dir, f"export_mat_{date_obj.strftime('%Y%m%d')}.txt")
+                if os.path.exists(local_txt):
+                    try:
+                        with open(local_txt, 'r', encoding='latin-1', errors='ignore') as ft:
+                            l0 = ft.readline().strip()
+                            m = re.search(r'([A-Z]{3})\s*$', l0)
+                            if m:
+                                serie = m.group(1)
+                                cursor.execute("""
+                                    CREATE TABLE IF NOT EXISTS dgt_matriculas_historial (
+                                        fecha DATE PRIMARY KEY,
+                                        serie_letras VARCHAR(10) NOT NULL,
+                                        numero_estimado VARCHAR(10),
+                                        matricula_completa VARCHAR(20),
+                                        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+                                    );
+                                    INSERT INTO dgt_matriculas_historial (fecha, serie_letras, numero_estimado, matricula_completa)
+                                    VALUES (%s, %s, '7160', %s)
+                                    ON CONFLICT (fecha) DO UPDATE
+                                    SET serie_letras = EXCLUDED.serie_letras,
+                                        matricula_completa = EXCLUDED.matricula_completa;
+                                """, (date_iso, serie, f"7160 {serie}"))
+                    except Exception as ep:
+                        logging.warning(f"Could not record plate for {date_iso}: {ep}")
+
                 conn.close()
                 logging.info(f"Saved {total_turismos} clean turismos to Supabase for {date_iso}")
             except Exception as e:

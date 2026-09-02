@@ -12,11 +12,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 class DashboardApp {
     constructor() {
+        const now = new Date();
+        const curY = now.getFullYear().toString();
+        const curM = `${curY}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+        const monthsShort = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+
         this.currentPage = 1;
         this.limit = 50;
         this.currentPeriod = 'month';
-        this.selectedMonth = '2026-08'; // Default Current Month = Agosto 2026
-        this.selectedYear = '2026';
+        this.selectedMonth = curM; // Dynamic Current Month = e.g. '2026-09'
+        this.selectedYear = curY; // Dynamic Current Year = e.g. '2026'
         this.selectedCcaa = '';
         this.currentCountry = 'es';
         this.currentMode = 'live';
@@ -26,7 +31,7 @@ class DashboardApp {
         this.evLimit = 10;
         this.brandsLimit = 10;
         this.evBrandsLimit = 10;
-        this.matrixSortBy = 'ago';
+        this.matrixSortBy = monthsShort[now.getMonth()] || 'sep';
         this.matrixSortDir = 'desc';
         this.tableLoaded = false; // Deferred DGT individual table loading
 
@@ -87,7 +92,7 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260901_v1_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260902_v1_';
                 Object.keys(localStorage).forEach(k => {
                     if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
                         if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
@@ -125,17 +130,27 @@ class DashboardApp {
     populateQuickMonthDropdown() {
         if (!this.quickMonthSelect) return;
         const monthsName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        const years = [2026, 2025, 2024];
+        
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonthNum = now.getMonth() + 1;
+        const curMonthCode = `${curYear}-${curMonthNum.toString().padStart(2, '0')}`;
+
+        if (!this.selectedMonth) {
+            this.selectedMonth = curMonthCode;
+        }
+
+        const years = [curYear, curYear - 1, curYear - 2];
 
         let html = '<option value="" style="font-weight:700; color:#94a3b8;">-- Seleccionar Mes --</option>';
 
         years.forEach(yr => {
-            const maxM = yr === 2026 ? 8 : 12;
+            const maxM = yr === curYear ? curMonthNum : 12;
             for (let m = maxM; m >= 1; m--) {
                 const mCode = `${yr}-${m.toString().padStart(2, '0')}`;
-                const isCurrent = mCode === '2026-08';
+                const isCurrent = mCode === curMonthCode;
                 const mLabel = isCurrent ? `${monthsName[m - 1]} ${yr} (Mes Actual)` : `${monthsName[m - 1]} ${yr}`;
-                const sel = isCurrent ? 'selected' : '';
+                const sel = mCode === this.selectedMonth ? 'selected' : '';
                 html += `<option value="${mCode}" ${sel}>${mLabel}</option>`;
             }
         });
@@ -147,19 +162,25 @@ class DashboardApp {
         if (!this.compareMonthA || !this.compareMonthB) return;
 
         const monthsName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-        const years = [2026, 2025, 2024];
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonthNum = now.getMonth() + 1;
+        const curMonthCode = `${curYear}-${curMonthNum.toString().padStart(2, '0')}`;
+        const prevYearMonthCode = `${curYear - 1}-${curMonthNum.toString().padStart(2, '0')}`;
+
+        const years = [curYear, curYear - 1, curYear - 2];
 
         let optionsHtmlA = '';
         let optionsHtmlB = '';
 
         years.forEach(yr => {
-            const maxM = yr === 2026 ? 8 : 12;
+            const maxM = yr === curYear ? curMonthNum : 12;
             for (let m = maxM; m >= 1; m--) {
                 const mCode = `${yr}-${m.toString().padStart(2, '0')}`;
                 const mLabel = `${monthsName[m - 1]} ${yr}`;
                 
-                const selA = mCode === '2026-08' ? 'selected' : '';
-                const selB = mCode === '2025-07' ? 'selected' : '';
+                const selA = mCode === curMonthCode ? 'selected' : '';
+                const selB = mCode === prevYearMonthCode ? 'selected' : '';
 
                 optionsHtmlA += `<option value="${mCode}" ${selA}>${mLabel}</option>`;
                 optionsHtmlB += `<option value="${mCode}" ${selB}>${mLabel}</option>`;
@@ -372,7 +393,10 @@ class DashboardApp {
             '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
         };
 
-        let periodStr = `📆 Mes Concreto: ${this.selectedMonth || '2026-08'}`;
+        const now = new Date();
+        const curMonthCode = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
+
+        let periodStr = `📆 Mes Concreto: ${this.selectedMonth || curMonthCode}`;
         if (this.currentPeriod === 'year') {
             periodStr = `📊 Año ${this.selectedYear} Completo (Ene - Dic)`;
         } else if (this.singleDatePicker && this.singleDatePicker.value) {
@@ -382,10 +406,10 @@ class DashboardApp {
         } else if (this.dateFromFilter && this.dateFromFilter.value) {
             periodStr = `📅 Rango: ${this.dateFromFilter.value} ${this.dateToFilter.value ? 'a ' + this.dateToFilter.value : ''}`;
         } else {
-            const parts = (this.selectedMonth || '2026-08').split('-');
+            const parts = (this.selectedMonth || curMonthCode).split('-');
             const monthTxt = monthsName[parts[1]] || parts[1];
-            periodStr = (this.selectedMonth === '2026-08') 
-                ? `📆 Agosto 2026 (Mes Actual en Curso)` 
+            periodStr = (this.selectedMonth === curMonthCode) 
+                ? `📆 ${monthTxt} ${parts[0]} (Mes Actual en Curso)` 
                 : `📆 Mes Concreto: ${monthTxt} ${parts[0]}`;
         }
 
