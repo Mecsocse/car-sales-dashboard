@@ -21,6 +21,9 @@ class DashboardApp {
         this.limit = 50;
         this.currentPeriod = 'month';
         this.selectedMonth = curM; // Dynamic Current Month = e.g. '2026-09'
+        if (window.location.pathname.includes('agosto-2026')) {
+            this.selectedMonth = '2026-08';
+        }
         this.selectedYear = curY; // Dynamic Current Year = e.g. '2026'
         this.selectedCcaa = '';
         this.currentCountry = 'es';

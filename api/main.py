@@ -76,6 +76,16 @@ def read_root():
         return FileResponse(index_path)
     return {"message": "AutoMarket Intelligence API Running."}
 
+@app.get("/informe-agosto-2026")
+@app.get("/informe-agosto-2026/")
+@app.get("/matriculaciones-agosto-2026")
+@app.get("/ventas-agosto-2026")
+def read_august_report():
+    index_path = os.path.join(DASHBOARD_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "AutoMarket Intelligence API Running."}
+
 @app.get("/favicon.svg")
 def get_favicon_svg():
     p = os.path.join(DASHBOARD_DIR, "favicon.svg")
