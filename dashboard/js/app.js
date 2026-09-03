@@ -105,6 +105,7 @@ class DashboardApp {
 
             this.populateQuickMonthDropdown();
             this.populateHistoricalCompareDropdowns();
+            this.updatePeriodTag();
             this.bindPeriodEvents();
             this.bindEvents();
             this.bindCompareEvents();
