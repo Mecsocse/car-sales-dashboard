@@ -21,10 +21,10 @@ class DashboardApp {
         this.limit = 50;
         this.currentPeriod = 'month';
         this.selectedMonth = curM; // Dynamic Current Month = e.g. '2026-09'
-        if (window.location.pathname.includes('agosto-2026')) {
+        if (window.location.pathname.includes('agosto-2026') || window.location.search.includes('agosto-2026') || window.location.search.includes('2026-08')) {
             this.selectedMonth = '2026-08';
         }
-        this.selectedYear = curY; // Dynamic Current Year = e.g. '2026'
+        this.selectedYear = '2026';
         this.selectedCcaa = '';
         this.currentCountry = 'es';
         this.currentMode = 'live';
@@ -95,7 +95,7 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260902_v1_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260903_v2_';
                 Object.keys(localStorage).forEach(k => {
                     if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
                         if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
@@ -159,6 +159,9 @@ class DashboardApp {
         });
 
         this.quickMonthSelect.innerHTML = html;
+        if (this.selectedMonth) {
+            this.quickMonthSelect.value = this.selectedMonth;
+        }
     }
 
     populateHistoricalCompareDropdowns() {
