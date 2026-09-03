@@ -139,6 +139,20 @@ def get_social_preview():
         return FileResponse(p_fallback, media_type="image/png")
     raise HTTPException(status_code=404, detail="social-preview.png not found")
 
+@app.get("/x_profile_avatar.png")
+def get_x_profile_avatar():
+    p = os.path.join(DASHBOARD_DIR, "x_profile_avatar.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Avatar not found")
+
+@app.get("/x_banner_1500x500.png")
+def get_x_banner():
+    p = os.path.join(DASHBOARD_DIR, "x_banner_1500x500.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Banner not found")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
