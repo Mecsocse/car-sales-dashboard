@@ -36,7 +36,6 @@ class DashboardApp {
         this.evBrandsLimit = 10;
         this.matrixSortBy = monthsShort[now.getMonth()] || 'sep';
         this.matrixSortDir = 'desc';
-        this.tableLoaded = false; // Deferred DGT individual table loading
 
         // Electrification Toggle States
         this.kpiQuotaMode = 'bev';
@@ -85,10 +84,6 @@ class DashboardApp {
         this.matrixSearchInput = document.getElementById('matrix-search');
         this.matrixTableBody = document.getElementById('matrix-table-body');
         this.btnLoadMoreMatrix = document.getElementById('btn-load-more-matrix');
-
-        // Deferred DGT Individual Table Elements
-        this.btnLoadDgtTable = document.getElementById('btn-load-dgt-table');
-        this.dgtTableContainer = document.getElementById('dgt-table-container');
     }
 
     async init() {
@@ -516,10 +511,6 @@ class DashboardApp {
             this.loadSecondaryCharts()
         ]);
 
-        if (this.tableLoaded) {
-            await this.loadTableData();
-        }
-
         if (this.insightsWidget) {
             this.insightsWidget.fetchInsight(this.getFullQueryParams());
         }
@@ -547,33 +538,6 @@ class DashboardApp {
 
         if (this.exportCsvBtn) {
             this.exportCsvBtn.addEventListener('click', () => this.exportCSV());
-        }
-
-        if (this.btnLoadDgtTable) {
-            this.btnLoadDgtTable.addEventListener('click', async () => {
-                if (this.dgtTableContainer) {
-                    this.dgtTableContainer.style.display = 'block';
-                }
-                this.tableLoaded = true;
-                this.btnLoadDgtTable.style.display = 'none';
-                await this.loadTableData();
-            });
-        }
-
-        if (this.prevPageBtn) {
-            this.prevPageBtn.addEventListener('click', () => {
-                if (this.currentPage > 1) {
-                    this.currentPage--;
-                    this.loadTableData();
-                }
-            });
-        }
-
-        if (this.nextPageBtn) {
-            this.nextPageBtn.addEventListener('click', () => {
-                this.currentPage++;
-                this.loadTableData();
-            });
         }
     }
 
@@ -1203,30 +1167,6 @@ class DashboardApp {
                 }
             })
             .catch(e => console.warn('Daily evolution load notice:', e));
-    }
-
-    async loadTableData() {
-        const tbody = document.getElementById('table-body');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center">Cargando datos...</td></tr>';
-
-        try {
-            const q = this.getFullQueryParams();
-            const url = `${API_BASE}/api/registrations/table?${q}&page=${this.currentPage}&limit=${this.limit}`;
-
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('API Error');
-            const data = await res.json();
-
-            window.Components.renderTable(data.data, 'table-body');
-
-            if (this.pageInfo) this.pageInfo.textContent = `Página ${data.page} de ${data.pages || 1}`;
-            if (this.prevPageBtn) this.prevPageBtn.disabled = data.page <= 1;
-            if (this.nextPageBtn) this.nextPageBtn.disabled = data.page >= data.pages;
-
-        } catch (error) {
-            console.error('Failed to load table data:', error);
-            if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="text-center text-red">Error al cargar datos. Backend no disponible.</td></tr>';
-        }
     }
 
     exportCSV() {
