@@ -614,6 +614,33 @@ select:focus, input:focus {
     gap: 12px;
 }
 
+.modal-brand-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #eff6ff;
+    border: 1.5px solid #3b82f6;
+    padding: 6px 12px;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+
+.modal-brand-select-wrapper:hover {
+    border-color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.modal-brand-select-wrapper select {
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e3a8a;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
 .modal-year-select-wrapper {
     display: flex;
     align-items: center;

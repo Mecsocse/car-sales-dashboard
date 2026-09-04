@@ -96,7 +96,9 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
     container.innerHTML = `
         ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, compLabel, "car")}
         ${quotaCardHtml}
-        ${createMetricCard("Marca Ganadora", topBrandVal, topBrandUnits, "award", "text-green", "Líder de ventas", "award")}
+        <div style="cursor: pointer; transition: transform 0.15s ease;" onclick="if(window.App) window.App.openBrandModal('${topBrandVal !== 'N/A' ? topBrandVal : ''}')" title="Haz clic para ver el Análisis Integral de Marca">
+            ${createMetricCard("Marca Ganadora", topBrandVal, topBrandUnits, "award", "text-green", "👆 Clic para análisis completo", "award")}
+        </div>
         ${createMetricCard("Modelo Ganador", topModelVal, topModelUnits, "trophy", "text-purple", "Modelo más vendido", "trophy")}
     `;
 

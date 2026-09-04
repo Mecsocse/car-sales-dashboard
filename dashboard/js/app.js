@@ -1223,11 +1223,39 @@ class DashboardApp {
                 if (tab) this.renderBrandModalTab(tab);
             });
         });
+
+        // Trigger buttons from dashboard (Header, Toolbar, Card)
+        ['btn-header-brand-analysis', 'btn-toolbar-brand-analysis', 'btn-card-brand-analysis'].forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.openBrandModal();
+                });
+            }
+        });
+
+        // Brand A selector inside modal
+        const brandASelect = document.getElementById('modal-brand-a-select');
+        if (brandASelect) {
+            brandASelect.addEventListener('change', (e) => {
+                const targetBrandA = e.target.value;
+                if (targetBrandA) {
+                    this.openBrandModal(targetBrandA, this.currentBrandB, this.currentModalYear);
+                }
+            });
+        }
     }
 
     async openBrandModal(brandA, brandB = '', customYear = null) {
         const modal = document.getElementById('brand-deepdive-modal');
         if (!modal) return;
+
+        // Default brandA to top brand or currently loaded brand or TOYOTA
+        if (!brandA) {
+            brandA = this.currentBrandA || (this.lastAllData && this.lastAllData.summary && this.lastAllData.summary.top_brand) || 'TOYOTA';
+            if (brandA.toUpperCase().includes('DESCONOCIDO') || brandA === 'N/A') brandA = 'TOYOTA';
+        }
 
         const loader = document.getElementById('brand-modal-loader');
         if (loader) loader.style.display = 'flex';
@@ -1242,6 +1270,7 @@ class DashboardApp {
 
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons();
 
         // Clear stale KPI cards and show clean skeleton placeholders while fetching
         const kpiContainer = document.getElementById('modal-brand-kpis');
@@ -1254,24 +1283,36 @@ class DashboardApp {
             `;
         }
 
-        // Populate Comparator Dropdown with Top 100 brands
+        // Populate Brand A & Comparator Dropdowns with Top 100 brands
+        const brandASelect = document.getElementById('modal-brand-a-select');
         const compareSelect = document.getElementById('modal-compare-brand-select');
-        if (compareSelect) {
-            try {
-                const res = await fetch(`${API_BASE}/api/brands/list?limit=100`);
-                if (res.ok) {
-                    const brands = await res.json();
-                    let html = '<option value="">➕ Comparar con otra marca...</option>';
-                    brands.filter(b => b && b !== brandA && !b.startsWith('202')).forEach(b => {
-                        const sel = b === brandB ? 'selected' : '';
-                        html += `<option value="${b}" ${sel}>${b}</option>`;
+        try {
+            const res = await fetch(`${API_BASE}/api/brands/list?limit=100`);
+            if (res.ok) {
+                const brands = await res.json();
+
+                if (brandASelect) {
+                    let htmlA = '<option value="">-- Seleccionar Marca --</option>';
+                    brands.filter(b => b && !b.startsWith('202') && !b.toUpperCase().includes('DESCONOCIDO')).forEach(b => {
+                        const sel = b.toUpperCase() === brandA.toUpperCase() ? 'selected' : '';
+                        htmlA += `<option value="${b}" ${sel}>🚗 ${b}</option>`;
                     });
-                    compareSelect.innerHTML = html;
+                    brandASelect.innerHTML = htmlA;
+                    brandASelect.value = brandA;
                 }
-            } catch (err) {
-                console.error('Failed to load brands for comparison dropdown:', err);
+
+                if (compareSelect) {
+                    let htmlB = '<option value="">➕ Comparar con otra marca...</option>';
+                    brands.filter(b => b && b.toUpperCase() !== brandA.toUpperCase() && !b.startsWith('202') && !b.toUpperCase().includes('DESCONOCIDO')).forEach(b => {
+                        const sel = b.toUpperCase() === (brandB || '').toUpperCase() ? 'selected' : '';
+                        htmlB += `<option value="${b}" ${sel}>${b}</option>`;
+                    });
+                    compareSelect.innerHTML = htmlB;
+                    compareSelect.value = brandB || '';
+                }
             }
-            compareSelect.value = brandB || '';
+        } catch (err) {
+            console.error('Failed to load brands for comparison dropdown:', err);
         }
 
         // Set Header Title & Badges

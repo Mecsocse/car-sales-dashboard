@@ -197,6 +197,12 @@
                         </div>
                     </button>
 
+                    <!-- Brand Analysis Button in Header -->
+                    <button class="btn btn-primary" id="btn-header-brand-analysis" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
+                        <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
+                        <span>Análisis de Marca</span>
+                    </button>
+
                     <!-- About Project Button -->
                     <button class="btn btn-secondary" id="btn-open-about-modal">
                         <i data-lucide="info"></i>
@@ -221,34 +227,42 @@
                         <span>Control Temporal y Período</span>
                     </div>
 
-                    <!-- Fast CCAA Picker in Main Control Bar -->
-                    <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 4px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                        <span style="font-size: 12px; color: #475569; font-weight: 700;">🗺️ Región / CCAA:</span>
-                        <select id="quick-ccaa-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer;">
-                            <option value="" selected>🇪🇸 Toda España</option>
-                            <option value="Andalucía">Andalucía</option>
-                            <option value="Aragón">Aragón</option>
-                            <option value="Asturias">Asturias</option>
-                            <option value="Canarias">Canarias</option>
-                            <option value="Cantabria">Cantabria</option>
-                            <option value="Castilla y León">Castilla y León</option>
-                            <option value="Castilla-La Mancha">Castilla-La Mancha</option>
-                            <option value="Cataluña">Cataluña</option>
-                            <option value="Ceuta">Ceuta</option>
-                            <option value="Comunidad de Madrid">Comunidad de Madrid</option>
-                            <option value="Comunidad Valenciana">Comunidad Valenciana</option>
-                            <option value="Extremadura">Extremadura</option>
-                            <option value="Galicia">Galicia</option>
-                            <option value="Illes Balears">Illes Balears</option>
-                            <option value="La Rioja">La Rioja</option>
-                            <option value="Melilla">Melilla</option>
-                            <option value="Navarra">Navarra</option>
-                            <option value="País Vasco">País Vasco</option>
-                        </select>
-                    </div>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <!-- Fast CCAA Picker in Main Control Bar -->
+                        <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 4px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                            <span style="font-size: 12px; color: #475569; font-weight: 700;">🗺️ Región / CCAA:</span>
+                            <select id="quick-ccaa-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer;">
+                                <option value="" selected>🇪🇸 Toda España</option>
+                                <option value="Andalucía">Andalucía</option>
+                                <option value="Aragón">Aragón</option>
+                                <option value="Asturias">Asturias</option>
+                                <option value="Canarias">Canarias</option>
+                                <option value="Cantabria">Cantabria</option>
+                                <option value="Castilla y León">Castilla y León</option>
+                                <option value="Castilla-La Mancha">Castilla-La Mancha</option>
+                                <option value="Cataluña">Cataluña</option>
+                                <option value="Ceuta">Ceuta</option>
+                                <option value="Comunidad de Madrid">Comunidad de Madrid</option>
+                                <option value="Comunidad Valenciana">Comunidad Valenciana</option>
+                                <option value="Extremadura">Extremadura</option>
+                                <option value="Galicia">Galicia</option>
+                                <option value="Illes Balears">Illes Balears</option>
+                                <option value="La Rioja">La Rioja</option>
+                                <option value="Melilla">Melilla</option>
+                                <option value="Navarra">Navarra</option>
+                                <option value="País Vasco">País Vasco</option>
+                            </select>
+                        </div>
 
-                    <div class="active-period-badge" id="active-period-tag" style="background: #2563eb; color: #ffffff; padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
-                        ✨ Visualizando: Septiembre 2026 (Mes Actual)
+                        <!-- Brand Analysis Quick Button in Toolbar -->
+                        <button id="btn-toolbar-brand-analysis" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #d8b4fe; background: #faf5ff; color: #7c3aed; cursor: pointer; transition: all 0.2s ease;">
+                            <i data-lucide="bar-chart-2" style="width: 15px; height: 15px; color: #7c3aed;"></i>
+                            <span>Análisis de Marca</span>
+                        </button>
+
+                        <div class="active-period-badge" id="active-period-tag" style="background: #2563eb; color: #ffffff; padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
+                            ✨ Visualizando: Septiembre 2026 (Mes Actual)
+                        </div>
                     </div>
                 </div>
 
@@ -321,9 +335,13 @@
                     <div class="chart-container" id="container-brands-ranking" style="height: 320px; transition: height 0.3s;">
                         <canvas id="brandsRankingChart"></canvas>
                     </div>
-                    <div style="text-align: center; margin-top: 12px;">
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 12px;">
                         <button id="btn-extend-brands" class="btn btn-secondary" style="padding: 4px 12px; font-size: 11px;">
                             <span>Ver 10 más</span>
+                        </button>
+                        <button id="btn-card-brand-analysis" class="btn btn-secondary" style="padding: 4px 12px; font-size: 11px; color: #7c3aed; border-color: #d8b4fe; background: #faf5ff; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                            <i data-lucide="bar-chart-2" style="width: 12px; height: 12px;"></i>
+                            <span>Análisis de Marca</span>
                         </button>
                     </div>
                 </div>
@@ -577,6 +595,14 @@
                 </div>
                 
                 <div class="brand-modal-actions">
+                    <!-- Modal Brand A Primary Selector -->
+                    <div class="modal-brand-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #ffffff; border: 1.5px solid #2563eb; padding: 5px 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);">
+                        <i data-lucide="car" style="width: 15px; height: 15px; color: #2563eb;"></i>
+                        <select id="modal-brand-a-select" style="background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
+                            <option value="">Seleccionar Marca...</option>
+                        </select>
+                    </div>
+
                     <!-- Modal Year Selector -->
                     <div class="modal-year-select-wrapper">
                         <i data-lucide="calendar" style="width: 15px; height: 15px; color: #64748b;"></i>
@@ -844,9 +870,9 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260904_v1"></script>
-    <script src="js/components.js?v=20260904_v1"></script>
-    <script src="js/insights.js?v=20260904_v1"></script>
-    <script src="js/app.js?v=20260904_v1"></script>
+    <script src="js/charts.js?v=20260904_v2"></script>
+    <script src="js/components.js?v=20260904_v2"></script>
+    <script src="js/insights.js?v=20260904_v2"></script>
+    <script src="js/app.js?v=20260904_v2"></script>
 </body>
 </html>
