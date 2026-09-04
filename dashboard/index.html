@@ -584,29 +584,35 @@
     <!-- Brand Deep Dive & Comparator Modal -->
     <div id="brand-deepdive-modal" class="brand-modal-backdrop" style="display: none;">
         <div class="brand-modal-card">
-            <!-- Modal Header -->
-            <div class="brand-modal-header">
-                <div class="brand-modal-title-group">
-                    <div class="brand-modal-badge" id="modal-brand-badge-a">MARCA</div>
-                    <div class="brand-modal-info">
-                        <h2 id="modal-brand-title">Análisis de Marca</h2>
-                        <span id="modal-period-subtitle" class="text-muted">Período Seleccionado • Toda España</span>
+            <!-- Modal Header (Clean 2-row spacious layout) -->
+            <div class="brand-modal-header" style="display: flex; flex-direction: column; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;">
+                <!-- Top Row: Title & Subtitle + Close Button -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <div class="brand-modal-badge" id="modal-brand-badge-a" style="font-size: 13px; padding: 4px 10px; font-weight: 800; border-radius: 6px;">MARCA</div>
+                        <div>
+                            <h2 id="modal-brand-title" style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2;">Análisis Integral de Marca</h2>
+                            <span id="modal-period-subtitle" style="font-size: 12px; color: #64748b; margin-top: 2px; display: block;">Período Seleccionado • Toda España</span>
+                        </div>
                     </div>
+                    <button class="modal-close-btn" id="close-brand-modal" title="Cerrar ventana" style="flex-shrink: 0;"><i data-lucide="x"></i></button>
                 </div>
-                
-                <div class="brand-modal-actions">
+
+                <!-- Bottom Row: Filter & Compare Controls Strip -->
+                <div class="brand-modal-actions" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%;">
                     <!-- Modal Brand A Primary Selector -->
-                    <div class="modal-brand-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #ffffff; border: 1.5px solid #2563eb; padding: 5px 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);">
+                    <div class="modal-brand-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #eff6ff; border: 1.5px solid #2563eb; padding: 6px 12px; border-radius: 8px; box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1);">
                         <i data-lucide="car" style="width: 15px; height: 15px; color: #2563eb;"></i>
-                        <select id="modal-brand-a-select" style="background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
+                        <span style="font-size: 11px; font-weight: 700; color: #1e40af; text-transform: uppercase;">Marca:</span>
+                        <select id="modal-brand-a-select" style="background: transparent; border: none; font-size: 13px; font-weight: 800; color: #1e3a8a; outline: none; cursor: pointer; font-family: inherit;">
                             <option value="">Seleccionar Marca...</option>
                         </select>
                     </div>
 
                     <!-- Modal Year Selector -->
-                    <div class="modal-year-select-wrapper">
-                        <i data-lucide="calendar" style="width: 15px; height: 15px; color: #64748b;"></i>
-                        <select id="modal-brand-year-select">
+                    <div class="modal-year-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 8px;">
+                        <i data-lucide="calendar" style="width: 14px; height: 14px; color: #64748b;"></i>
+                        <select id="modal-brand-year-select" style="background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
                             <option value="2026">Año 2026</option>
                             <option value="2025">Año 2025</option>
                             <option value="2024">Año 2024</option>
@@ -614,13 +620,12 @@
                     </div>
 
                     <!-- Comparator Selector -->
-                    <div class="comparator-select-wrapper">
-                        <i data-lucide="git-compare" style="width: 16px; height: 16px; color: #64748b;"></i>
-                        <select id="modal-compare-brand-select">
+                    <div class="comparator-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 8px; flex: 1; min-width: 220px; max-width: 360px;">
+                        <i data-lucide="git-compare" style="width: 15px; height: 15px; color: #dc2626;"></i>
+                        <select id="modal-compare-brand-select" style="background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit; width: 100%;">
                             <option value="">➕ Comparar con otra marca...</option>
                         </select>
                     </div>
-                    <button class="modal-close-btn" id="close-brand-modal"><i data-lucide="x"></i></button>
                 </div>
             </div>
 
@@ -870,9 +875,9 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260904_v2"></script>
-    <script src="js/components.js?v=20260904_v2"></script>
-    <script src="js/insights.js?v=20260904_v2"></script>
-    <script src="js/app.js?v=20260904_v2"></script>
+    <script src="js/charts.js?v=20260904_v3"></script>
+    <script src="js/components.js?v=20260904_v3"></script>
+    <script src="js/insights.js?v=20260904_v3"></script>
+    <script src="js/app.js?v=20260904_v3"></script>
 </body>
 </html>

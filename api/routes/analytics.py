@@ -827,6 +827,18 @@ def get_brands_list(limit: int = 100, conn: sqlite3.Connection = Depends(get_db)
           AND UPPER(marca_clean) NOT LIKE '%REMOLQ%'
           AND UPPER(marca_clean) NOT LIKE '%CAYVOL%'
           AND UPPER(marca_clean) NOT LIKE '%SEMITRAILER%'
+          AND UPPER(marca_clean) NOT LIKE '%RODRIGUEZ%'
+          AND UPPER(marca_clean) NOT LIKE '%BERGADANA%'
+          AND UPPER(marca_clean) NOT LIKE '%ALLIED VEHICLES%'
+          AND UPPER(marca_clean) NOT LIKE '%TRIPOD%'
+          AND UPPER(marca_clean) NOT LIKE '%MODELCAR%'
+          AND UPPER(marca_clean) NOT LIKE '%AIRBUS%'
+          AND UPPER(marca_clean) NOT LIKE '%SORTIMO%'
+          AND UPPER(marca_clean) NOT LIKE '%CODETRANS%'
+          AND UPPER(marca_clean) NOT LIKE '%JOHN DEERE%'
+          AND UPPER(marca_clean) NOT LIKE '%LIEBHERR%'
+          AND UPPER(marca_clean) NOT LIKE '%DEUTZ%'
+          AND UPPER(marca_clean) NOT IN ('SCANIA', 'DAF', 'MAN', 'IVECO', 'TSD', 'MERCEDES-BENZ MINIBUS')
           AND UPPER(marca_clean) NOT LIKE 'VOLKSWAGEN %'
           AND UPPER(marca_clean) NOT LIKE 'SEAT %'
           AND UPPER(marca_clean) NOT LIKE 'RENAULT %'
@@ -1366,11 +1378,9 @@ def get_brand_deepdive(
         exec_query(c, f"""
             SELECT 
                 CASE
-                    WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN '100% Eléctrico (BEV)'
+                    WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'Eléctrico (BEV)'
                     WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'Híbrido Enchufable (PHEV)'
-                    WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'HIBRIDO GASOLINA') THEN 'Híbrido Gasolina'
-                    WHEN carburante_std IN ('HEV_DIESEL', 'HIBRIDO_DIESEL', 'HIBRIDO DIESEL') THEN 'Híbrido Diésel'
-                    WHEN carburante_std IN ('HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'Híbrido Gasolina'
+                    WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'HIBRIDO GASOLINA', 'HEV_DIESEL', 'HIBRIDO_DIESEL', 'HIBRIDO DIESEL', 'HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'Híbrido (HEV/MHEV)'
                     WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'Diésel'
                     WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'Gas (GLP/GNC)'
                     ELSE 'Gasolina'

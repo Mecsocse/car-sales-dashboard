@@ -1291,9 +1291,17 @@ class DashboardApp {
             if (res.ok) {
                 const brands = await res.json();
 
+                const isRealCarBrand = (b) => {
+                    if (!b) return false;
+                    const u = b.toUpperCase();
+                    if (u.startsWith('202') || u.includes('DESCONOCIDO')) return false;
+                    const excluded = ['RODRIGUEZ', 'BERGADANA', 'ALLIED VEHICLES', 'TRIPOD', 'MODELCAR', 'AIRBUS', 'SORTIMO', 'CODETRANS', 'JOHN DEERE', 'LIEBHERR', 'DEUTZ', 'SCANIA', 'DAF', 'MAN', 'IVECO', 'TSD', 'MERCEDES-BENZ MINIBUS', 'REMOLQ', 'CAYVOL', 'SEMITRAILER'];
+                    return !excluded.some(ex => u.includes(ex));
+                };
+
                 if (brandASelect) {
                     let htmlA = '<option value="">-- Seleccionar Marca --</option>';
-                    brands.filter(b => b && !b.startsWith('202') && !b.toUpperCase().includes('DESCONOCIDO')).forEach(b => {
+                    brands.filter(isRealCarBrand).forEach(b => {
                         const sel = b.toUpperCase() === brandA.toUpperCase() ? 'selected' : '';
                         htmlA += `<option value="${b}" ${sel}>🚗 ${b}</option>`;
                     });
@@ -1303,7 +1311,7 @@ class DashboardApp {
 
                 if (compareSelect) {
                     let htmlB = '<option value="">➕ Comparar con otra marca...</option>';
-                    brands.filter(b => b && b.toUpperCase() !== brandA.toUpperCase() && !b.startsWith('202') && !b.toUpperCase().includes('DESCONOCIDO')).forEach(b => {
+                    brands.filter(b => isRealCarBrand(b) && b.toUpperCase() !== brandA.toUpperCase()).forEach(b => {
                         const sel = b.toUpperCase() === (brandB || '').toUpperCase() ? 'selected' : '';
                         htmlB += `<option value="${b}" ${sel}>${b}</option>`;
                     });

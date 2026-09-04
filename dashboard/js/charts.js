@@ -987,12 +987,33 @@ function initBrandFuelMixChart(ctxId, fuelA, fuelB, nameA, nameB) {
     if (charts[ctxId]) charts[ctxId].destroy();
 
     const allFuels = ['Gasolina', 'Diésel', 'Híbrido (HEV/MHEV)', 'Híbrido Enchufable (PHEV)', 'Eléctrico (BEV)', 'Gas (GLP/GNC)'];
-    const mapA = Object.fromEntries((fuelA || []).map(f => [f.carburante, f.pct]));
-    const mapB = Object.fromEntries((fuelB || []).map(f => [f.carburante, f.pct]));
+    
+    const normalizeFuel = (str) => {
+        const s = String(str || '').toUpperCase();
+        if (s.includes('ELECTRICO') || s.includes('ELÉCTRICO') || s.includes('BEV')) return 'Eléctrico (BEV)';
+        if (s.includes('ENCHUFABLE') || s.includes('PHEV')) return 'Híbrido Enchufable (PHEV)';
+        if (s.includes('HIBRID') || s.includes('HÍBRID') || s.includes('HEV') || s.includes('MHEV')) return 'Híbrido (HEV/MHEV)';
+        if (s.includes('DIESEL') || s.includes('DIÉSEL') || s.includes('GASOIL')) return 'Diésel';
+        if (s.includes('GLP') || s.includes('GNC') || s === 'GAS' || s.startsWith('GAS ') || s.endsWith(' GAS')) return 'Gas (GLP/GNC)';
+        return 'Gasolina';
+    };
+
+    const getFuelMap = (list) => {
+        const m = {};
+        allFuels.forEach(f => m[f] = 0);
+        (list || []).forEach(item => {
+            const canonical = normalizeFuel(item.carburante);
+            m[canonical] = (m[canonical] || 0) + (Number(item.pct) || 0);
+        });
+        return m;
+    };
+
+    const mapA = getFuelMap(fuelA);
+    const mapB = getFuelMap(fuelB);
 
     const datasets = [{
         label: nameA,
-        data: allFuels.map(f => mapA[f] || 0),
+        data: allFuels.map(f => Number((mapA[f] || 0).toFixed(1))),
         backgroundColor: '#2563eb', // Brand A: Blue
         borderRadius: 4
     }];
@@ -1000,7 +1021,7 @@ function initBrandFuelMixChart(ctxId, fuelA, fuelB, nameA, nameB) {
     if (fuelB && nameB) {
         datasets.push({
             label: nameB,
-            data: allFuels.map(f => mapB[f] || 0),
+            data: allFuels.map(f => Number((mapB[f] || 0).toFixed(1))),
             backgroundColor: '#dc2626', // Brand B: Red
             borderRadius: 4
         });
