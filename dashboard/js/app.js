@@ -90,7 +90,7 @@ class DashboardApp {
         try {
             // Invalidate and remove old local storage caches (keep only current version)
             try {
-                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260903_v2_';
+                const CURRENT_CACHE_PREFIX = 'dashboard_all_data_v20260905_v1_';
                 Object.keys(localStorage).forEach(k => {
                     if (k.startsWith('dashboard_all_data_') || k.startsWith('dash_cache_')) {
                         if (!k.startsWith(CURRENT_CACHE_PREFIX)) localStorage.removeItem(k);
@@ -685,14 +685,6 @@ class DashboardApp {
         const matrixHeaderEl = document.getElementById('matrix-total-header');
         if (matrixHeaderEl) matrixHeaderEl.textContent = `TOTAL ${this.selectedYear}`;
 
-        // Update "Evolución Mensual" chart title with selected year
-        const evolTitleEl = document.getElementById('monthly-evolution-title');
-        if (evolTitleEl) {
-            const isCurrentYear = this.selectedYear === '2026';
-            const rangeStr = isCurrentYear ? 'Ene - Jun' : 'Ene - Dic';
-            evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
-        }
-
         this.showLoading('Cargando matriz...');
         try {
             const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
@@ -700,38 +692,101 @@ class DashboardApp {
             const data = await this.fetchCached(url);
             if (!data) return;
 
-            // Show/hide SEP-DIC columns: only visible for completed years (2024, 2025)
-            const isFullYear = this.selectedYear !== '2026';
-            document.querySelectorAll('.matrix-col-full').forEach(el => {
-                el.style.display = isFullYear ? '' : 'none';
+            // Define all 12 canonical month columns
+            const allMonths = [
+                { key: 'ene', label: 'ENE', num: 1 },
+                { key: 'feb', label: 'FEB', num: 2 },
+                { key: 'mar', label: 'MAR', num: 3 },
+                { key: 'abr', label: 'ABR', num: 4 },
+                { key: 'may', label: 'MAY', num: 5 },
+                { key: 'jun', label: 'JUN', num: 6 },
+                { key: 'jul', label: 'JUL', num: 7 },
+                { key: 'ago', label: 'AGO', num: 8 },
+                { key: 'sep', label: 'SEP', num: 9 },
+                { key: 'oct', label: 'OCT', num: 10 },
+                { key: 'nov', label: 'NOV', num: 11 },
+                { key: 'dic', label: 'DIC', num: 12 }
+            ];
+
+            const currentYearNum = new Date().getFullYear();
+            const currentMonthNum = new Date().getMonth() + 1;
+            const selectedYearNum = parseInt(this.selectedYear, 10) || currentYearNum;
+
+            // Automatically determine active months:
+            // - Past years: show all 12 months
+            // - Current year: show months up to current month OR any month that has registrations (>0)
+            const activeMonths = allMonths.filter(m => 
+                selectedYearNum < currentYearNum || 
+                m.num <= currentMonthNum || 
+                data.some(r => (Number(r[m.key]) || 0) > 0)
+            );
+
+            // Update header columns visibility and sort arrow icons
+            allMonths.forEach(m => {
+                const th = document.querySelector(`#matrix-table th[data-sort="${m.key}"]`);
+                if (th) {
+                    const isVisible = activeMonths.some(am => am.key === m.key);
+                    th.style.display = isVisible ? '' : 'none';
+                    const icon = th.querySelector('.sort-icon');
+                    if (icon) {
+                        icon.textContent = (this.matrixSortBy === m.key) 
+                            ? (this.matrixSortDir === 'desc' ? '⯆' : '⯅') 
+                            : '↕';
+                    }
+                }
             });
+
+            // Update non-month headers sort icons (#, modelo, total)
+            ['rank', 'modelo', 'total_2026'].forEach(f => {
+                const th = document.querySelector(`#matrix-table th[data-sort="${f}"]`);
+                if (th) {
+                    const icon = th.querySelector('.sort-icon');
+                    if (icon) {
+                        icon.textContent = (this.matrixSortBy === f) 
+                            ? (this.matrixSortDir === 'desc' ? '⯆' : '⯅') 
+                            : '↕';
+                    }
+                }
+            });
+
+            // Update "Evolución Mensual" chart title dynamically based on active months range
+            const evolTitleEl = document.getElementById('monthly-evolution-title');
+            if (evolTitleEl && activeMonths.length > 0) {
+                const firstLabel = activeMonths[0].label;
+                const lastLabel = activeMonths[activeMonths.length - 1].label;
+                const rangeStr = activeMonths.length === 12 
+                    ? 'Ene - Dic' 
+                    : `${firstLabel.charAt(0) + firstLabel.slice(1).toLowerCase()} - ${lastLabel.charAt(0) + lastLabel.slice(1).toLowerCase()}`;
+                evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
+            }
 
             let html = '';
             data.forEach(r => {
-                const sepOctNovDic = isFullYear ? `
-                        <td style="padding: 10px; color: #334155;">${(r.sep||0).toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${(r.oct||0).toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${(r.nov||0).toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${(r.dic||0).toLocaleString('es-ES')}</td>
-                ` : '';
+                let monthCells = '';
+                activeMonths.forEach(m => {
+                    const val = Number(r[m.key]) || 0;
+                    const isSorted = this.matrixSortBy === m.key;
+                    const cellStyle = isSorted 
+                        ? 'padding: 10px; font-weight: 700; background: #e0f2fe; color: #0369a1;' 
+                        : 'padding: 10px; color: #334155;';
+                    monthCells += `<td style="${cellStyle}">${val.toLocaleString('es-ES')}</td>`;
+                });
+
+                const isTotalSorted = this.matrixSortBy === 'total_2026';
+                const totalStyle = isTotalSorted
+                    ? 'padding: 10px; font-weight: 800; background: #f5f3ff; color: #6d28d9;'
+                    : 'padding: 10px; font-weight: 700; color: #7c3aed;';
+
                 html += `
                     <tr style="border-bottom: 1px solid #e2e8f0; text-align: center;">
                         <td style="padding: 10px; font-weight: 700; color: #7c3aed; text-align: left;">${r.rank}</td>
                         <td style="padding: 10px; font-weight: 700; color: #0f172a; text-align: left;">${r.modelo_full}</td>
-                        <td style="padding: 10px; color: #334155;">${r.ene.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${r.feb.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${r.mar.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${r.abr.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${r.may.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; font-weight: 700; background: #e0f2fe; color: #0369a1;">${r.jun.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${r.jul.toLocaleString('es-ES')}</td>
-                        <td style="padding: 10px; color: #334155;">${r.ago.toLocaleString('es-ES')}</td>
-                        ${sepOctNovDic}
-                        <td style="padding: 10px; font-weight: 700; color: #7c3aed;">${r.total_2026.toLocaleString('es-ES')}</td>
+                        ${monthCells}
+                        <td style="${totalStyle}">${(Number(r.total_2026) || 0).toLocaleString('es-ES')}</td>
                     </tr>
                 `;
             });
-            this.matrixTableBody.innerHTML = html || '<tr><td colspan="15" class="text-center">No se encontraron modelos.</td></tr>';
+            this.matrixTableBody.innerHTML = html || `<tr><td colspan="${activeMonths.length + 3}" class="text-center">No se encontraron modelos.</td></tr>`;
         } catch (e) {
             console.error('Error loading monthly matrix table:', e);
         } finally {
@@ -1118,7 +1173,21 @@ class DashboardApp {
         // 1. Monthly Evolution Chart
         this.fetchCached(`${API_BASE}/api/analytics/monthly-evolution?year=${this.selectedYear}${ccaaParam}`)
             .then(data => {
-                if (data) window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', data);
+                if (data) {
+                    window.DashboardCharts.initMonthlyEvolutionChart('monthlyEvolutionChart', data);
+                    const evolTitleEl = document.getElementById('monthly-evolution-title');
+                    if (evolTitleEl) {
+                        const monthsWithData = (data || []).filter(d => (d.total || 0) > 0);
+                        if (monthsWithData.length > 0) {
+                            const firstM = monthsWithData[0].mes_nombre;
+                            const lastM = monthsWithData[monthsWithData.length - 1].mes_nombre;
+                            const rangeStr = monthsWithData.length >= 12
+                                ? 'Ene - Dic'
+                                : `${firstM.charAt(0) + firstM.slice(1).toLowerCase()} - ${lastM.charAt(0) + lastM.slice(1).toLowerCase()}`;
+                            evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
+                        }
+                    }
+                }
             })
             .catch(e => console.warn('Monthly evolution load notice:', e));
 

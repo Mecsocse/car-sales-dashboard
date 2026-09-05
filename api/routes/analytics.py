@@ -740,7 +740,7 @@ def get_monthly_matrix(
     limit: int = 50,
     search: Optional[str] = None,
     ccaa: Optional[str] = None,
-    sort_by: str = "ago",
+    sort_by: str = "total_2026",
     sort_dir: str = "desc",
     conn: sqlite3.Connection = Depends(get_db)
 ):
@@ -761,7 +761,7 @@ def get_monthly_matrix(
         "ene": "ene", "feb": "feb", "mar": "mar", "abr": "abr",
         "may": "may", "jun": "jun", "jul": "jul", "ago": "ago",
         "sep": "sep", "oct": "oct", "nov": "nov", "dic": "dic",
-        "total_2026": "total_2026", "modelo": "modelo_full", "rank": "ago"
+        "total_2026": "total_2026", "modelo": "modelo_full", "rank": "total_2026"
     }
     order_col = valid_sorts.get(sort_by.lower(), "ago")
     order_direction = "ASC" if sort_dir.lower() == "asc" else "DESC"
