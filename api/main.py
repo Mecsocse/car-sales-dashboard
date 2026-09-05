@@ -80,7 +80,17 @@ def read_root():
 @app.get("/informe-agosto-2026/")
 @app.get("/matriculaciones-agosto-2026")
 @app.get("/ventas-agosto-2026")
-def read_august_report():
+@app.get("/informe-septiembre-2026")
+@app.get("/informe-septiembre-2026/")
+@app.get("/matriculaciones-septiembre-2026")
+@app.get("/ventas-septiembre-2026")
+@app.get("/ultima-matricula-dgt")
+@app.get("/ultima-matricula-dgt/")
+@app.get("/prevision-matriculas")
+@app.get("/prevision-matriculas/")
+@app.get("/matriculas")
+@app.get("/matriculas/")
+def read_seo_landing_pages():
     index_path = os.path.join(DASHBOARD_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)

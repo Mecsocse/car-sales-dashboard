@@ -1541,10 +1541,23 @@ class DashboardApp {
             }
         };
 
+        const faqPlateLink = document.getElementById('faq-link-open-plate');
         if (openPlateBtn) openPlateBtn.addEventListener('click', openPlate);
         if (footerPlateLink) footerPlateLink.addEventListener('click', openPlate);
+        if (faqPlateLink) faqPlateLink.addEventListener('click', openPlate);
         if (closePlateBtn) closePlateBtn.addEventListener('click', closePlate);
         if (plateBackdrop) plateBackdrop.addEventListener('click', closePlate);
+
+        // Direct landing / deep-linking support for SEO URLs (#matricula, /ultima-matricula-dgt)
+        const checkDirectLinks = () => {
+            const path = window.location.pathname.toLowerCase();
+            const hash = window.location.hash.toLowerCase();
+            if (path.includes('matricula') || hash === '#matricula' || hash === '#ultima-matricula' || hash === '#placas') {
+                setTimeout(() => openPlate(), 150);
+            }
+        };
+        checkDirectLinks();
+        window.addEventListener('hashchange', checkDirectLinks);
 
         // 2. About Modal
         const aboutModal = document.getElementById('modal-about-project');
