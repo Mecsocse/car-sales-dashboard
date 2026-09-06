@@ -107,11 +107,55 @@ def get_favicon_svg():
 def get_favicon_ico():
     p_ico = os.path.join(DASHBOARD_DIR, "favicon.ico")
     if os.path.exists(p_ico):
-        return FileResponse(p_ico, media_type="image/x-icon")
-    p_svg = os.path.join(DASHBOARD_DIR, "favicon.svg")
-    if os.path.exists(p_svg):
-        return FileResponse(p_svg, media_type="image/svg+xml")
+        return FileResponse(p_ico, media_type="image/x-icon", headers={"Cache-Control": "public, max-age=86400"})
+    p_48 = os.path.join(DASHBOARD_DIR, "favicon-48x48.png")
+    if os.path.exists(p_48):
+        return FileResponse(p_48, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
     raise HTTPException(status_code=404, detail="Favicon not found")
+
+@app.get("/apple-touch-icon.png")
+@app.get("/apple-touch-icon-precomposed.png")
+def get_apple_touch_icon():
+    p = os.path.join(DASHBOARD_DIR, "apple-touch-icon.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Apple touch icon not found")
+
+@app.get("/favicon-48x48.png")
+def get_favicon_48():
+    p = os.path.join(DASHBOARD_DIR, "favicon-48x48.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Icon not found")
+
+@app.get("/favicon-96x96.png")
+def get_favicon_96():
+    p = os.path.join(DASHBOARD_DIR, "favicon-96x96.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Icon not found")
+
+@app.get("/favicon-192x192.png")
+@app.get("/favicon.png")
+def get_favicon_192():
+    p = os.path.join(DASHBOARD_DIR, "favicon-192x192.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Icon not found")
+
+@app.get("/favicon-512x512.png")
+def get_favicon_512():
+    p = os.path.join(DASHBOARD_DIR, "favicon-512x512.png")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Icon not found")
+
+@app.get("/site.webmanifest")
+def get_webmanifest():
+    p = os.path.join(DASHBOARD_DIR, "site.webmanifest")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="application/manifest+json", headers={"Cache-Control": "public, max-age=86400"})
+    raise HTTPException(status_code=404, detail="Manifest not found")
 
 @app.get("/robots.txt")
 def get_robots_txt():
