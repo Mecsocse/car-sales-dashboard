@@ -121,6 +121,16 @@ class DashboardApp {
                 this.insightsWidget.fetchInsight(this.getFullQueryParams());
             }
 
+            // If visitor landed on a Matrícula URL, scroll directly to the section
+            if (window.location.pathname.includes('matricula') || window.location.hash.includes('matricula')) {
+                setTimeout(() => {
+                    const sec = document.getElementById('seccion-matriculas-dgt');
+                    if (sec) {
+                        sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 300);
+            }
+
         } catch (error) {
             console.error('Error initializing dashboard:', error);
         }
@@ -1662,6 +1672,13 @@ class DashboardApp {
             if (modalDisplay) modalDisplay.textContent = `${num} · ${series}`;
             if (modalDate) modalDate.textContent = formattedLong;
             if (modalNext) modalNext.textContent = `0000 · ${nextSeries}`;
+
+            const seoPlateDisplay = document.getElementById('seo-plate-display');
+            const seoPlateDate = document.getElementById('seo-plate-date');
+            const seoPlateNext = document.getElementById('seo-plate-next');
+            if (seoPlateDisplay) seoPlateDisplay.textContent = `${num} · ${series}`;
+            if (seoPlateDate) seoPlateDate.textContent = formattedLong;
+            if (seoPlateNext) seoPlateNext.textContent = `0000 · ${nextSeries}`;
 
             if (modalTimeline && Array.isArray(data.timeline)) {
                 let html = '';

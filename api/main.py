@@ -1,9 +1,10 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 import os
 import sys
+import re
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../')))
 from config import DB_PATH, DASHBOARD_DIR
@@ -69,12 +70,58 @@ if os.path.exists(css_dir):
 if os.path.exists(js_dir):
     app.mount("/js", StaticFiles(directory=js_dir), name="js")
 
+_SEO_HTML_CACHE = {}
+
+def get_customized_seo_html(path: str) -> str:
+    path_clean = path.strip("/").lower()
+    if path_clean in _SEO_HTML_CACHE:
+        return _SEO_HTML_CACHE[path_clean]
+    
+    index_path = os.path.join(DASHBOARD_DIR, "index.html")
+    if not os.path.exists(index_path):
+        return "<html><body>Dashboard index.html not found</body></html>"
+    
+    with open(index_path, "r", encoding="utf-8") as f:
+        html = f.read()
+
+    meta = {
+        "title": "Coches más vendidos en España (2026) y Última Matrícula DGT Hoy | CarDataSales",
+        "desc": "Consulta la última matrícula de la DGT hoy (serie NSH), previsión de letras, qué matrícula te tocará, los 50 coches más vendidos en España (2026) y cuota de mercado en tiempo real.",
+        "canonical": f"https://cardatasales.com/{path_clean}" if path_clean else "https://cardatasales.com/"
+    }
+
+    if "matricula" in path_clean:
+        if "prevision" in path_clean:
+            meta["title"] = "Previsión de Matrículas DGT (2026) · Qué Letra me Tocará | CarDataSales"
+            meta["desc"] = "Calcula qué matrícula le tocará a tu coche nuevo en España. Calendario de previsión de letras DGT, ritmo diario de matriculaciones y estimación de días."
+        else:
+            meta["title"] = "Última Matrícula DGT Hoy (2026) y Letra Más Alta Observada | CarDataSales"
+            meta["desc"] = "Comprueba la última matrícula oficial asignada hoy en España por la DGT, serie de letras más alta observada (NSH) e histórico completo de series desde el año 2000."
+    elif "agosto" in path_clean:
+        meta["title"] = "Coches Más Vendidos en España en Agosto 2026 · Ranking Oficial DGT | CarDataSales"
+        meta["desc"] = "Informe completo de ventas y matriculaciones de coches en España en agosto de 2026. Modelos líderes, cuota de turismos eléctricos y desglose por CCAA."
+    elif "septiembre" in path_clean:
+        meta["title"] = "Matriculaciones y Coches Más Vendidos en Septiembre 2026 | CarDataSales"
+        meta["desc"] = "Datos diarios actualizados de ventas de coches en España en septiembre de 2026. Consulta el ranking de turismos, cuota de mercado y última matrícula DGT."
+
+    # Replace title, description, canonical, OG tags
+    html = re.sub(r'<link\s+rel="canonical"\s+href="[^"]*"', f'<link rel="canonical" href="{meta["canonical"]}"', html)
+    html = re.sub(r'<title>.*?</title>', f'<title>{meta["title"]}</title>', html)
+    html = re.sub(r'<meta\s+name="title"\s+content="[^"]*"', f'<meta name="title" content="{meta["title"]}"', html)
+    html = re.sub(r'<meta\s+property="og:title"\s+content="[^"]*"', f'<meta property="og:title" content="{meta["title"]}"', html)
+    html = re.sub(r'<meta\s+name="twitter:title"\s+content="[^"]*"', f'<meta name="twitter:title" content="{meta["title"]}"', html)
+    html = re.sub(r'<meta\s+name="description"\s+content="[^"]*"', f'<meta name="description" content="{meta["desc"]}"', html)
+    html = re.sub(r'<meta\s+property="og:description"\s+content="[^"]*"', f'<meta property="og:description" content="{meta["desc"]}"', html)
+    html = re.sub(r'<meta\s+name="twitter:description"\s+content="[^"]*"', f'<meta name="twitter:description" content="{meta["desc"]}"', html)
+    html = re.sub(r'<meta\s+property="og:url"\s+content="[^"]*"', f'<meta property="og:url" content="{meta["canonical"]}"', html)
+    html = re.sub(r'<meta\s+name="twitter:url"\s+content="[^"]*"', f'<meta name="twitter:url" content="{meta["canonical"]}"', html)
+
+    _SEO_HTML_CACHE[path_clean] = html
+    return html
+
 @app.get("/")
 def read_root():
-    index_path = os.path.join(DASHBOARD_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"message": "AutoMarket Intelligence API Running."}
+    return HTMLResponse(content=get_customized_seo_html(""), status_code=200)
 
 @app.get("/informe-agosto-2026")
 @app.get("/informe-agosto-2026/")
@@ -90,11 +137,8 @@ def read_root():
 @app.get("/prevision-matriculas/")
 @app.get("/matriculas")
 @app.get("/matriculas/")
-def read_seo_landing_pages():
-    index_path = os.path.join(DASHBOARD_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"message": "AutoMarket Intelligence API Running."}
+def read_seo_landing_pages(request: Request):
+    return HTMLResponse(content=get_customized_seo_html(request.url.path), status_code=200)
 
 @app.get("/favicon.svg")
 def get_favicon_svg():
