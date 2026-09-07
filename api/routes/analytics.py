@@ -838,7 +838,8 @@ def get_brands_list(limit: int = 100, conn: sqlite3.Connection = Depends(get_db)
           AND UPPER(marca_clean) NOT LIKE '%JOHN DEERE%'
           AND UPPER(marca_clean) NOT LIKE '%LIEBHERR%'
           AND UPPER(marca_clean) NOT LIKE '%DEUTZ%'
-          AND UPPER(marca_clean) NOT IN ('SCANIA', 'DAF', 'MAN', 'IVECO', 'TSD', 'MERCEDES-BENZ MINIBUS')
+          AND UPPER(marca_clean) NOT LIKE '%CLAAS%'
+          AND UPPER(marca_clean) NOT IN ('SCANIA', 'DAF', 'MAN', 'IVECO', 'TSD', 'MERCEDES-BENZ MINIBUS', 'CLASS', 'CLAAS')
           AND UPPER(marca_clean) NOT LIKE 'VOLKSWAGEN %'
           AND UPPER(marca_clean) NOT LIKE 'SEAT %'
           AND UPPER(marca_clean) NOT LIKE 'RENAULT %'
@@ -1295,13 +1296,18 @@ def get_brand_deepdive(
 
     def _val(r, col_name=None, idx=0, default=0):
         if not r: return default
-        if isinstance(r, (list, tuple)): return r[idx] if len(r) > idx else default
-        if isinstance(r, dict): return r.get(col_name, default) if col_name else list(r.values())[idx]
-        try:
-            return r[col_name] if col_name and col_name in r.keys() else r[idx]
-        except Exception:
-            try: return r[idx]
-            except Exception: return default
+        v = None
+        if isinstance(r, (list, tuple)):
+            v = r[idx] if len(r) > idx else default
+        elif isinstance(r, dict):
+            v = r.get(col_name, default) if col_name else list(r.values())[idx]
+        else:
+            try:
+                v = r[col_name] if col_name and col_name in r.keys() else r[idx]
+            except Exception:
+                try: v = r[idx]
+                except Exception: v = default
+        return default if v is None else v
 
     # Total nacional en el año
     p_nat = [year, ccaa.strip()] if where_ccaa else [year]
@@ -1323,7 +1329,7 @@ def get_brand_deepdive(
         p_tot = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]
         exec_query(c, f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE anio_str = ? AND UPPER(marca_clean) = ? {where_ccaa}", p_tot)
         t_row = c.fetchone()
-        tot_units = _val(t_row, 'total', 0, 0)
+        tot_units = _val(t_row, 'total', 0, 0) or 0
         market_share = round((tot_units / national_total * 100), 2) if national_total > 0 else 0
 
         # 2. Ventas mes a mes

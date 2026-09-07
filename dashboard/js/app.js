@@ -1364,7 +1364,7 @@ class DashboardApp {
                     if (!b) return false;
                     const u = b.toUpperCase();
                     if (u.startsWith('202') || u.includes('DESCONOCIDO')) return false;
-                    const excluded = ['RODRIGUEZ', 'BERGADANA', 'ALLIED VEHICLES', 'TRIPOD', 'MODELCAR', 'AIRBUS', 'SORTIMO', 'CODETRANS', 'JOHN DEERE', 'LIEBHERR', 'DEUTZ', 'SCANIA', 'DAF', 'MAN', 'IVECO', 'TSD', 'MERCEDES-BENZ MINIBUS', 'REMOLQ', 'CAYVOL', 'SEMITRAILER'];
+                    const excluded = ['RODRIGUEZ', 'BERGADANA', 'ALLIED VEHICLES', 'TRIPOD', 'MODELCAR', 'AIRBUS', 'SORTIMO', 'CODETRANS', 'JOHN DEERE', 'LIEBHERR', 'DEUTZ', 'SCANIA', 'DAF', 'MAN', 'IVECO', 'TSD', 'MERCEDES-BENZ MINIBUS', 'REMOLQ', 'CAYVOL', 'SEMITRAILER', 'CLASS', 'CLAAS'];
                     return !excluded.some(ex => u.includes(ex));
                 };
 
