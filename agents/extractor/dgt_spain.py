@@ -53,7 +53,7 @@ CANONICAL_MODELS = {
     'SEAT': ['IBIZA', 'ARONA', 'ATECA', 'LEON', 'TARRACO', 'ALHAMBRA'],
     'HYUNDAI': ['IONIQ 5', 'IONIQ 6', 'IONIQ 9', 'TUCSON', 'KONA', 'I20', 'I10', 'I30', 'BAYON', 'SANTA FE', 'STARIA', 'INSTER'],
     'TOYOTA': ['COROLLA CROSS', 'YARIS CROSS', 'COROLLA', 'C-HR EV', 'C-HR', 'GR YARIS', 'YARIS', 'RAV4', 'AYGO X', 'BZ4X', 'HIGHLANDER', 'CAMRY', 'LAND CRUISER', 'PROACE CITY', 'PROACE', 'AURIS'],
-    'VOLKSWAGEN': ['ID.POLO', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG', 'TAYRON'],
+    'VOLKSWAGEN': ['ID.2X', 'ID.POLO', 'ID.2', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG', 'TAYRON'],
     'KIA': ['EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'SPORTAGE', 'NIRO', 'STONIC', 'XCEED', 'CEED', 'PICANTO', 'SORENTO', 'PROCEED', 'RIO', 'PV5'],
     'PEUGEOT': ['E-2008', 'E-208', 'E-3008', 'E-308', 'E-5008', '2008', '208', '3008', '308', '5008', '408', '508', 'RIFTER', 'TRAVELLER', 'PARTNER'],
     'CITROEN': ['Ë-C3 AIRCROSS', 'C3 AIRCROSS', 'Ë-C4 X', 'C4 X', 'Ë-C4', 'Ë-C3', 'C3', 'C4', 'C5 AIRCROSS', 'C5 X', 'BERLINGO', 'SPACETOURER'],
@@ -98,8 +98,13 @@ def clean_model(raw_m, brand, prop=''):
             return '6E'
             
     if b == 'VOLKSWAGEN':
+        # SUV elèctric derivat de l'ID.2 / ID.Polo (concept ID. 2all SUV, ID.2X, ID.Cross)
+        if any(k in s for k in ('ID.2X', 'ID.2 X', 'ID2.X', 'ID2 X', 'ID2X', 'ID.CROSS', 'ID. CROSS', 'ID CROSS', 'ID.2ALL SUV', 'ID.2 SUV', 'ID.POLO CROSS', 'ID.POLO SUV', 'ID. POLO CROSS', 'ID. POLO SUV')) or (('T-CROSS' in s or 'TCROSS' in s) and prop in ('2', '9')):
+            return 'ID.2X'
         if 'ID. POLO' in s or 'ID.POLO' in s or 'ID POLO' in s or ('POLO' in s and prop in ('2', '9')):
             return 'ID.POLO'
+        if 'ID.2' in s or 'ID 2' in s or 'ID. 2' in s or 'ID2' in s:
+            return 'ID.2'
         if 'ID. BUZZ' in s or 'ID.BUZZ' in s or 'ID BUZZ' in s:
             return 'ID. BUZZ'
 
@@ -154,7 +159,7 @@ def parse_dgt_fuel(line, brand_clean, model_clean):
     if brand_clean in ('TESLA', 'POLESTAR', 'SMART', 'ZEEKR', 'NIO', 'SERES', 'VOYAH', 'XPENG', 'LIVAN') and prop not in ('0', '1', '3', '4', '6', '7'):
         return 'ELECTRICO'
         
-    if model_u in ('ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'ID.POLO', 'CX-6E', '6E', 'IONIQ 5', 'IONIQ 6', 'EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'BORN', 'TAVASCAN', 'RAVAL', 'E-208', 'E-2008', 'SPRING', 'ARIYA', 'LEAF', '500E', '5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'MUSTANG MACH-E', 'EXPLORER EV', 'ENYAQ', 'ELROQ', 'EX30', 'EX40', 'EC40', 'EX90', 'IX1', 'IX2', 'IX3', 'IX', 'I4', 'I5', 'I7', 'EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'Q4', 'Q6', 'Q8 E-TRON', 'TAYCAN', 'MG4', 'CYBERSTER', 'MARVEL R', 'B10', 'T03') and prop not in ('0', '1', '3', '4', '6', '7'):
+    if model_u in ('ID.2X', 'ID.2', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'ID.POLO', 'CX-6E', '6E', 'IONIQ 5', 'IONIQ 6', 'EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'BORN', 'TAVASCAN', 'RAVAL', 'E-208', 'E-2008', 'SPRING', 'ARIYA', 'LEAF', '500E', '5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'MUSTANG MACH-E', 'EXPLORER EV', 'ENYAQ', 'ELROQ', 'EX30', 'EX40', 'EC40', 'EX90', 'IX1', 'IX2', 'IX3', 'IX', 'I4', 'I5', 'I7', 'EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'Q4', 'Q6', 'Q8 E-TRON', 'TAYCAN', 'MG4', 'CYBERSTER', 'MARVEL R', 'B10', 'T03') and prop not in ('0', '1', '3', '4', '6', '7'):
         return 'ELECTRICO'
 
     # 2. Híbridos Enchufables (PHEV)
