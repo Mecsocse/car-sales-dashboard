@@ -2,9 +2,15 @@ name: Automated Bulletproof DGT Data Ingestion
 
 on:
   schedule:
-    # 4 Retries daily (Monday to Sunday) at 07:30, 10:30, 14:30, 18:30 UTC (09:30, 12:30, 16:30, 20:30 CET)
-    - cron: '30 7,10,14,18 * * *'
+    # Prime morning checks every 30 mins: 08:00 to 11:30 UTC (10:00 to 13:30 CEST Spain)
+    - cron: '0,30 8,9,10,11 * * *'
+    # Afternoon & evening safety backups: 14:30, 18:30 UTC (16:30, 20:30 CEST Spain)
+    - cron: '30 14,18 * * *'
   workflow_dispatch: # Manual trigger anytime from GitHub Actions UI
+
+concurrency:
+  group: dgt-ingestion-lock
+  cancel-in-progress: false
 
 jobs:
   run-ingestion:
