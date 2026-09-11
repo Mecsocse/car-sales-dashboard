@@ -53,7 +53,7 @@ CANONICAL_MODELS = {
     'SEAT': ['IBIZA', 'ARONA', 'ATECA', 'LEON', 'TARRACO', 'ALHAMBRA'],
     'HYUNDAI': ['IONIQ 5', 'IONIQ 6', 'IONIQ 9', 'TUCSON', 'KONA', 'I20', 'I10', 'I30', 'BAYON', 'SANTA FE', 'STARIA', 'INSTER'],
     'TOYOTA': ['COROLLA CROSS', 'YARIS CROSS', 'COROLLA', 'C-HR EV', 'C-HR', 'GR YARIS', 'YARIS', 'RAV4', 'AYGO X', 'BZ4X', 'HIGHLANDER', 'CAMRY', 'LAND CRUISER', 'PROACE CITY', 'PROACE', 'AURIS'],
-    'VOLKSWAGEN': ['ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG', 'TAYRON'],
+    'VOLKSWAGEN': ['ID.POLO', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG', 'TAYRON'],
     'KIA': ['EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'SPORTAGE', 'NIRO', 'STONIC', 'XCEED', 'CEED', 'PICANTO', 'SORENTO', 'PROCEED', 'RIO', 'PV5'],
     'PEUGEOT': ['E-2008', 'E-208', 'E-3008', 'E-308', 'E-5008', '2008', '208', '3008', '308', '5008', '408', '508', 'RIFTER', 'TRAVELLER', 'PARTNER'],
     'CITROEN': ['Ë-C3 AIRCROSS', 'C3 AIRCROSS', 'Ë-C4 X', 'C4 X', 'Ë-C4', 'Ë-C3', 'C3', 'C4', 'C5 AIRCROSS', 'C5 X', 'BERLINGO', 'SPACETOURER'],
@@ -68,7 +68,7 @@ CANONICAL_MODELS = {
     'OPEL': ['CORSA', 'MOKKA', 'CROSSLAND', 'ASTRA', 'GRANDLAND', 'FRONTERA', 'COMBO'],
     'JEEP': ['AVENGER', 'RENEGADE', 'COMPASS', 'WRANGLER', 'GRAND CHEROKEE'],
     'VOLVO': ['EX30', 'EX40', 'EC40', 'EX90', 'XC40', 'XC60', 'XC90', 'V60', 'V90', 'S60'],
-    'MAZDA': ['6E', 'CX-30', 'CX-5', 'MAZDA3', 'MAZDA2', 'CX-60', 'CX-80', 'MX-5', 'MX-30'],
+    'MAZDA': ['CX-6E', '6E', 'CX-30', 'CX-5', 'MAZDA3', 'MAZDA2', 'CX-60', 'CX-80', 'MX-5', 'MX-30'],
     'BYD': ['DOLPHIN SURF', 'DOLPHIN', 'SEALION 7', 'SEAL U', 'SEAL 06', 'SEAL', 'ATTO 2', 'ATTO 3', 'TANG', 'HAN', 'SEAGULL'],
     'OMODA': ['OMODA 5', 'OMODA 7', 'OMODA 9'],
     'JAECOO': ['JAECOO 7', 'JAECOO 8', 'JAECOO 5'],
@@ -91,6 +91,18 @@ def clean_model(raw_m, brand, prop=''):
     if not b: return ''
     
     # Specific brand distinctions
+    if b == 'MAZDA':
+        if 'CX-6E' in s or 'CX 6E' in s or 'CX6E' in s:
+            return 'CX-6E'
+        if '6E' in s or 'EZ-6' in s or 'EZ6' in s:
+            return '6E'
+            
+    if b == 'VOLKSWAGEN':
+        if 'ID. POLO' in s or 'ID.POLO' in s or 'ID POLO' in s or ('POLO' in s and prop in ('2', '9')):
+            return 'ID.POLO'
+        if 'ID. BUZZ' in s or 'ID.BUZZ' in s or 'ID BUZZ' in s:
+            return 'ID. BUZZ'
+
     if b == 'CITROEN':
         s_norm = s.replace('-', 'Ë-').replace('', 'Ë').replace('E-C3', 'Ë-C3').replace('E-C4', 'Ë-C4')
         if ('AIRCROSS' in s_norm or 'AIRCR' in s_norm) and 'C3' in s_norm:
@@ -142,7 +154,7 @@ def parse_dgt_fuel(line, brand_clean, model_clean):
     if brand_clean in ('TESLA', 'POLESTAR', 'SMART', 'ZEEKR', 'NIO', 'SERES', 'VOYAH', 'XPENG', 'LIVAN') and prop not in ('0', '1', '3', '4', '6', '7'):
         return 'ELECTRICO'
         
-    if model_u in ('ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'IONIQ 5', 'IONIQ 6', 'EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'BORN', 'TAVASCAN', 'RAVAL', 'E-208', 'E-2008', 'SPRING', 'ARIYA', 'LEAF', '500E', '5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'MUSTANG MACH-E', 'EXPLORER EV', 'ENYAQ', 'ELROQ', 'EX30', 'EX40', 'EC40', 'EX90', 'IX1', 'IX2', 'IX3', 'IX', 'I4', 'I5', 'I7', 'EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'Q4', 'Q6', 'Q8 E-TRON', 'TAYCAN', 'MG4', 'CYBERSTER', 'MARVEL R', 'B10', 'T03') and prop not in ('0', '1', '3', '4', '6', '7'):
+    if model_u in ('ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'ID.POLO', 'CX-6E', '6E', 'IONIQ 5', 'IONIQ 6', 'EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'BORN', 'TAVASCAN', 'RAVAL', 'E-208', 'E-2008', 'SPRING', 'ARIYA', 'LEAF', '500E', '5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'MUSTANG MACH-E', 'EXPLORER EV', 'ENYAQ', 'ELROQ', 'EX30', 'EX40', 'EC40', 'EX90', 'IX1', 'IX2', 'IX3', 'IX', 'I4', 'I5', 'I7', 'EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'Q4', 'Q6', 'Q8 E-TRON', 'TAYCAN', 'MG4', 'CYBERSTER', 'MARVEL R', 'B10', 'T03') and prop not in ('0', '1', '3', '4', '6', '7'):
         return 'ELECTRICO'
 
     # 2. Híbridos Enchufables (PHEV)
@@ -383,6 +395,26 @@ class DGTSpainExtractor:
             
         return total_turismos
 
+    def get_existing_dates_in_db(self, start_date, end_date):
+        """Returns a set of dates (YYYY-MM-DD) that already exist in Supabase."""
+        db_url = os.environ.get("DATABASE_URL") or "postgresql://postgres.nmqclghnxmstpabcyugn:Apuig060489%3F@aws-0-eu-central-1.pooler.supabase.com:6543/postgres?sslmode=require"
+        existing = set()
+        if db_url:
+            try:
+                import psycopg2
+                conn = psycopg2.connect(db_url, connect_timeout=10)
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT DISTINCT fecha::text FROM ventas_mensuales_resumen WHERE fecha >= %s AND fecha <= %s",
+                    (start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d'))
+                )
+                existing = {row[0] for row in cur.fetchall()}
+                conn.close()
+                logging.info(f"Database already contains {len(existing)} dates in range: {sorted(existing)}")
+            except Exception as e:
+                logging.warning(f"Could not check existing dates in Supabase: {e}")
+        return existing
+
     def run_date(self, date_obj):
         date_str = date_obj.strftime('%Y-%m-%d')
         logging.info(f"Checking DGT Spain for date {date_str}...")
@@ -392,13 +424,22 @@ class DGTSpainExtractor:
             return self.save_summary_data(daily_summary, date_obj)
         return 0
 
-    def run_range(self, start_date, end_date):
+    def run_range(self, start_date, end_date, force=False):
         current = start_date
         total = 0
+        existing_dates = set() if force else self.get_existing_dates_in_db(start_date, end_date)
+
         while current <= end_date:
             # Skip future dates
             if current.date() > datetime.now().date():
                 break
+            
+            date_str = current.strftime('%Y-%m-%d')
+            if not force and date_str in existing_dates:
+                logging.info(f"Date {date_str} already ingested in database. Skipping to save bandwidth & database resources.")
+                current += timedelta(days=1)
+                continue
+
             total += self.run_date(current)
             current += timedelta(days=1)
         return total
@@ -490,12 +531,12 @@ class DGTSpainExtractor:
             except Exception as e2:
                 logging.error(f"[COOK] Fallback SQLite cooking also failed: {e2}")
 
-    def auto_catchup(self, days_back=10):
+    def auto_catchup(self, days_back=10, force=False):
         """Automatically checks recent days and downloads any missing or updated DGT files."""
         end = datetime.now()
         start = end - timedelta(days=days_back)
-        logging.info(f"Starting DGT Spain Auto Catchup from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}...")
-        total = self.run_range(start, end)
+        logging.info(f"Starting DGT Spain Auto Catchup from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')} (force={force})...")
+        total = self.run_range(start, end, force=force)
         
         # After ingesting new data, re-cook precomputed JSONs for instant web serving
         if total > 0:
@@ -518,6 +559,7 @@ if __name__ == "__main__":
     parser.add_argument("--range", nargs=2, help="START END dates YYYY-MM-DD")
     parser.add_argument("--month", help="YYYY-MM")
     parser.add_argument("--catchup", type=int, default=10, help="Number of past days to check and catch up (default: 10)")
+    parser.add_argument("--force", action="store_true", help="Force re-download and re-ingest even if date already exists in DB")
     args = parser.parse_args()
     
     extractor = DGTSpainExtractor()
@@ -527,13 +569,13 @@ if __name__ == "__main__":
     elif args.range:
         start = datetime.strptime(args.range[0], "%Y-%m-%d")
         end = datetime.strptime(args.range[1], "%Y-%m-%d")
-        extractor.run_range(start, end)
+        extractor.run_range(start, end, force=args.force)
     elif args.month:
         import calendar
         y, m = int(args.month[:4]), int(args.month[5:7])
         start = datetime.strptime(f"{args.month}-01", "%Y-%m-%d")
         last_day = calendar.monthrange(y, m)[1]
         end = datetime.strptime(f"{args.month}-{last_day:02d}", "%Y-%m-%d")
-        extractor.run_range(start, end)
+        extractor.run_range(start, end, force=args.force)
     else:
-        extractor.auto_catchup(days_back=args.catchup)
+        extractor.auto_catchup(days_back=args.catchup, force=args.force)
