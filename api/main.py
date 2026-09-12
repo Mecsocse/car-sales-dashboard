@@ -61,6 +61,42 @@ def startup_event():
             
     threading.Thread(target=_run_warm, daemon=True).start()
 
+    def _run_dgt_background_watcher():
+        import time
+        from datetime import datetime
+        # Wait 45s after boot to let app initialize smoothly
+        time.sleep(45)
+        while True:
+            try:
+                # Active hours: 10:00 to 19:30 UTC / Spain time
+                now = datetime.now()
+                # Run lightweight catchup (skips existing dates in 2s, ingests newly published DGT files)
+                if 9 <= now.hour <= 20:
+                    from agents.extractor.dgt_spain import DGTSpainExtractor
+                    extractor = DGTSpainExtractor()
+                    extractor.auto_catchup(days_back=3)
+            except Exception as e:
+                print("DGT Background Watcher notice:", e)
+            # Check every 15 minutes
+            time.sleep(900)
+
+    threading.Thread(target=_run_dgt_background_watcher, daemon=True).start()
+
+@app.get("/api/admin/trigger-ingest", tags=["admin"])
+def trigger_dgt_ingest(days: int = 3, force: bool = False):
+    """Allows triggering DGT ingestion on-demand via browser or webhook."""
+    def _async_ingest():
+        try:
+            from agents.extractor.dgt_spain import DGTSpainExtractor
+            extractor = DGTSpainExtractor()
+            extractor.auto_catchup(days_back=days, force=force)
+        except Exception as e:
+            print("Manual trigger error:", e)
+
+    threading.Thread(target=_async_ingest, daemon=True).start()
+    return {"status": "success", "message": f"DGT ingestion triggered in background (days_back={days}, force={force})"}
+
+
 # Serve static dashboard files safely without shadowing /api
 css_dir = os.path.join(DASHBOARD_DIR, "css")
 js_dir = os.path.join(DASHBOARD_DIR, "js")

@@ -2,10 +2,10 @@ name: Automated Bulletproof DGT Data Ingestion
 
 on:
   schedule:
-    # Prime morning checks every 30 mins: 08:00 to 11:30 UTC (10:00 to 13:30 CEST Spain)
-    - cron: '0,30 8,9,10,11 * * *'
-    # Afternoon & evening safety backups: 14:30, 18:30 UTC (16:30, 20:30 CEST Spain)
-    - cron: '30 14,18 * * *'
+    # Continuous checks every 30 mins: 08:00 to 17:30 UTC (10:00 to 19:30 CEST Spain) - NO BLIND SPOTS
+    - cron: '0,30 8-17 * * *'
+    # Evening safety backups: 19:30, 21:30 UTC (21:30, 23:30 CEST Spain)
+    - cron: '30 19,21 * * *'
   workflow_dispatch: # Manual trigger anytime from GitHub Actions UI
 
 concurrency:
