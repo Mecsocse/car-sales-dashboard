@@ -1533,6 +1533,9 @@ class DashboardApp {
         const modal = document.getElementById('model-compare-modal');
         const closeBtn = document.getElementById('close-model-modal');
         const yearSelect = document.getElementById('modal-model-year-select');
+        const monthSelect = document.getElementById('modal-model-month-select');
+        const dateInput = document.getElementById('modal-model-date-input');
+        const periodBtns = document.querySelectorAll('.period-type-btn');
         const tabBtns = document.querySelectorAll('.model-tab-btn');
 
         if (closeBtn) {
@@ -1551,6 +1554,32 @@ class DashboardApp {
             }
         });
 
+        // Period switcher buttons (Año / Mes / Día)
+        const wrapYear = document.getElementById('wrapper-period-year');
+        const wrapMonth = document.getElementById('wrapper-period-month');
+        const wrapDay = document.getElementById('wrapper-period-day');
+
+        periodBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                periodBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.style.background = 'transparent';
+                    b.style.color = '#64748b';
+                });
+                btn.classList.add('active');
+                btn.style.background = '#ffffff';
+                btn.style.color = '#0f172a';
+
+                const type = btn.dataset.type;
+                this.currentModelPeriodType = type;
+                if (wrapYear) wrapYear.style.display = type === 'year' ? 'flex' : 'none';
+                if (wrapMonth) wrapMonth.style.display = type === 'month' ? 'flex' : 'none';
+                if (wrapDay) wrapDay.style.display = type === 'day' ? 'flex' : 'none';
+
+                this.fetchAndRenderModelCompare();
+            });
+        });
+
         if (yearSelect) {
             yearSelect.addEventListener('change', (e) => {
                 this.currentModelYear = e.target.value;
@@ -1558,13 +1587,45 @@ class DashboardApp {
             });
         }
 
-        ['modal-model-1-select', 'modal-model-2-select', 'modal-model-3-select', 'modal-model-4-select'].forEach((selId, idx) => {
-            const sel = document.getElementById(selId);
-            if (sel) {
-                sel.addEventListener('change', (e) => {
-                    const val = e.target.value;
-                    if (val) {
-                        this.currentModelList[idx] = val;
+        if (monthSelect) {
+            monthSelect.addEventListener('change', (e) => {
+                this.currentModelMonth = e.target.value;
+                this.fetchAndRenderModelCompare();
+            });
+        }
+
+        if (dateInput) {
+            dateInput.addEventListener('change', (e) => {
+                this.currentModelDate = e.target.value;
+                this.fetchAndRenderModelCompare();
+            });
+        }
+
+        // Cascading Brand -> Model selectors for 4 slots
+        [1, 2, 3, 4].forEach(slotIdx => {
+            const bSel = document.getElementById(`modal-brand-${slotIdx}-select`);
+            const mSel = document.getElementById(`modal-model-${slotIdx}-select`);
+
+            if (bSel) {
+                bSel.addEventListener('change', (e) => {
+                    const brand = e.target.value;
+                    this.updateSlotModelDropdown(slotIdx, brand);
+                    const newModel = mSel ? mSel.value : '';
+                    const fullModel = brand && newModel ? `${brand} ${newModel}` : '';
+                    if (fullModel) {
+                        this.currentModelList[slotIdx - 1] = fullModel;
+                        this.fetchAndRenderModelCompare();
+                    }
+                });
+            }
+
+            if (mSel) {
+                mSel.addEventListener('change', (e) => {
+                    const brand = bSel ? bSel.value : '';
+                    const model = e.target.value;
+                    const fullModel = brand && model ? `${brand} ${model}` : '';
+                    if (fullModel) {
+                        this.currentModelList[slotIdx - 1] = fullModel;
                         this.fetchAndRenderModelCompare();
                     }
                 });
@@ -1575,22 +1636,19 @@ class DashboardApp {
         const btnAdd = document.getElementById('btn-add-model');
         const w3 = document.getElementById('wrapper-model-3');
         const w4 = document.getElementById('wrapper-model-4');
-        const s3 = document.getElementById('modal-model-3-select');
-        const s4 = document.getElementById('modal-model-4-select');
 
         if (btnAdd) {
             btnAdd.addEventListener('click', () => {
-                const available = (this.cachedTopModels || []).filter(m => !this.currentModelList.includes(m));
                 if (w3 && w3.style.display === 'none') {
-                    const nextM = available[0] || 'TESLA MODEL 3';
+                    const nextM = this.pickNextAvailableModel() || 'TESLA MODEL 3';
                     this.currentModelList[2] = nextM;
-                    if (s3) s3.value = nextM;
+                    this.setupSlot(3, nextM);
                     w3.style.display = 'flex';
                     this.fetchAndRenderModelCompare();
                 } else if (w4 && w4.style.display === 'none') {
-                    const nextM = available[0] || 'MG ZS';
+                    const nextM = this.pickNextAvailableModel() || 'MG ZS';
                     this.currentModelList[3] = nextM;
-                    if (s4) s4.value = nextM;
+                    this.setupSlot(4, nextM);
                     w4.style.display = 'flex';
                     btnAdd.style.display = 'none';
                     this.fetchAndRenderModelCompare();
@@ -1603,9 +1661,9 @@ class DashboardApp {
         if (btnRem3) {
             btnRem3.addEventListener('click', () => {
                 if (w4 && w4.style.display !== 'none') {
-                    const m4Val = s4 ? s4.value : '';
-                    if (s3) s3.value = m4Val;
+                    const m4Val = this.currentModelList[3];
                     this.currentModelList = [this.currentModelList[0], this.currentModelList[1], m4Val];
+                    this.setupSlot(3, m4Val);
                     w4.style.display = 'none';
                     if (btnAdd) btnAdd.style.display = 'inline-flex';
                 } else {
@@ -1648,19 +1706,81 @@ class DashboardApp {
         });
     }
 
+    splitBrandModel(fullModel) {
+        if (!fullModel) return { brand: '', model: '' };
+        const upper = fullModel.toUpperCase().trim();
+        if (this.modelsCatalog) {
+            const brands = Object.keys(this.modelsCatalog).sort((a, b) => b.length - a.length);
+            for (const b of brands) {
+                if (upper === b) {
+                    return { brand: b, model: (this.modelsCatalog[b] && this.modelsCatalog[b][0]) || '' };
+                }
+                if (upper.startsWith(b + ' ')) {
+                    const mod = upper.slice(b.length).trim();
+                    return { brand: b, model: mod };
+                }
+            }
+        }
+        const parts = upper.split(' ');
+        return { brand: parts[0] || '', model: parts.slice(1).join(' ') || '' };
+    }
+
+    updateSlotModelDropdown(slotIdx, brand, selectedModel = null) {
+        const mSel = document.getElementById(`modal-model-${slotIdx}-select`);
+        if (!mSel) return;
+        if (!brand || !this.modelsCatalog || !this.modelsCatalog[brand]) {
+            mSel.innerHTML = '<option value="">Modelo...</option>';
+            return;
+        }
+        const models = (this.modelsCatalog[brand] || []).slice().sort();
+        let html = '<option value="">Modelo...</option>';
+        models.forEach(m => {
+            const isSel = selectedModel && selectedModel.toUpperCase() === m.toUpperCase() ? 'selected' : '';
+            html += `<option value="${m}" ${isSel}>${m}</option>`;
+        });
+        mSel.innerHTML = html;
+        if (selectedModel && models.some(m => m.toUpperCase() === selectedModel.toUpperCase())) {
+            mSel.value = selectedModel;
+        } else if (models.length > 0) {
+            mSel.value = models[0];
+        }
+    }
+
+    setupSlot(slotIdx, fullModel) {
+        const bSel = document.getElementById(`modal-brand-${slotIdx}-select`);
+        if (!bSel) return;
+        const { brand, model } = this.splitBrandModel(fullModel);
+
+        const brands = Object.keys(this.modelsCatalog || {}).sort();
+        let bHtml = '<option value="">Marca...</option>';
+        brands.forEach(b => {
+            const isSel = b === brand ? 'selected' : '';
+            bHtml += `<option value="${b}" ${isSel}>${b}</option>`;
+        });
+        bSel.innerHTML = bHtml;
+        bSel.value = brand;
+
+        this.updateSlotModelDropdown(slotIdx, brand, model);
+    }
+
+    pickNextAvailableModel() {
+        const candidates = ['TESLA MODEL 3', 'MG ZS', 'HYUNDAI TUCSON', 'RENAULT CLIO', 'SEAT IBIZA', 'KIA SPORTAGE', 'PEUGEOT 208'];
+        return candidates.find(c => !this.currentModelList.map(m => (m || '').toUpperCase()).includes(c.toUpperCase())) || 'TESLA MODEL 3';
+    }
+
     async openModelCompareModal(modelsList = null, customYear = null, customCcaa = null) {
         const modal = document.getElementById('model-compare-modal');
         if (!modal) return;
 
-        // Populate models dropdown list if not cached yet
-        if (!this.cachedTopModels) {
+        // Populate models catalog if not loaded yet
+        if (!this.modelsCatalog) {
             try {
-                const res = await fetch(`${API_BASE}/api/models/full-list?limit=250`);
+                const res = await fetch(`${API_BASE}/api/models/catalog`);
                 if (res.ok) {
-                    this.cachedTopModels = await res.json();
+                    this.modelsCatalog = await res.json();
                 }
             } catch (err) {
-                console.error('Failed to load top models list:', err);
+                console.error('Failed to load models catalog:', err);
             }
         }
 
@@ -1669,36 +1789,47 @@ class DashboardApp {
             let top1 = 'DACIA SANDERO';
             let top2 = 'TOYOTA COROLLA';
             if (this.lastAllData && this.lastAllData.models_ranking && this.lastAllData.models_ranking.length >= 2) {
-                top1 = this.lastAllData.models_ranking[0].modelo || top1;
-                top2 = this.lastAllData.models_ranking[1].modelo || top2;
-            } else if (this.cachedTopModels && this.cachedTopModels.length >= 2) {
-                top1 = this.cachedTopModels[0];
-                top2 = this.cachedTopModels[1];
+                top1 = this.lastAllData.models_ranking[0].modelo_full || `${this.lastAllData.models_ranking[0].marca} ${this.lastAllData.models_ranking[0].modelo}`;
+                top2 = this.lastAllData.models_ranking[1].modelo_full || `${this.lastAllData.models_ranking[1].marca} ${this.lastAllData.models_ranking[1].modelo}`;
             }
             modelsList = [top1, top2];
         }
 
         this.currentModelList = [...modelsList];
+        this.currentModelPeriodType = this.currentModelPeriodType || 'year';
         this.currentModelYear = customYear || this.currentModelYear || this.selectedYear || (this.selectedMonth ? this.selectedMonth.split('-')[0] : '2026');
+        this.currentModelMonth = this.currentModelMonth || this.selectedMonth || '2026-09';
+        this.currentModelDate = this.currentModelDate || '2026-09-11';
         this.currentModelTab = this.currentModelTab || 'monthly';
+
+        // Set period controls
+        const periodBtns = document.querySelectorAll('.period-type-btn');
+        periodBtns.forEach(b => {
+            const isAct = b.dataset.type === this.currentModelPeriodType;
+            b.classList.toggle('active', isAct);
+            b.style.background = isAct ? '#ffffff' : 'transparent';
+            b.style.color = isAct ? '#0f172a' : '#64748b';
+        });
+
+        const wrapYear = document.getElementById('wrapper-period-year');
+        const wrapMonth = document.getElementById('wrapper-period-month');
+        const wrapDay = document.getElementById('wrapper-period-day');
+        if (wrapYear) wrapYear.style.display = this.currentModelPeriodType === 'year' ? 'flex' : 'none';
+        if (wrapMonth) wrapMonth.style.display = this.currentModelPeriodType === 'month' ? 'flex' : 'none';
+        if (wrapDay) wrapDay.style.display = this.currentModelPeriodType === 'day' ? 'flex' : 'none';
 
         const yearSelect = document.getElementById('modal-model-year-select');
         if (yearSelect) yearSelect.value = this.currentModelYear;
+        const monthSelect = document.getElementById('modal-model-month-select');
+        if (monthSelect) monthSelect.value = this.currentModelMonth;
+        const dateInput = document.getElementById('modal-model-date-input');
+        if (dateInput) dateInput.value = this.currentModelDate;
 
-        // Populate dropdown options
-        const modelList = this.cachedTopModels || modelsList;
-        ['modal-model-1-select', 'modal-model-2-select', 'modal-model-3-select', 'modal-model-4-select'].forEach((selId, idx) => {
-            const sel = document.getElementById(selId);
-            if (sel) {
-                let html = '<option value="">-- Seleccionar Modelo --</option>';
-                modelList.forEach(m => {
-                    const isSelected = (this.currentModelList[idx] || '').toUpperCase() === m.toUpperCase() ? 'selected' : '';
-                    html += `<option value="${m}" ${isSelected}>🚗 ${m}</option>`;
-                });
-                sel.innerHTML = html;
-                sel.value = this.currentModelList[idx] || '';
-            }
-        });
+        // Setup Brand & Model slots
+        this.setupSlot(1, this.currentModelList[0] || 'DACIA SANDERO');
+        this.setupSlot(2, this.currentModelList[1] || 'TOYOTA COROLLA');
+        if (this.currentModelList[2]) this.setupSlot(3, this.currentModelList[2]);
+        if (this.currentModelList[3]) this.setupSlot(4, this.currentModelList[3]);
 
         // Set wrapper visibility for 3 and 4
         const w3 = document.getElementById('wrapper-model-3');
@@ -1721,9 +1852,19 @@ class DashboardApp {
         if (loader) loader.style.display = 'flex';
 
         const models = this.currentModelList.filter(Boolean);
-        const yearParam = this.currentModelYear || '2026';
+        const periodType = this.currentModelPeriodType || 'year';
+        const year = this.currentModelYear || '2026';
+        const month = this.currentModelMonth || '2026-09';
+        const date = this.currentModelDate || '2026-09-11';
         const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
-        const url = `${API_BASE}/api/analytics/models-compare?models=${encodeURIComponent(models.join(','))}&year=${yearParam}${ccaaParam}`;
+
+        let q = `models=${encodeURIComponent(models.join(','))}&period_type=${periodType}`;
+        if (periodType === 'year') q += `&year=${year}`;
+        else if (periodType === 'month') q += `&month=${month}&year=${month.split('-')[0]}`;
+        else if (periodType === 'day') q += `&date=${date}&year=${date.split('-')[0]}`;
+        q += ccaaParam;
+
+        const url = `${API_BASE}/api/analytics/models-compare?${q}`;
 
         try {
             const res = await fetch(url);
@@ -1769,7 +1910,17 @@ class DashboardApp {
         data.models.forEach((m, idx) => {
             const c = colors[idx % colors.length];
             const topFuel = m.fuel_mix && m.fuel_mix[0] ? `${m.fuel_mix[0].carburante} (${m.fuel_mix[0].pct}%)` : 'N/A';
-            const bestM = m.best_month && m.best_month !== 'N/A' ? `${m.best_month} (${m.best_month_units.toLocaleString('es-ES')} un.)` : 'N/A';
+            
+            let bestPeriodLine = '';
+            if (data.period_type === 'day') {
+                bestPeriodLine = `<span><strong>Fecha:</strong> ${data.date || 'Día consultado'}</span>`;
+            } else if (data.period_type === 'month') {
+                const bVal = m.best_period && m.best_period !== 'N/A' ? `${m.best_period} (${m.best_period_units.toLocaleString('es-ES')} un.)` : 'N/A';
+                bestPeriodLine = `<span><strong>Mejor día:</strong> ${bVal}</span>`;
+            } else {
+                const bVal = m.best_period && m.best_period !== 'N/A' ? `${m.best_period} (${m.best_period_units.toLocaleString('es-ES')} un.)` : 'N/A';
+                bestPeriodLine = `<span><strong>Mejor mes:</strong> ${bVal}</span>`;
+            }
 
             html += `
                 <div class="model-kpi-card ${c.cls}">
@@ -1781,9 +1932,9 @@ class DashboardApp {
                         ${m.total_units.toLocaleString('es-ES')} <span style="font-size: 12px; font-weight: 600; color: #64748b;">un.</span>
                     </div>
                     <div style="font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 2px;">
-                        <span><strong>Cuota nacional:</strong> ${m.market_share}%</span>
+                        <span><strong>Cuota período:</strong> ${m.market_share}%</span>
                         <span><strong>Motorización:</strong> ${topFuel}</span>
-                        <span><strong>Mejor mes:</strong> ${bestM}</span>
+                        ${bestPeriodLine}
                     </div>
                 </div>
             `;
@@ -1794,7 +1945,7 @@ class DashboardApp {
     renderModelCompareTab(tabId) {
         if (!this.modelCompareData || !this.modelCompareData.models) return;
         const data = this.modelCompareData;
-        const yr = data.year || '2026';
+        const pLabel = data.period_label || data.year || '2026';
 
         // Show/hide tab panes
         const panes = document.querySelectorAll('.model-tab-pane');
@@ -1808,14 +1959,23 @@ class DashboardApp {
             const isTarget = btn.dataset.tab === tabId;
             btn.classList.toggle('active', isTarget);
             if (btn.dataset.tab === 'monthly') {
-                btn.querySelector('span').textContent = `Mes a Mes (${yr})`;
+                const spanEl = btn.querySelector('span');
+                if (spanEl) {
+                    if (data.period_type === 'month') {
+                        spanEl.textContent = `Día a Día (${pLabel})`;
+                    } else if (data.period_type === 'day') {
+                        spanEl.textContent = `Ventas del Día (${pLabel})`;
+                    } else {
+                        spanEl.textContent = `Mes a Mes (${pLabel})`;
+                    }
+                }
             }
         });
 
         this.currentModelTab = tabId;
 
         if (tabId === 'monthly') {
-            window.DashboardCharts.initModelMonthlyChart('modelMonthlyChart', data.models, yr);
+            window.DashboardCharts.initModelMonthlyChart('modelMonthlyChart', data.models, pLabel);
         } else if (tabId === 'yearly') {
             window.DashboardCharts.initModelYearlyChart('modelYearlyChart', data.models);
         } else if (tabId === 'fuels') {
@@ -1826,11 +1986,11 @@ class DashboardApp {
     }
 
     updateModelBadgesAndSubtitle(data) {
-        const yr = data.year || '2026';
+        const pLabel = data.period_label || `Año ${data.year || '2026'}`;
         const cText = this.selectedCcaa || 'Toda España';
         const subtitle = document.getElementById('modal-model-subtitle');
         if (subtitle) {
-            subtitle.textContent = `Año ${yr} Completo (Ene - Dic) • ${cText} • ${data.models.length} modelos en análisis`;
+            subtitle.textContent = `${pLabel} • ${cText} • ${data.models.length} modelos en análisis`;
         }
 
         const pills = [

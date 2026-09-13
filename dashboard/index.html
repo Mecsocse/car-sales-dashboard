@@ -985,35 +985,51 @@
                 <!-- Bottom Row: Filter & Compare Controls Strip -->
                 <div class="brand-modal-actions" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%;">
                     <!-- Model 1 Primary Selector (Blue) -->
-                    <div class="model-select-item" style="display: flex; align-items: center; gap: 6px; background: #eff6ff; border: 1.5px solid #2563eb; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #2563eb; flex-shrink: 0;"></span>
-                        <select id="modal-model-1-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #1e3a8a; outline: none; cursor: pointer; font-family: inherit; width: 100%;">
-                            <option value="">Seleccionar Modelo 1...</option>
+                    <div class="model-select-item" style="display: flex; align-items: center; gap: 4px; background: #eff6ff; border: 1.5px solid #2563eb; padding: 4px 8px; border-radius: 8px; flex: 1; min-width: 210px;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #2563eb; flex-shrink: 0;"></span>
+                        <select id="modal-brand-1-select" style="background: transparent; border: none; font-size: 11px; font-weight: 800; color: #1e3a8a; outline: none; cursor: pointer; max-width: 95px;" title="Seleccionar Marca">
+                            <option value="">Marca...</option>
+                        </select>
+                        <span style="color: #93c5fd; font-size: 12px; font-weight: 700;">›</span>
+                        <select id="modal-model-1-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #1e40af; outline: none; cursor: pointer; flex: 1; min-width: 90px;" title="Seleccionar Modelo">
+                            <option value="">Modelo...</option>
                         </select>
                     </div>
 
                     <!-- Model 2 Selector (Emerald Green) -->
-                    <div class="model-select-item" style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; border: 1.5px solid #10b981; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; flex-shrink: 0;"></span>
-                        <select id="modal-model-2-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #065f46; outline: none; cursor: pointer; font-family: inherit; width: 100%;">
-                            <option value="">Seleccionar Modelo 2...</option>
+                    <div class="model-select-item" style="display: flex; align-items: center; gap: 4px; background: #ecfdf5; border: 1.5px solid #10b981; padding: 4px 8px; border-radius: 8px; flex: 1; min-width: 210px;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #10b981; flex-shrink: 0;"></span>
+                        <select id="modal-brand-2-select" style="background: transparent; border: none; font-size: 11px; font-weight: 800; color: #065f46; outline: none; cursor: pointer; max-width: 95px;" title="Seleccionar Marca">
+                            <option value="">Marca...</option>
+                        </select>
+                        <span style="color: #6ee7b7; font-size: 12px; font-weight: 700;">›</span>
+                        <select id="modal-model-2-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #047857; outline: none; cursor: pointer; flex: 1; min-width: 90px;" title="Seleccionar Modelo">
+                            <option value="">Modelo...</option>
                         </select>
                     </div>
 
                     <!-- Model 3 Selector (Purple, toggleable) -->
-                    <div id="wrapper-model-3" class="model-select-item" style="display: none; align-items: center; gap: 6px; background: #faf5ff; border: 1.5px solid #8b5cf6; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #8b5cf6; flex-shrink: 0;"></span>
-                        <select id="modal-model-3-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #5b21b6; outline: none; cursor: pointer; font-family: inherit; width: calc(100% - 20px);">
-                            <option value="">Seleccionar Modelo 3...</option>
+                    <div id="wrapper-model-3" class="model-select-item" style="display: none; align-items: center; gap: 4px; background: #faf5ff; border: 1.5px solid #8b5cf6; padding: 4px 8px; border-radius: 8px; flex: 1; min-width: 220px;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6; flex-shrink: 0;"></span>
+                        <select id="modal-brand-3-select" style="background: transparent; border: none; font-size: 11px; font-weight: 800; color: #5b21b6; outline: none; cursor: pointer; max-width: 95px;" title="Seleccionar Marca">
+                            <option value="">Marca...</option>
+                        </select>
+                        <span style="color: #c4b5fd; font-size: 12px; font-weight: 700;">›</span>
+                        <select id="modal-model-3-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #6d28d9; outline: none; cursor: pointer; flex: 1; min-width: 80px;" title="Seleccionar Modelo">
+                            <option value="">Modelo...</option>
                         </select>
                         <button id="btn-remove-model-3" title="Quitar 3er modelo" style="background: none; border: none; color: #8b5cf6; font-size: 16px; font-weight: 800; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
                     </div>
 
                     <!-- Model 4 Selector (Amber, toggleable) -->
-                    <div id="wrapper-model-4" class="model-select-item" style="display: none; align-items: center; gap: 6px; background: #fffbeb; border: 1.5px solid #f59e0b; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
-                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; flex-shrink: 0;"></span>
-                        <select id="modal-model-4-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #92400e; outline: none; cursor: pointer; font-family: inherit; width: calc(100% - 20px);">
-                            <option value="">Seleccionar Modelo 4...</option>
+                    <div id="wrapper-model-4" class="model-select-item" style="display: none; align-items: center; gap: 4px; background: #fffbeb; border: 1.5px solid #f59e0b; padding: 4px 8px; border-radius: 8px; flex: 1; min-width: 220px;">
+                        <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #f59e0b; flex-shrink: 0;"></span>
+                        <select id="modal-brand-4-select" style="background: transparent; border: none; font-size: 11px; font-weight: 800; color: #92400e; outline: none; cursor: pointer; max-width: 95px;" title="Seleccionar Marca">
+                            <option value="">Marca...</option>
+                        </select>
+                        <span style="color: #fcd34d; font-size: 12px; font-weight: 700;">›</span>
+                        <select id="modal-model-4-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #b45309; outline: none; cursor: pointer; flex: 1; min-width: 80px;" title="Seleccionar Modelo">
+                            <option value="">Modelo...</option>
                         </select>
                         <button id="btn-remove-model-4" title="Quitar 4to modelo" style="background: none; border: none; color: #f59e0b; font-size: 16px; font-weight: 800; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
                     </div>
@@ -1024,15 +1040,47 @@
                         <span>Añadir modelo</span>
                     </button>
 
-                    <!-- Year Selector -->
-                    <div class="modal-year-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 8px;">
-                        <i data-lucide="calendar" style="width: 14px; height: 14px; color: #64748b;"></i>
-                        <select id="modal-model-year-select" style="background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
-                            <option value="2026">Año 2026</option>
-                            <option value="2025">Año 2025</option>
-                            <option value="2024">Año 2024</option>
-                            <option value="2023">Año 2023</option>
-                        </select>
+                    <!-- Period Controls Strip (Año / Mes / Día) -->
+                    <div class="modal-period-controls" style="display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 4px 8px; border-radius: 8px;">
+                        <!-- Segmented Mode Switcher -->
+                        <div class="period-type-toggle" style="display: inline-flex; background: #e2e8f0; padding: 2px; border-radius: 6px; gap: 2px;">
+                            <button type="button" class="period-type-btn active" data-type="year" style="border: none; background: #ffffff; color: #0f172a; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">Año</button>
+                            <button type="button" class="period-type-btn" data-type="month" style="border: none; background: transparent; color: #64748b; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">Mes</button>
+                            <button type="button" class="period-type-btn" data-type="day" style="border: none; background: transparent; color: #64748b; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; cursor: pointer;">Día</button>
+                        </div>
+
+                        <!-- Year Selector -->
+                        <div id="wrapper-period-year" style="display: flex; align-items: center;">
+                            <select id="modal-model-year-select" style="background: transparent; border: none; font-size: 12px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
+                                <option value="2026">Año 2026</option>
+                                <option value="2025">Año 2025</option>
+                                <option value="2024">Año 2024</option>
+                                <option value="2023">Año 2023</option>
+                            </select>
+                        </div>
+
+                        <!-- Month Selector -->
+                        <div id="wrapper-period-month" style="display: none; align-items: center;">
+                            <select id="modal-model-month-select" style="background: transparent; border: none; font-size: 12px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
+                                <option value="2026-09">Sep 2026</option>
+                                <option value="2026-08">Ago 2026</option>
+                                <option value="2026-07">Jul 2026</option>
+                                <option value="2026-06">Jun 2026</option>
+                                <option value="2026-05">May 2026</option>
+                                <option value="2026-04">Abr 2026</option>
+                                <option value="2026-03">Mar 2026</option>
+                                <option value="2026-02">Feb 2026</option>
+                                <option value="2026-01">Ene 2026</option>
+                                <option value="2025-12">Dic 2025</option>
+                                <option value="2025-11">Nov 2025</option>
+                                <option value="2025-10">Oct 2025</option>
+                            </select>
+                        </div>
+
+                        <!-- Day Input Picker -->
+                        <div id="wrapper-period-day" style="display: none; align-items: center;">
+                            <input type="date" id="modal-model-date-input" value="2026-09-11" max="2026-09-11" style="background: transparent; border: none; font-size: 12px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1283,9 +1331,9 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260913_models"></script>
-    <script src="js/components.js?v=20260913_models"></script>
-    <script src="js/insights.js?v=20260913_models"></script>
-    <script src="js/app.js?v=20260913_models"></script>
+    <script src="js/charts.js?v=20260913_models_v2"></script>
+    <script src="js/components.js?v=20260913_models_v2"></script>
+    <script src="js/insights.js?v=20260913_models_v2"></script>
+    <script src="js/app.js?v=20260913_models_v2"></script>
 </body>
 </html>

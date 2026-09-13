@@ -257,8 +257,31 @@ function initModelsRankingChart(ctxId, data) {
             responsive: true,
             maintainAspectRatio: false,
             layout: { padding: { left: 5, right: 40 } },
+            onClick: (evt, elements) => {
+                if (!elements || elements.length === 0) return;
+                const item = elements[0];
+                const modelObj = data[item.index];
+                if (modelObj && window.App && window.App.openModelCompareModal) {
+                    const mFull = modelObj.modelo_full || `${modelObj.marca} ${modelObj.modelo}`;
+                    window.App.openModelCompareModal([mFull]);
+                }
+            },
+            onHover: (evt, elements) => {
+                if (evt && evt.native && evt.native.target) {
+                    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                }
+            },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (tooltipItems) => {
+                            const item = tooltipItems[0];
+                            const modelObj = data[item.dataIndex];
+                            return `${modelObj.modelo_full || (modelObj.marca + ' ' + modelObj.modelo)}: ${modelObj.total.toLocaleString('es-ES')} unidades (Clic para comparar)`;
+                        }
+                    }
+                }
             },
             scales: {
                 x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.22 },
@@ -298,8 +321,31 @@ function initEVRankingChart(ctxId, data) {
             responsive: true,
             maintainAspectRatio: false,
             layout: { padding: { left: 5, right: 40 } },
+            onClick: (evt, elements) => {
+                if (!elements || elements.length === 0) return;
+                const item = elements[0];
+                const modelObj = data[item.index];
+                if (modelObj && window.App && window.App.openModelCompareModal) {
+                    const mFull = modelObj.modelo_full || `${modelObj.marca} ${modelObj.modelo}`;
+                    window.App.openModelCompareModal([mFull]);
+                }
+            },
+            onHover: (evt, elements) => {
+                if (evt && evt.native && evt.native.target) {
+                    evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                }
+            },
             plugins: {
-                legend: { display: false }
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        title: (tooltipItems) => {
+                            const item = tooltipItems[0];
+                            const modelObj = data[item.dataIndex];
+                            return `${modelObj.modelo_full || (modelObj.marca + ' ' + modelObj.modelo)}: ${modelObj.total.toLocaleString('es-ES')} unidades (Clic para comparar)`;
+                        }
+                    }
+                }
             },
             scales: {
                 x: { grid: { color: '#f1f5f9' }, max: maxVal * 1.22 },
@@ -1059,7 +1105,7 @@ const MODEL_PALETTE = [
     '#f59e0b'  // Model 4: Amber
 ];
 
-function initModelMonthlyChart(ctxId, modelsList, year) {
+function initModelMonthlyChart(ctxId, modelsList, periodLabel) {
     const el = document.getElementById(ctxId);
     if (!el) return;
     const ctx = el.getContext('2d');
@@ -1067,13 +1113,17 @@ function initModelMonthlyChart(ctxId, modelsList, year) {
 
     if (!modelsList || !modelsList.length) return;
 
-    const labels = (modelsList[0].monthly || []).map(m => m.mes_nombre);
-    const datasets = modelsList.map((m, idx) => ({
-        label: `${m.modelo} (${year})`,
-        data: (m.monthly || []).map(item => item.total),
-        backgroundColor: MODEL_PALETTE[idx % MODEL_PALETTE.length],
-        borderRadius: 4
-    }));
+    const timeline0 = modelsList[0].timeline || modelsList[0].monthly || [];
+    const labels = timeline0.map(m => m.label || m.mes_nombre || m.fecha || m.mes);
+    const datasets = modelsList.map((m, idx) => {
+        const tList = m.timeline || m.monthly || [];
+        return {
+            label: m.modelo,
+            data: tList.map(item => item.total),
+            backgroundColor: MODEL_PALETTE[idx % MODEL_PALETTE.length],
+            borderRadius: 4
+        };
+    });
 
     charts[ctxId] = new Chart(ctx, {
         type: 'bar',

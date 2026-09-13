@@ -908,6 +908,58 @@ def get_models_full_list(limit: int = 250, conn: Any = Depends(get_db)):
     _LIST_CACHE[key] = res
     return res
 
+@router.get("/models/catalog")
+def get_models_catalog(conn: Any = Depends(get_db)):
+    """
+    Retorna catálogo jerárquico { MARCA: [MODELO1, MODELO2, ...] }
+    con todas las marcas y modelos de turismos ordenados estrictamente alfabéticamente (A-Z).
+    """
+    key = "models_catalog_v2"
+    if key in _LIST_CACHE:
+        return _LIST_CACHE[key]
+    c = conn.cursor()
+    exec_query(c, """
+        SELECT UPPER(marca_clean) as marca, UPPER(modelo_clean) as modelo, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str IN ('2024', '2025', '2026')
+          AND marca_clean IS NOT NULL AND marca_clean != '' AND marca_clean NOT LIKE '%DESCONOCIDO%'
+          AND modelo_clean IS NOT NULL AND modelo_clean != '' AND modelo_clean NOT LIKE '%DESCONOCIDO%'
+        GROUP BY UPPER(marca_clean), UPPER(modelo_clean)
+        HAVING SUM(total_unidades) >= 10
+        ORDER BY marca ASC, modelo ASC
+    """)
+    rows = c.fetchall()
+    
+    excluded_keywords = [
+        'AIRBUS', 'ALLIED', 'BERGADANA', 'CAYVOL', 'CLAAS', 'CLASS', 'CODETRANS', 
+        'DAF', 'DEUTZ', 'IVECO', 'JOHN DEERE', 'LIEBHERR', 'MAN', 'MODELCAR', 
+        'REMOLQ', 'RODRIGUEZ', 'SCANIA', 'SEMITRAILER', 'SORTIMO', 'TRIPOD', 'TSD',
+        'MINIBUS', '202', 'AUTOBUS', 'CAMION'
+    ]
+    def _v(r, col, idx=0):
+        if not r: return None
+        if isinstance(r, dict): return r.get(col)
+        return r[idx]
+
+    catalog = {}
+    for r in rows:
+        b = str(_v(r, 'marca', 0) or '').strip().upper()
+        m = str(_v(r, 'modelo', 1) or '').strip().upper()
+        if not b or not m or len(m) < 2 or any(ex in b for ex in excluded_keywords) or '?' in m:
+            continue
+        if b not in catalog:
+            catalog[b] = []
+        if m not in catalog[b]:
+            catalog[b].append(m)
+
+    sorted_catalog = {
+        brand: sorted(models)
+        for brand, models in sorted(catalog.items(), key=lambda x: x[0])
+        if len(models) > 0
+    }
+    _LIST_CACHE[key] = sorted_catalog
+    return sorted_catalog
+
 @router.get("/fuel/list")
 def get_fuel_list(conn: sqlite3.Connection = Depends(get_db)):
     return ["Gasolina", "Diésel", "Eléctrico (BEV)", "Híbrido (HEV)", "Híbrido Enchufable", "GLP (Autogás)", "Gas Natural (GNC)"]
@@ -1455,29 +1507,38 @@ _MODELS_COMPARE_CACHE = {}
 @router.get("/analytics/models-compare")
 def get_models_compare(
     models: str = Query(..., description="Modelos a comparar separados por comas (2 a 4)"),
+    period_type: str = Query("year", description="Tipo de período: year, month o day"),
     year: str = Query("2026", description="Año de análisis"),
+    month: Optional[str] = Query(None, description="Mes en formato YYYY-MM"),
+    date: Optional[str] = Query(None, description="Fecha en formato YYYY-MM-DD"),
     ccaa: Optional[str] = Query(None, description="CCAA opcional"),
     conn: Any = Depends(get_db)
 ):
     """
-    Devuelve métricas detalladas para comparar de 2 a 4 modelos:
-    - Ventas mes a mes (Ene-Dic)
+    Devuelve métricas detalladas para comparar de 2 a 4 modelos en año, mes o día:
+    - Ventas en el período seleccionado (total, cuota nacional, peso en grupo)
+    - Evolución temporal (mes a mes en año, día a día en mes o acumulado)
     - Ventas año a año (2023-2026)
     - Mix de carburantes y tecnologías
     - Top 10 Comunidades Autónomas
-    - Cuota de mercado sobre el total nacional y relativa entre los comparados
     """
     if not isinstance(ccaa, str):
         ccaa = None
     if not isinstance(year, str):
         year = "2026"
+    if not isinstance(month, str):
+        month = None
+    if not isinstance(date, str):
+        date = None
+    if not isinstance(period_type, str):
+        period_type = "year"
 
     raw_models = [m.strip().upper() for m in models.split(",") if m.strip()]
     if not raw_models:
         raise HTTPException(status_code=400, detail="Debe especificar al menos un modelo para comparar.")
     raw_models = raw_models[:4]
 
-    cache_key = f"{','.join(raw_models)}|{year}|{ccaa or ''}"
+    cache_key = f"{','.join(raw_models)}|{period_type}|{year}|{month or ''}|{date or ''}|{ccaa or ''}"
     if cache_key in _MODELS_COMPARE_CACHE:
         return _MODELS_COMPARE_CACHE[cache_key]
 
@@ -1499,30 +1560,65 @@ def get_models_compare(
                 except Exception: v = default
         return default if v is None else v
 
-    # Total nacional en el año
-    p_nat = [year, ccaa.strip()] if where_ccaa else [year]
-    exec_query(c, f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE anio_str = ? {where_ccaa}", p_nat)
+    # Determinar condición de período
+    if period_type == "day" and date:
+        period_filter = "fecha = ?"
+        period_param = date
+        period_label = f"Día {date}"
+    elif period_type == "month" and month:
+        period_filter = "mes_str = ?"
+        period_param = month
+        period_label = f"Mes {month}"
+    else:
+        period_type = "year"
+        period_filter = "anio_str = ?"
+        period_param = year
+        period_label = f"Año {year}"
+
+    # Total nacional en el período
+    p_nat = [period_param, ccaa.strip()] if where_ccaa else [period_param]
+    exec_query(c, f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE {period_filter} {where_ccaa}", p_nat)
     nat_row = c.fetchone()
     national_total = _val(nat_row, 'total', 0, 1) or 1
 
-    meses_nombres = [
-        ("01", "Ene"), ("02", "Feb"), ("03", "Mar"), ("04", "Abr"),
-        ("05", "May"), ("06", "Jun"), ("07", "Jul"), ("08", "Ago"),
-        ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dic")
-    ]
-
     placeholders = ','.join(['?'] * len(raw_models))
 
-    # 1. Ventas mes a mes
-    p_m = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+    # Total de cada modelo en el período
+    p_tot = [period_param] + raw_models + ([ccaa.strip()] if where_ccaa else [])
     exec_query(c, f"""
-        SELECT UPPER(modelo_full) as mod_name, substr(mes_str, 6, 2) as m_num, SUM(total_unidades) as total
+        SELECT UPPER(modelo_full) as mod_name, SUM(total_unidades) as total
         FROM ventas_mensuales_resumen
-        WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
-        GROUP BY mod_name, m_num
-        ORDER BY mod_name, m_num ASC
-    """, p_m)
-    monthly_rows = c.fetchall()
+        WHERE {period_filter} AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+        GROUP BY mod_name
+    """, p_tot)
+    tot_map = { _val(r, 'mod_name', 0): _val(r, 'total', 1, 0) for r in c.fetchall() }
+
+    # Timeline Evolution
+    if period_type in ("day", "month"):
+        m_target = date[:7] if period_type == "day" and date else (month or f"{year}-08")
+        p_time = [m_target] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+        exec_query(c, f"""
+            SELECT UPPER(modelo_full) as mod_name, to_char(fecha, 'YYYY-MM-DD') as day_str, to_char(fecha, 'DD') as d_num, SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE mes_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+            GROUP BY mod_name, day_str, d_num
+            ORDER BY day_str ASC
+        """, p_time)
+        time_rows = c.fetchall()
+        distinct_days = sorted(list(set(_val(r, 'day_str', 1) for r in time_rows if _val(r, 'day_str', 1))))
+        timeline_mode = "daily"
+    else:
+        p_time = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+        exec_query(c, f"""
+            SELECT UPPER(modelo_full) as mod_name, substr(mes_str, 6, 2) as m_num, SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+            GROUP BY mod_name, m_num
+            ORDER BY m_num ASC
+        """, p_time)
+        time_rows = c.fetchall()
+        distinct_days = []
+        timeline_mode = "monthly"
 
     # 2. Ventas año a año (2023-2026)
     p_y = raw_models + ([ccaa.strip()] if where_ccaa else [])
@@ -1535,8 +1631,8 @@ def get_models_compare(
     """, p_y)
     yearly_rows = c.fetchall()
 
-    # 3. Mix de carburantes
-    p_f = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+    # 3. Mix de carburantes en el período
+    p_f = [period_param] + raw_models + ([ccaa.strip()] if where_ccaa else [])
     exec_query(c, f"""
         SELECT 
             UPPER(modelo_full) as mod_name,
@@ -1550,34 +1646,51 @@ def get_models_compare(
             END as carb,
             SUM(total_unidades) as total
         FROM ventas_mensuales_resumen
-        WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+        WHERE {period_filter} AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
         GROUP BY mod_name, carb
         ORDER BY mod_name, total DESC
     """, p_f)
     fuel_rows = c.fetchall()
 
-    # 4. Top CCAA
-    p_c = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+    # 4. Top CCAA en el período
+    p_c = [period_param] + raw_models + ([ccaa.strip()] if where_ccaa else [])
     exec_query(c, f"""
         SELECT UPPER(modelo_full) as mod_name, ccaa, SUM(total_unidades) as total
         FROM ventas_mensuales_resumen
-        WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+        WHERE {period_filter} AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
           AND ccaa IS NOT NULL AND ccaa != ''
         GROUP BY mod_name, ccaa
         ORDER BY mod_name, total DESC
     """, p_c)
     ccaa_rows = c.fetchall()
 
+    meses_nombres = [
+        ("01", "Ene"), ("02", "Feb"), ("03", "Mar"), ("04", "Abr"),
+        ("05", "May"), ("06", "Jun"), ("07", "Jul"), ("08", "Ago"),
+        ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dic")
+    ]
+
     models_data = []
     for m_name in raw_models:
-        m_dict = { _val(r, 'm_num', 1): _val(r, 'total', 2, 0) for r in monthly_rows if _val(r, 'mod_name', 0) == m_name }
-        monthly_list = [{
-            "mes": code,
-            "mes_nombre": nombre,
-            "total": m_dict.get(code, 0)
-        } for code, nombre in meses_nombres]
-        tot_units = sum(item["total"] for item in monthly_list)
+        tot_units = tot_map.get(m_name, 0)
         market_share = round((tot_units / national_total * 100), 2) if national_total > 0 else 0
+
+        if timeline_mode == "daily":
+            d_dict = { _val(r, 'day_str', 1): _val(r, 'total', 3, 0) for r in time_rows if _val(r, 'mod_name', 0) == m_name }
+            timeline = [{
+                "fecha": day,
+                "label": f"Día {day[-2:]}",
+                "total": d_dict.get(day, 0)
+            } for day in distinct_days]
+            best_point = max(timeline, key=lambda x: x["total"]) if timeline else None
+        else:
+            m_dict = { _val(r, 'm_num', 1): _val(r, 'total', 2, 0) for r in time_rows if _val(r, 'mod_name', 0) == m_name }
+            timeline = [{
+                "mes": code,
+                "label": nombre,
+                "total": m_dict.get(code, 0)
+            } for code, nombre in meses_nombres]
+            best_point = max(timeline, key=lambda x: x["total"]) if timeline else None
 
         y_dict = { _val(r, 'anio_str', 1): _val(r, 'total', 2, 0) for r in yearly_rows if _val(r, 'mod_name', 0) == m_name }
         yearly_list = [{
@@ -1597,7 +1710,6 @@ def get_models_compare(
             "pct": round(_val(r, 'total', 2, 0) / (tot_units or 1) * 100, 1)
         } for r in ccaa_rows if _val(r, 'mod_name', 0) == m_name][:10]
 
-        best_m = max(monthly_list, key=lambda x: x["total"]) if monthly_list else None
         parts = m_name.split()
         brand_guess = parts[0] if parts else ""
 
@@ -1606,9 +1718,10 @@ def get_models_compare(
             "marca": brand_guess,
             "total_units": tot_units,
             "market_share": market_share,
-            "best_month": best_m["mes_nombre"] if best_m and best_m["total"] > 0 else "N/A",
-            "best_month_units": best_m["total"] if best_m else 0,
-            "monthly": monthly_list,
+            "best_period": best_point["label"] if best_point and best_point["total"] > 0 else "N/A",
+            "best_period_units": best_point["total"] if best_point else 0,
+            "timeline": timeline,
+            "timeline_mode": timeline_mode,
             "yearly": yearly_list,
             "fuel_mix": fuel_list,
             "top_ccaa": ccaa_list
@@ -1619,7 +1732,11 @@ def get_models_compare(
         m['share_among_compared'] = round((m['total_units'] / compared_total * 100), 1)
 
     result = {
+        "period_type": period_type,
+        "period_label": period_label,
         "year": year,
+        "month": month,
+        "date": date,
         "ccaa": ccaa,
         "national_total": national_total,
         "compared_total": compared_total,
