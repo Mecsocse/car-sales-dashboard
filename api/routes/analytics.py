@@ -880,6 +880,34 @@ def get_models_list(brand: Optional[str] = None, conn: sqlite3.Connection = Depe
     _LIST_CACHE[key] = res
     return res
 
+@router.get("/models/full-list")
+def get_models_full_list(limit: int = 250, conn: Any = Depends(get_db)):
+    """Retorna los modelos más vendidos con nombre completo (MARCA MODELO) ordenados por volumen."""
+    key = f"models_full_list:{limit}"
+    if key in _LIST_CACHE:
+        return _LIST_CACHE[key]
+    c = conn.cursor()
+    exec_query(c, """
+        SELECT UPPER(modelo_full) as modelo, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str IN ('2025', '2026')
+          AND modelo_full IS NOT NULL 
+          AND modelo_full != '' 
+          AND modelo_full NOT LIKE '%DESCONOCIDO%'
+        GROUP BY UPPER(modelo_full)
+        HAVING SUM(total_unidades) > 30
+        ORDER BY total DESC
+        LIMIT ?
+    """, (limit,))
+    rows = c.fetchall()
+    def _v(r, col, idx=0):
+        if not r: return None
+        if isinstance(r, dict): return r.get(col)
+        return r[idx]
+    res = [_v(r, 'modelo', 0) for r in rows if _v(r, 'modelo', 0)]
+    _LIST_CACHE[key] = res
+    return res
+
 @router.get("/fuel/list")
 def get_fuel_list(conn: sqlite3.Connection = Depends(get_db)):
     return ["Gasolina", "Diésel", "Eléctrico (BEV)", "Híbrido (HEV)", "Híbrido Enchufable", "GLP (Autogás)", "Gas Natural (GNC)"]
@@ -1421,6 +1449,188 @@ def get_brand_deepdive(
         "brand_b": _fetch_brand_metrics(brand_b) if brand_b else None
     }
 
+
+_MODELS_COMPARE_CACHE = {}
+
+@router.get("/analytics/models-compare")
+def get_models_compare(
+    models: str = Query(..., description="Modelos a comparar separados por comas (2 a 4)"),
+    year: str = Query("2026", description="Año de análisis"),
+    ccaa: Optional[str] = Query(None, description="CCAA opcional"),
+    conn: Any = Depends(get_db)
+):
+    """
+    Devuelve métricas detalladas para comparar de 2 a 4 modelos:
+    - Ventas mes a mes (Ene-Dic)
+    - Ventas año a año (2023-2026)
+    - Mix de carburantes y tecnologías
+    - Top 10 Comunidades Autónomas
+    - Cuota de mercado sobre el total nacional y relativa entre los comparados
+    """
+    if not isinstance(ccaa, str):
+        ccaa = None
+    if not isinstance(year, str):
+        year = "2026"
+
+    raw_models = [m.strip().upper() for m in models.split(",") if m.strip()]
+    if not raw_models:
+        raise HTTPException(status_code=400, detail="Debe especificar al menos un modelo para comparar.")
+    raw_models = raw_models[:4]
+
+    cache_key = f"{','.join(raw_models)}|{year}|{ccaa or ''}"
+    if cache_key in _MODELS_COMPARE_CACHE:
+        return _MODELS_COMPARE_CACHE[cache_key]
+
+    c = conn.cursor()
+    where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
+
+    def _val(r, col_name=None, idx=0, default=0):
+        if not r: return default
+        v = None
+        if isinstance(r, (list, tuple)):
+            v = r[idx] if len(r) > idx else default
+        elif isinstance(r, dict):
+            v = r.get(col_name, default) if col_name else list(r.values())[idx]
+        else:
+            try:
+                v = r[col_name] if col_name and col_name in r.keys() else r[idx]
+            except Exception:
+                try: v = r[idx]
+                except Exception: v = default
+        return default if v is None else v
+
+    # Total nacional en el año
+    p_nat = [year, ccaa.strip()] if where_ccaa else [year]
+    exec_query(c, f"SELECT SUM(total_unidades) as total FROM ventas_mensuales_resumen WHERE anio_str = ? {where_ccaa}", p_nat)
+    nat_row = c.fetchone()
+    national_total = _val(nat_row, 'total', 0, 1) or 1
+
+    meses_nombres = [
+        ("01", "Ene"), ("02", "Feb"), ("03", "Mar"), ("04", "Abr"),
+        ("05", "May"), ("06", "Jun"), ("07", "Jul"), ("08", "Ago"),
+        ("09", "Sep"), ("10", "Oct"), ("11", "Nov"), ("12", "Dic")
+    ]
+
+    placeholders = ','.join(['?'] * len(raw_models))
+
+    # 1. Ventas mes a mes
+    p_m = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+    exec_query(c, f"""
+        SELECT UPPER(modelo_full) as mod_name, substr(mes_str, 6, 2) as m_num, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+        GROUP BY mod_name, m_num
+        ORDER BY mod_name, m_num ASC
+    """, p_m)
+    monthly_rows = c.fetchall()
+
+    # 2. Ventas año a año (2023-2026)
+    p_y = raw_models + ([ccaa.strip()] if where_ccaa else [])
+    exec_query(c, f"""
+        SELECT UPPER(modelo_full) as mod_name, anio_str, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str IN ('2023', '2024', '2025', '2026') AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+        GROUP BY mod_name, anio_str
+        ORDER BY mod_name, anio_str ASC
+    """, p_y)
+    yearly_rows = c.fetchall()
+
+    # 3. Mix de carburantes
+    p_f = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+    exec_query(c, f"""
+        SELECT 
+            UPPER(modelo_full) as mod_name,
+            CASE
+                WHEN carburante_std IN ('ELECTRICO', 'EV', 'BEV') THEN 'Eléctrico (BEV)'
+                WHEN carburante_std IN ('PHEV', 'HIBRIDO_ENCHUFABLE') THEN 'Híbrido Enchufable (PHEV)'
+                WHEN carburante_std IN ('HEV_GASOLINA', 'HIBRIDO_GASOLINA', 'HIBRIDO GASOLINA', 'HEV_DIESEL', 'HIBRIDO_DIESEL', 'HIBRIDO DIESEL', 'HEV', 'MHEV', 'HIBRIDO', 'HÍBRIDO') THEN 'Híbrido (HEV/MHEV)'
+                WHEN carburante_std IN ('DIESEL', 'GASOIL', 'DIÉSEL') THEN 'Diésel'
+                WHEN carburante_std IN ('GAS', 'GLP', 'GNC') THEN 'Gas (GLP/GNC)'
+                ELSE 'Gasolina'
+            END as carb,
+            SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+        GROUP BY mod_name, carb
+        ORDER BY mod_name, total DESC
+    """, p_f)
+    fuel_rows = c.fetchall()
+
+    # 4. Top CCAA
+    p_c = [year] + raw_models + ([ccaa.strip()] if where_ccaa else [])
+    exec_query(c, f"""
+        SELECT UPPER(modelo_full) as mod_name, ccaa, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE anio_str = ? AND UPPER(modelo_full) IN ({placeholders}) {where_ccaa}
+          AND ccaa IS NOT NULL AND ccaa != ''
+        GROUP BY mod_name, ccaa
+        ORDER BY mod_name, total DESC
+    """, p_c)
+    ccaa_rows = c.fetchall()
+
+    models_data = []
+    for m_name in raw_models:
+        m_dict = { _val(r, 'm_num', 1): _val(r, 'total', 2, 0) for r in monthly_rows if _val(r, 'mod_name', 0) == m_name }
+        monthly_list = [{
+            "mes": code,
+            "mes_nombre": nombre,
+            "total": m_dict.get(code, 0)
+        } for code, nombre in meses_nombres]
+        tot_units = sum(item["total"] for item in monthly_list)
+        market_share = round((tot_units / national_total * 100), 2) if national_total > 0 else 0
+
+        y_dict = { _val(r, 'anio_str', 1): _val(r, 'total', 2, 0) for r in yearly_rows if _val(r, 'mod_name', 0) == m_name }
+        yearly_list = [{
+            "anio": yr,
+            "total": y_dict.get(yr, 0)
+        } for yr in ['2023', '2024', '2025', '2026']]
+
+        fuel_list = [{
+            "carburante": _val(r, 'carb', 1),
+            "total": _val(r, 'total', 2, 0),
+            "pct": round(_val(r, 'total', 2, 0) / (tot_units or 1) * 100, 1)
+        } for r in fuel_rows if _val(r, 'mod_name', 0) == m_name]
+
+        ccaa_list = [{
+            "ccaa": _val(r, 'ccaa', 1),
+            "total": _val(r, 'total', 2, 0),
+            "pct": round(_val(r, 'total', 2, 0) / (tot_units or 1) * 100, 1)
+        } for r in ccaa_rows if _val(r, 'mod_name', 0) == m_name][:10]
+
+        best_m = max(monthly_list, key=lambda x: x["total"]) if monthly_list else None
+        parts = m_name.split()
+        brand_guess = parts[0] if parts else ""
+
+        models_data.append({
+            "modelo": m_name,
+            "marca": brand_guess,
+            "total_units": tot_units,
+            "market_share": market_share,
+            "best_month": best_m["mes_nombre"] if best_m and best_m["total"] > 0 else "N/A",
+            "best_month_units": best_m["total"] if best_m else 0,
+            "monthly": monthly_list,
+            "yearly": yearly_list,
+            "fuel_mix": fuel_list,
+            "top_ccaa": ccaa_list
+        })
+
+    compared_total = sum(m['total_units'] for m in models_data) or 1
+    for m in models_data:
+        m['share_among_compared'] = round((m['total_units'] / compared_total * 100), 1)
+
+    result = {
+        "year": year,
+        "ccaa": ccaa,
+        "national_total": national_total,
+        "compared_total": compared_total,
+        "models": models_data
+    }
+
+    if len(_MODELS_COMPARE_CACHE) > 500:
+        _MODELS_COMPARE_CACHE.clear()
+    _MODELS_COMPARE_CACHE[cache_key] = result
+    return result
+
 def warm_cache():
     """Pre-calculates the most common queries and loads them into RAM at boot."""
     try:
@@ -1444,6 +1654,14 @@ def warm_cache():
             pass
         try:
             get_monthly_matrix(year="2026", limit=50, conn=conn)
+        except Exception:
+            pass
+        try:
+            get_models_full_list(limit=250, conn=conn)
+        except Exception:
+            pass
+        try:
+            get_models_compare(models="DACIA SANDERO,TOYOTA COROLLA", year="2026", conn=conn)
         except Exception:
             pass
         try:

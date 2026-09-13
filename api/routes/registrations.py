@@ -50,7 +50,8 @@ def get_db():
             conn.close()
 
 def exec_query(cursor, query: str, params=None):
-    if os.environ.get("DATABASE_URL"):
+    is_pg = bool(os.environ.get("DATABASE_URL")) or type(cursor).__module__.startswith("psycopg2")
+    if is_pg:
         try:
             if hasattr(cursor, 'connection') and cursor.connection:
                 cursor.connection.rollback()

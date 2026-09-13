@@ -106,6 +106,7 @@ class DashboardApp {
             this.bindCompareEvents();
             this.bindMatrixEvents();
             this.bindBrandModalEvents();
+            this.bindModelCompareModalEvents();
             this.bindAuxModalsEvents();
             this.bindElectrificationToggles();
 
@@ -1523,6 +1524,332 @@ class DashboardApp {
         } else if (tabId === 'fuels') {
             window.DashboardCharts.initBrandFuelMixChart('brandFuelMixChart', ba.fuel_mix, bb ? bb.fuel_mix : null, labelA, labelB);
         }
+    }
+
+    // -------------------------------------------------------------
+    // MODEL DEEP DIVE & COMPARATOR MODAL LOGIC (2 to 4 Models)
+    // -------------------------------------------------------------
+    bindModelCompareModalEvents() {
+        const modal = document.getElementById('model-compare-modal');
+        const closeBtn = document.getElementById('close-model-modal');
+        const yearSelect = document.getElementById('modal-model-year-select');
+        const tabBtns = document.querySelectorAll('.model-tab-btn');
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => this.closeModelCompareModal());
+        }
+
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) this.closeModelCompareModal();
+            });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal && modal.style.display !== 'none') {
+                this.closeModelCompareModal();
+            }
+        });
+
+        if (yearSelect) {
+            yearSelect.addEventListener('change', (e) => {
+                this.currentModelYear = e.target.value;
+                this.fetchAndRenderModelCompare();
+            });
+        }
+
+        ['modal-model-1-select', 'modal-model-2-select', 'modal-model-3-select', 'modal-model-4-select'].forEach((selId, idx) => {
+            const sel = document.getElementById(selId);
+            if (sel) {
+                sel.addEventListener('change', (e) => {
+                    const val = e.target.value;
+                    if (val) {
+                        this.currentModelList[idx] = val;
+                        this.fetchAndRenderModelCompare();
+                    }
+                });
+            }
+        });
+
+        // Add Model button
+        const btnAdd = document.getElementById('btn-add-model');
+        const w3 = document.getElementById('wrapper-model-3');
+        const w4 = document.getElementById('wrapper-model-4');
+        const s3 = document.getElementById('modal-model-3-select');
+        const s4 = document.getElementById('modal-model-4-select');
+
+        if (btnAdd) {
+            btnAdd.addEventListener('click', () => {
+                const available = (this.cachedTopModels || []).filter(m => !this.currentModelList.includes(m));
+                if (w3 && w3.style.display === 'none') {
+                    const nextM = available[0] || 'TESLA MODEL 3';
+                    this.currentModelList[2] = nextM;
+                    if (s3) s3.value = nextM;
+                    w3.style.display = 'flex';
+                    this.fetchAndRenderModelCompare();
+                } else if (w4 && w4.style.display === 'none') {
+                    const nextM = available[0] || 'MG ZS';
+                    this.currentModelList[3] = nextM;
+                    if (s4) s4.value = nextM;
+                    w4.style.display = 'flex';
+                    btnAdd.style.display = 'none';
+                    this.fetchAndRenderModelCompare();
+                }
+            });
+        }
+
+        // Remove Model 3
+        const btnRem3 = document.getElementById('btn-remove-model-3');
+        if (btnRem3) {
+            btnRem3.addEventListener('click', () => {
+                if (w4 && w4.style.display !== 'none') {
+                    const m4Val = s4 ? s4.value : '';
+                    if (s3) s3.value = m4Val;
+                    this.currentModelList = [this.currentModelList[0], this.currentModelList[1], m4Val];
+                    w4.style.display = 'none';
+                    if (btnAdd) btnAdd.style.display = 'inline-flex';
+                } else {
+                    this.currentModelList = [this.currentModelList[0], this.currentModelList[1]];
+                    w3.style.display = 'none';
+                    if (btnAdd) btnAdd.style.display = 'inline-flex';
+                }
+                this.fetchAndRenderModelCompare();
+            });
+        }
+
+        // Remove Model 4
+        const btnRem4 = document.getElementById('btn-remove-model-4');
+        if (btnRem4) {
+            btnRem4.addEventListener('click', () => {
+                this.currentModelList = this.currentModelList.slice(0, 3);
+                w4.style.display = 'none';
+                if (btnAdd) btnAdd.style.display = 'inline-flex';
+                this.fetchAndRenderModelCompare();
+            });
+        }
+
+        // Nav tabs
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                if (tab) this.renderModelCompareTab(tab);
+            });
+        });
+
+        // Trigger buttons from dashboard
+        ['btn-header-model-analysis', 'btn-toolbar-model-analysis', 'btn-card-model-analysis'].forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.openModelCompareModal();
+                });
+            }
+        });
+    }
+
+    async openModelCompareModal(modelsList = null, customYear = null, customCcaa = null) {
+        const modal = document.getElementById('model-compare-modal');
+        if (!modal) return;
+
+        // Populate models dropdown list if not cached yet
+        if (!this.cachedTopModels) {
+            try {
+                const res = await fetch(`${API_BASE}/api/models/full-list?limit=250`);
+                if (res.ok) {
+                    this.cachedTopModels = await res.json();
+                }
+            } catch (err) {
+                console.error('Failed to load top models list:', err);
+            }
+        }
+
+        // Determine initial models
+        if (!modelsList || !modelsList.length) {
+            let top1 = 'DACIA SANDERO';
+            let top2 = 'TOYOTA COROLLA';
+            if (this.lastAllData && this.lastAllData.models_ranking && this.lastAllData.models_ranking.length >= 2) {
+                top1 = this.lastAllData.models_ranking[0].modelo || top1;
+                top2 = this.lastAllData.models_ranking[1].modelo || top2;
+            } else if (this.cachedTopModels && this.cachedTopModels.length >= 2) {
+                top1 = this.cachedTopModels[0];
+                top2 = this.cachedTopModels[1];
+            }
+            modelsList = [top1, top2];
+        }
+
+        this.currentModelList = [...modelsList];
+        this.currentModelYear = customYear || this.currentModelYear || this.selectedYear || (this.selectedMonth ? this.selectedMonth.split('-')[0] : '2026');
+        this.currentModelTab = this.currentModelTab || 'monthly';
+
+        const yearSelect = document.getElementById('modal-model-year-select');
+        if (yearSelect) yearSelect.value = this.currentModelYear;
+
+        // Populate dropdown options
+        const modelList = this.cachedTopModels || modelsList;
+        ['modal-model-1-select', 'modal-model-2-select', 'modal-model-3-select', 'modal-model-4-select'].forEach((selId, idx) => {
+            const sel = document.getElementById(selId);
+            if (sel) {
+                let html = '<option value="">-- Seleccionar Modelo --</option>';
+                modelList.forEach(m => {
+                    const isSelected = (this.currentModelList[idx] || '').toUpperCase() === m.toUpperCase() ? 'selected' : '';
+                    html += `<option value="${m}" ${isSelected}>🚗 ${m}</option>`;
+                });
+                sel.innerHTML = html;
+                sel.value = this.currentModelList[idx] || '';
+            }
+        });
+
+        // Set wrapper visibility for 3 and 4
+        const w3 = document.getElementById('wrapper-model-3');
+        const w4 = document.getElementById('wrapper-model-4');
+        const btnAdd = document.getElementById('btn-add-model');
+
+        if (w3) w3.style.display = this.currentModelList.length >= 3 ? 'flex' : 'none';
+        if (w4) w4.style.display = this.currentModelList.length >= 4 ? 'flex' : 'none';
+        if (btnAdd) btnAdd.style.display = this.currentModelList.length >= 4 ? 'none' : 'inline-flex';
+
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (window.lucide) lucide.createIcons();
+
+        await this.fetchAndRenderModelCompare();
+    }
+
+    async fetchAndRenderModelCompare() {
+        const loader = document.getElementById('model-modal-loader');
+        if (loader) loader.style.display = 'flex';
+
+        const models = this.currentModelList.filter(Boolean);
+        const yearParam = this.currentModelYear || '2026';
+        const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
+        const url = `${API_BASE}/api/analytics/models-compare?models=${encodeURIComponent(models.join(','))}&year=${yearParam}${ccaaParam}`;
+
+        try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('API Error');
+            const data = await res.json();
+            this.modelCompareData = data;
+
+            // Render KPI cards
+            this.renderModelCompareKPIs(data);
+
+            // Render Tab Chart
+            this.renderModelCompareTab(this.currentModelTab || 'monthly');
+
+            // Update Badges and Subtitle
+            this.updateModelBadgesAndSubtitle(data);
+
+            if (window.lucide) lucide.createIcons();
+        } catch (err) {
+            console.error('Error fetching models compare:', err);
+        } finally {
+            if (loader) loader.style.display = 'none';
+        }
+    }
+
+    closeModelCompareModal() {
+        const modal = document.getElementById('model-compare-modal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    renderModelCompareKPIs(data) {
+        const kpiContainer = document.getElementById('modal-model-kpis');
+        if (!kpiContainer || !data.models) return;
+
+        const colors = [
+            { text: '#2563eb', cls: 'm1' },
+            { text: '#10b981', cls: 'm2' },
+            { text: '#8b5cf6', cls: 'm3' },
+            { text: '#f59e0b', cls: 'm4' }
+        ];
+
+        let html = '';
+        data.models.forEach((m, idx) => {
+            const c = colors[idx % colors.length];
+            const topFuel = m.fuel_mix && m.fuel_mix[0] ? `${m.fuel_mix[0].carburante} (${m.fuel_mix[0].pct}%)` : 'N/A';
+            const bestM = m.best_month && m.best_month !== 'N/A' ? `${m.best_month} (${m.best_month_units.toLocaleString('es-ES')} un.)` : 'N/A';
+
+            html += `
+                <div class="model-kpi-card ${c.cls}">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 6px;">
+                        <span style="font-size: 13px; font-weight: 800; color: ${c.text}; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m.modelo}</span>
+                        <span style="font-size: 11px; font-weight: 700; color: #64748b; white-space: nowrap;">${m.share_among_compared}% grupo</span>
+                    </div>
+                    <div style="font-size: 22px; font-weight: 900; color: #0f172a; margin: 2px 0;">
+                        ${m.total_units.toLocaleString('es-ES')} <span style="font-size: 12px; font-weight: 600; color: #64748b;">un.</span>
+                    </div>
+                    <div style="font-size: 11px; color: #64748b; display: flex; flex-direction: column; gap: 2px;">
+                        <span><strong>Cuota nacional:</strong> ${m.market_share}%</span>
+                        <span><strong>Motorización:</strong> ${topFuel}</span>
+                        <span><strong>Mejor mes:</strong> ${bestM}</span>
+                    </div>
+                </div>
+            `;
+        });
+        kpiContainer.innerHTML = html;
+    }
+
+    renderModelCompareTab(tabId) {
+        if (!this.modelCompareData || !this.modelCompareData.models) return;
+        const data = this.modelCompareData;
+        const yr = data.year || '2026';
+
+        // Show/hide tab panes
+        const panes = document.querySelectorAll('.model-tab-pane');
+        panes.forEach(p => {
+            p.style.display = p.id === `model-tab-${tabId}` ? 'block' : 'none';
+        });
+
+        // Update active tab buttons and labels
+        const tabBtns = document.querySelectorAll('.model-tab-btn');
+        tabBtns.forEach(btn => {
+            const isTarget = btn.dataset.tab === tabId;
+            btn.classList.toggle('active', isTarget);
+            if (btn.dataset.tab === 'monthly') {
+                btn.querySelector('span').textContent = `Mes a Mes (${yr})`;
+            }
+        });
+
+        this.currentModelTab = tabId;
+
+        if (tabId === 'monthly') {
+            window.DashboardCharts.initModelMonthlyChart('modelMonthlyChart', data.models, yr);
+        } else if (tabId === 'yearly') {
+            window.DashboardCharts.initModelYearlyChart('modelYearlyChart', data.models);
+        } else if (tabId === 'fuels') {
+            window.DashboardCharts.initModelFuelMixChart('modelFuelMixChart', data.models);
+        } else if (tabId === 'ccaa') {
+            window.DashboardCharts.initModelCcaaChart('modelCcaaChart', data.models);
+        }
+    }
+
+    updateModelBadgesAndSubtitle(data) {
+        const yr = data.year || '2026';
+        const cText = this.selectedCcaa || 'Toda España';
+        const subtitle = document.getElementById('modal-model-subtitle');
+        if (subtitle) {
+            subtitle.textContent = `Año ${yr} Completo (Ene - Dic) • ${cText} • ${data.models.length} modelos en análisis`;
+        }
+
+        const pills = [
+            document.getElementById('badge-pill-m1'),
+            document.getElementById('badge-pill-m2'),
+            document.getElementById('badge-pill-m3'),
+            document.getElementById('badge-pill-m4')
+        ];
+
+        pills.forEach((p, idx) => {
+            if (!p) return;
+            const m = data.models[idx];
+            if (m) {
+                p.style.display = 'inline-block';
+                p.textContent = m.modelo;
+            } else {
+                p.style.display = 'none';
+            }
+        });
     }
 
     // -------------------------------------------------------------

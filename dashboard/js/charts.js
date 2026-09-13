@@ -1049,6 +1049,208 @@ function initBrandFuelMixChart(ctxId, fuelA, fuelB, nameA, nameB) {
     });
 }
 
+// -------------------------------------------------------------
+// MODEL COMPARATOR MODAL CHARTS (2 to 4 Models)
+// -------------------------------------------------------------
+const MODEL_PALETTE = [
+    '#2563eb', // Model 1: Blue
+    '#10b981', // Model 2: Emerald Green
+    '#8b5cf6', // Model 3: Purple
+    '#f59e0b'  // Model 4: Amber
+];
+
+function initModelMonthlyChart(ctxId, modelsList, year) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    if (!modelsList || !modelsList.length) return;
+
+    const labels = (modelsList[0].monthly || []).map(m => m.mes_nombre);
+    const datasets = modelsList.map((m, idx) => ({
+        label: `${m.modelo} (${year})`,
+        data: (m.monthly || []).map(item => item.total),
+        backgroundColor: MODEL_PALETTE[idx % MODEL_PALETTE.length],
+        borderRadius: 4
+    }));
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v.toLocaleString('es-ES') } }
+            }
+        }
+    });
+}
+
+function initModelYearlyChart(ctxId, modelsList) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    if (!modelsList || !modelsList.length) return;
+
+    const labels = ['2023', '2024', '2025', '2026'];
+    const datasets = modelsList.map((m, idx) => {
+        const yMap = Object.fromEntries((m.yearly || []).map(y => [y.anio, y.total]));
+        return {
+            label: m.modelo,
+            data: labels.map(yr => yMap[yr] || 0),
+            backgroundColor: MODEL_PALETTE[idx % MODEL_PALETTE.length],
+            borderRadius: 6
+        };
+    });
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v.toLocaleString('es-ES') } }
+            }
+        }
+    });
+}
+
+function initModelFuelMixChart(ctxId, modelsList) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    if (!modelsList || !modelsList.length) return;
+
+    const allFuels = ['Gasolina', 'Diésel', 'Híbrido (HEV/MHEV)', 'Híbrido Enchufable (PHEV)', 'Eléctrico (BEV)', 'Gas (GLP/GNC)'];
+    
+    const normalizeFuel = (str) => {
+        const s = String(str || '').toUpperCase();
+        if (s.includes('ELECTRICO') || s.includes('ELÉCTRICO') || s.includes('BEV')) return 'Eléctrico (BEV)';
+        if (s.includes('ENCHUFABLE') || s.includes('PHEV')) return 'Híbrido Enchufable (PHEV)';
+        if (s.includes('HIBRID') || s.includes('HÍBRID') || s.includes('HEV') || s.includes('MHEV')) return 'Híbrido (HEV/MHEV)';
+        if (s.includes('DIESEL') || s.includes('DIÉSEL') || s.includes('GASOIL')) return 'Diésel';
+        if (s.includes('GLP') || s.includes('GNC') || s === 'GAS' || s.startsWith('GAS ') || s.endsWith(' GAS')) return 'Gas (GLP/GNC)';
+        return 'Gasolina';
+    };
+
+    const datasets = modelsList.map((m, idx) => {
+        const fuelMap = {};
+        allFuels.forEach(f => fuelMap[f] = 0);
+        (m.fuel_mix || []).forEach(item => {
+            const canonical = normalizeFuel(item.carburante);
+            fuelMap[canonical] = (fuelMap[canonical] || 0) + (Number(item.pct) || 0);
+        });
+        return {
+            label: m.modelo,
+            data: allFuels.map(f => Number((fuelMap[f] || 0).toFixed(1))),
+            backgroundColor: MODEL_PALETTE[idx % MODEL_PALETTE.length],
+            borderRadius: 4
+        };
+    });
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: allFuels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => `${v}%` } }
+            }
+        }
+    });
+}
+
+function initModelCcaaChart(ctxId, modelsList) {
+    const el = document.getElementById(ctxId);
+    if (!el) return;
+    const ctx = el.getContext('2d');
+    if (charts[ctxId]) charts[ctxId].destroy();
+
+    if (!modelsList || !modelsList.length) return;
+
+    const ccaaAgg = {};
+    modelsList.forEach(m => {
+        (m.top_ccaa || []).forEach(item => {
+            if (item.ccaa) {
+                ccaaAgg[item.ccaa] = (ccaaAgg[item.ccaa] || 0) + (item.total || 0);
+            }
+        });
+    });
+
+    const topCcaas = Object.entries(ccaaAgg)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(entry => entry[0]);
+
+    if (topCcaas.length === 0) topCcaas.push('Comunidad de Madrid', 'Cataluña', 'Andalucía', 'Comunidad Valenciana');
+
+    const datasets = modelsList.map((m, idx) => {
+        const cMap = Object.fromEntries((m.top_ccaa || []).map(c => [c.ccaa, c.total]));
+        return {
+            label: m.modelo,
+            data: topCcaas.map(cc => cMap[cc] || 0),
+            backgroundColor: MODEL_PALETTE[idx % MODEL_PALETTE.length],
+            borderRadius: 4
+        };
+    });
+
+    charts[ctxId] = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: topCcaas, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+                    }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v.toLocaleString('es-ES') } }
+            }
+        }
+    });
+}
+
 window.DashboardCharts = {
     initDailyEvolutionChart,
     initMonthlyEvolutionChart,
@@ -1064,5 +1266,9 @@ window.DashboardCharts = {
     initBrandMonthlyChart,
     initBrandYearlyChart,
     initBrandModelsChart,
-    initBrandFuelMixChart
+    initBrandFuelMixChart,
+    initModelMonthlyChart,
+    initModelYearlyChart,
+    initModelFuelMixChart,
+    initModelCcaaChart
 };

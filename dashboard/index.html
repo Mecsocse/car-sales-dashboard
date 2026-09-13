@@ -241,7 +241,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1171398586910114" crossorigin="anonymous"></script>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/styles.css?v=20260831_v14">
+    <link rel="stylesheet" href="css/styles.css?v=20260913_models">
 </head>
 <body>
     <!-- Global Loading Clock Indicator -->
@@ -280,6 +280,12 @@
                     <button class="btn btn-primary" id="btn-header-brand-analysis" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
                         <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
                         <span>Análisis de Marca</span>
+                    </button>
+
+                    <!-- Model Comparison Button in Header -->
+                    <button class="btn btn-primary" id="btn-header-model-analysis" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
+                        <i data-lucide="git-compare" style="width: 16px; height: 16px;"></i>
+                        <span>Comparar Modelos</span>
                     </button>
 
                     <!-- About Project Button -->
@@ -337,6 +343,12 @@
                         <button id="btn-toolbar-brand-analysis" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #d8b4fe; background: #faf5ff; color: #7c3aed; cursor: pointer; transition: all 0.2s ease;">
                             <i data-lucide="bar-chart-2" style="width: 15px; height: 15px; color: #7c3aed;"></i>
                             <span>Análisis de Marca</span>
+                        </button>
+
+                        <!-- Model Comparison Quick Button in Toolbar -->
+                        <button id="btn-toolbar-model-analysis" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #bfdbfe; background: #eff6ff; color: #2563eb; cursor: pointer; transition: all 0.2s ease;">
+                            <i data-lucide="git-compare" style="width: 15px; height: 15px; color: #2563eb;"></i>
+                            <span>Comparar Modelos</span>
                         </button>
 
                         <div class="active-period-badge" id="active-period-tag" style="background: #2563eb; color: #ffffff; padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
@@ -398,9 +410,13 @@
                     <div class="chart-container" id="container-models-ranking" style="height: 320px; transition: height 0.3s;">
                         <canvas id="modelsRankingChart"></canvas>
                     </div>
-                    <div style="text-align: center; margin-top: 12px;">
+                    <div style="display: flex; justify-content: center; gap: 8px; margin-top: 12px;">
                         <button id="btn-extend-models" class="btn btn-secondary" style="padding: 4px 12px; font-size: 11px;">
                             <span>Ver 10 más</span>
+                        </button>
+                        <button id="btn-card-model-analysis" class="btn btn-secondary" style="padding: 4px 12px; font-size: 11px; color: #2563eb; border-color: #bfdbfe; background: #eff6ff; display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+                            <i data-lucide="git-compare" style="width: 12px; height: 12px;"></i>
+                            <span>Comparar Modelos</span>
                         </button>
                     </div>
                 </div>
@@ -944,6 +960,147 @@
         </div>
     </div>
 
+    <!-- Model Deep Dive & Comparator Modal (2 to 4 Models) -->
+    <div id="model-compare-modal" class="brand-modal-backdrop" style="display: none;">
+        <div class="brand-modal-card" style="max-width: 1040px;">
+            <!-- Modal Header -->
+            <div class="brand-modal-header" style="display: flex; flex-direction: column; gap: 14px; padding-bottom: 16px; border-bottom: 1px solid #e2e8f0;">
+                <!-- Top Row: Title, Badges & Close Button -->
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap;" id="modal-model-badges-container">
+                            <span class="model-badge-pill" id="badge-pill-m1" style="background: #2563eb; color: #fff; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">MODELO 1</span>
+                            <span class="model-badge-pill" id="badge-pill-m2" style="background: #10b981; color: #fff; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px;">MODELO 2</span>
+                            <span class="model-badge-pill" id="badge-pill-m3" style="background: #8b5cf6; color: #fff; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px; display: none;">MODELO 3</span>
+                            <span class="model-badge-pill" id="badge-pill-m4" style="background: #f59e0b; color: #fff; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 6px; display: none;">MODELO 4</span>
+                        </div>
+                        <div>
+                            <h2 id="modal-model-title" style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2;">Comparador de Modelos</h2>
+                            <span id="modal-model-subtitle" style="font-size: 12px; color: #64748b; margin-top: 2px; display: block;">Período Seleccionado • Toda España</span>
+                        </div>
+                    </div>
+                    <button class="modal-close-btn" id="close-model-modal" title="Cerrar ventana" style="flex-shrink: 0;"><i data-lucide="x"></i></button>
+                </div>
+
+                <!-- Bottom Row: Filter & Compare Controls Strip -->
+                <div class="brand-modal-actions" style="display: flex; align-items: center; flex-wrap: wrap; gap: 10px; width: 100%;">
+                    <!-- Model 1 Primary Selector (Blue) -->
+                    <div class="model-select-item" style="display: flex; align-items: center; gap: 6px; background: #eff6ff; border: 1.5px solid #2563eb; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #2563eb; flex-shrink: 0;"></span>
+                        <select id="modal-model-1-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #1e3a8a; outline: none; cursor: pointer; font-family: inherit; width: 100%;">
+                            <option value="">Seleccionar Modelo 1...</option>
+                        </select>
+                    </div>
+
+                    <!-- Model 2 Selector (Emerald Green) -->
+                    <div class="model-select-item" style="display: flex; align-items: center; gap: 6px; background: #ecfdf5; border: 1.5px solid #10b981; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #10b981; flex-shrink: 0;"></span>
+                        <select id="modal-model-2-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #065f46; outline: none; cursor: pointer; font-family: inherit; width: 100%;">
+                            <option value="">Seleccionar Modelo 2...</option>
+                        </select>
+                    </div>
+
+                    <!-- Model 3 Selector (Purple, toggleable) -->
+                    <div id="wrapper-model-3" class="model-select-item" style="display: none; align-items: center; gap: 6px; background: #faf5ff; border: 1.5px solid #8b5cf6; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #8b5cf6; flex-shrink: 0;"></span>
+                        <select id="modal-model-3-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #5b21b6; outline: none; cursor: pointer; font-family: inherit; width: calc(100% - 20px);">
+                            <option value="">Seleccionar Modelo 3...</option>
+                        </select>
+                        <button id="btn-remove-model-3" title="Quitar 3er modelo" style="background: none; border: none; color: #8b5cf6; font-size: 16px; font-weight: 800; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+                    </div>
+
+                    <!-- Model 4 Selector (Amber, toggleable) -->
+                    <div id="wrapper-model-4" class="model-select-item" style="display: none; align-items: center; gap: 6px; background: #fffbeb; border: 1.5px solid #f59e0b; padding: 6px 10px; border-radius: 8px; flex: 1; min-width: 170px;">
+                        <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; flex-shrink: 0;"></span>
+                        <select id="modal-model-4-select" style="background: transparent; border: none; font-size: 12px; font-weight: 800; color: #92400e; outline: none; cursor: pointer; font-family: inherit; width: calc(100% - 20px);">
+                            <option value="">Seleccionar Modelo 4...</option>
+                        </select>
+                        <button id="btn-remove-model-4" title="Quitar 4to modelo" style="background: none; border: none; color: #f59e0b; font-size: 16px; font-weight: 800; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+                    </div>
+
+                    <!-- Add Model Button -->
+                    <button id="btn-add-model" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px; font-weight: 700; color: #475569; border: 1.5px dashed #cbd5e1; background: #ffffff; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
+                        <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+                        <span>Añadir modelo</span>
+                    </button>
+
+                    <!-- Year Selector -->
+                    <div class="modal-year-select-wrapper" style="display: flex; align-items: center; gap: 6px; background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 8px;">
+                        <i data-lucide="calendar" style="width: 14px; height: 14px; color: #64748b;"></i>
+                        <select id="modal-model-year-select" style="background: transparent; border: none; font-size: 13px; font-weight: 700; color: #0f172a; outline: none; cursor: pointer; font-family: inherit;">
+                            <option value="2026">Año 2026</option>
+                            <option value="2025">Año 2025</option>
+                            <option value="2024">Año 2024</option>
+                            <option value="2023">Año 2023</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Model Modal Loading Overlay -->
+            <div id="model-modal-loader" class="brand-modal-loading-overlay" style="display: none;">
+                <div class="chart-spinner-ring" style="width: 44px; height: 44px; border-width: 3px;"></div>
+                <span style="font-weight: 600; color: #1e293b; font-size: 14px; margin-top: 12px;">Cargando comparativa de modelos...</span>
+            </div>
+
+            <!-- Model KPI Cards Strip -->
+            <div class="brand-modal-kpis" id="modal-model-kpis" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+                <!-- Injected dynamically via JS -->
+            </div>
+
+            <!-- Modal Nav Tabs -->
+            <div class="brand-modal-tabs" id="model-modal-tab-bar">
+                <button class="model-tab-btn active" data-tab="monthly">
+                    <i data-lucide="calendar"></i>
+                    <span>Mes a Mes</span>
+                </button>
+                <button class="model-tab-btn" data-tab="yearly">
+                    <i data-lucide="trending-up"></i>
+                    <span>Año a Año</span>
+                </button>
+                <button class="model-tab-btn" data-tab="fuels">
+                    <i data-lucide="zap"></i>
+                    <span>Mix Carburantes</span>
+                </button>
+                <button class="model-tab-btn" data-tab="ccaa">
+                    <i data-lucide="map-pin"></i>
+                    <span>Por CCAA</span>
+                </button>
+            </div>
+
+            <!-- Modal Tab Content -->
+            <div class="brand-modal-body">
+                <!-- Tab 1: Monthly -->
+                <div class="model-tab-pane" id="model-tab-monthly">
+                    <div class="modal-chart-container" style="height: 330px;">
+                        <canvas id="modelMonthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Yearly -->
+                <div class="model-tab-pane" id="model-tab-yearly" style="display: none;">
+                    <div class="modal-chart-container" style="height: 330px;">
+                        <canvas id="modelYearlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab 3: Fuels -->
+                <div class="model-tab-pane" id="model-tab-fuels" style="display: none;">
+                    <div class="modal-chart-container" style="height: 330px;">
+                        <canvas id="modelFuelMixChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tab 4: CCAA -->
+                <div class="model-tab-pane" id="model-tab-ccaa" style="display: none;">
+                    <div class="modal-chart-container" style="height: 330px;">
+                        <canvas id="modelCcaaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal: Última Matrícula DGT & Histórico de Series -->
     <div class="modal" id="modal-plate-info" style="display: none;">
         <div class="modal-backdrop" id="modal-plate-backdrop"></div>
@@ -1126,9 +1283,9 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260907_v2"></script>
-    <script src="js/components.js?v=20260907_v2"></script>
-    <script src="js/insights.js?v=20260907_v2"></script>
-    <script src="js/app.js?v=20260907_v2"></script>
+    <script src="js/charts.js?v=20260913_models"></script>
+    <script src="js/components.js?v=20260913_models"></script>
+    <script src="js/insights.js?v=20260913_models"></script>
+    <script src="js/app.js?v=20260913_models"></script>
 </body>
 </html>

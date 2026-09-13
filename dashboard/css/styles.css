@@ -752,16 +752,17 @@ select:focus, input:focus {
     font-weight: 600;
 }
 
-/* Brand Modal Tabs */
+/* Brand & Model Modal Tabs */
 .brand-modal-tabs {
     display: flex;
     gap: 6px;
     padding: 0 24px;
     background: #f8fafc;
     border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
 }
 
-.brand-tab-btn {
+.brand-tab-btn, .model-tab-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -774,19 +775,20 @@ select:focus, input:focus {
     cursor: pointer;
     border-bottom: 2px solid transparent;
     transition: all 0.15s ease;
+    white-space: nowrap;
 }
 
-.brand-tab-btn:hover {
+.brand-tab-btn:hover, .model-tab-btn:hover {
     color: #0f172a;
 }
 
-.brand-tab-btn.active {
+.brand-tab-btn.active, .model-tab-btn.active {
     color: #2563eb;
     border-bottom-color: #2563eb;
     background: #ffffff;
 }
 
-/* Brand Modal Body & Chart Container */
+/* Brand & Model Modal Body & Chart Container */
 .brand-modal-body {
     padding: 24px;
     overflow-y: auto;
@@ -794,7 +796,7 @@ select:focus, input:focus {
     background: #ffffff;
 }
 
-.brand-tab-pane {
+.brand-tab-pane, .model-tab-pane {
     width: 100%;
 }
 
@@ -803,6 +805,48 @@ select:focus, input:focus {
     width: 100%;
     min-height: 320px;
 }
+
+/* Model Deep Dive & Comparator Specific Styles */
+.model-badge-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    letter-spacing: 0.3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.model-select-item {
+    transition: all 0.15s ease;
+}
+.model-select-item:hover {
+    filter: brightness(0.97);
+}
+
+.model-kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    position: relative;
+    overflow: hidden;
+}
+
+.model-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+.model-kpi-card.m1::before { background: #2563eb; }
+.model-kpi-card.m2::before { background: #10b981; }
+.model-kpi-card.m3::before { background: #8b5cf6; }
+.model-kpi-card.m4::before { background: #f59e0b; }
 
 /* DGT Spanish License Plate Widget */
 .dgt-plate-widget-btn {
