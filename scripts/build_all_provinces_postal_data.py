@@ -246,15 +246,24 @@ for fpath in files:
             total_records += 1
             marca_raw = line[17:47].strip().upper()
             marca_clean = clean_brand(marca_raw)
+            f_slice = line[450:465] if len(line) >= 465 else ''
             fuel_code = line[93:94].strip().upper()
-            fuel_clean = map_fuel(fuel_code)
+            
+            if 'BEV' in f_slice or fuel_code == '2':
+                fuel_clean = 'ELECTRICO'
+            elif 'PHEV' in f_slice:
+                fuel_clean = 'PHEV'
+            elif 'HEV' in f_slice:
+                fuel_clean = 'HEV'
+            elif 'GLP' in f_slice or 'GNC' in f_slice or fuel_code in ('3', '4', 'M'):
+                fuel_clean = 'GLP'
+            elif fuel_code == '1':
+                fuel_clean = 'DIESEL'
+            else:
+                fuel_clean = 'GASOLINA'
+            
             modelo_raw = line[47:77].strip()
             modelo_clean = clean_model(marca_clean, modelo_raw)
-            
-            if 'BEV' in line[460:463]:
-                fuel_clean = 'ELECTRICO'
-            elif 'PHEV' in line[460:464]:
-                fuel_clean = 'PHEV'
                 
             prov_dict = prov_postals[prefix]
             if cp not in prov_dict:

@@ -5,7 +5,7 @@
 
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? 'http://127.0.0.1:8000'
-    : 'https://car-sales-api-jafd.onrender.com';
+    : (window.location.hostname.includes('cardatasales.com') ? '' : 'https://car-sales-api-jafd.onrender.com');
 
 const PROVINCIA_COORDS = {
     'Madrid': [40.4168, -3.7038],
@@ -138,6 +138,8 @@ class TerritorialMapApp {
         this.viewMode = 'prov'; // 'prov' or 'all_cp'
         this.allSpainDataLoaded = false;
         this.loadingAllSpainPromise = null;
+        this.activeAbortController = null;
+        this.fetchSequence = 0;
 
         this.init();
     }
@@ -583,6 +585,7 @@ class TerritorialMapApp {
         [brandSelect, fuelSelect, periodSelect].forEach(el => {
             if (el) {
                 el.addEventListener('change', () => this.fetchAndRender());
+                el.addEventListener('input', () => this.fetchAndRender());
             }
         });
 
@@ -627,6 +630,15 @@ class TerritorialMapApp {
         if (fUp.includes('PHEV') || fUp.includes('ENCHUFABLE')) {
             return { stroke: '#0891b2', fill: '#06b6d4' }; // Cyan
         }
+        if (fUp.includes('HEV') || fUp.includes('HIBRIDO')) {
+            return { stroke: '#15803d', fill: '#22c55e' }; // Fresh green
+        }
+        if (fUp.includes('DIESEL')) {
+            return { stroke: '#334155', fill: '#64748b' }; // Slate
+        }
+        if (fUp.includes('GLP') || fUp.includes('GAS')) {
+            return { stroke: '#0284c7', fill: '#38bdf8' }; // Sky
+        }
         if (bUp === 'TESLA') {
             return { stroke: '#be123c', fill: '#e11d48' }; // Tesla Rose Red
         }
@@ -640,9 +652,6 @@ class TerritorialMapApp {
     }
 
     async fetchAndRender() {
-        const loader = document.getElementById('map-loader');
-        if (loader) loader.style.display = 'flex';
-
         const brandSelect = document.getElementById('filter-brand');
         const fuelSelect = document.getElementById('filter-fuel');
         const periodSelect = document.getElementById('filter-period');
@@ -650,6 +659,24 @@ class TerritorialMapApp {
         const brand = brandSelect ? brandSelect.value : '';
         const fuel = fuelSelect ? fuelSelect.value : '';
         const periodVal = periodSelect ? periodSelect.value : '2026';
+
+        // 1. Instant local update for active postal bubbles (0ms latency)
+        if (this.viewMode === 'all_cp' || this.isPostalViewActive) {
+            this.renderActivePostals();
+        }
+
+        // 2. Abort previous in-flight requests to eliminate race conditions
+        if (this.activeAbortController) {
+            this.activeAbortController.abort();
+        }
+        this.activeAbortController = new AbortController();
+        const signal = this.activeAbortController.signal;
+        const currentSeq = ++this.fetchSequence;
+
+        const loader = document.getElementById('map-loader');
+        if (loader && this.viewMode !== 'all_cp') {
+            loader.style.display = 'flex';
+        }
 
         let q = '';
         if (periodVal.includes('-')) {
@@ -661,12 +688,18 @@ class TerritorialMapApp {
         if (fuel) q += `&fuel=${encodeURIComponent(fuel)}`;
 
         try {
-            const res = await fetch(`${API_BASE}/api/analytics/geo-provincias?${q}`);
+            const res = await fetch(`${API_BASE}/api/analytics/geo-provincias?${q}`, { signal });
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
-            this.currentData = data;
 
+            // Discard if user made a newer filter selection while this was in flight
+            if (currentSeq !== this.fetchSequence) {
+                return;
+            }
+
+            this.currentData = data;
             this.renderSidebar(data, brand, fuel);
+
             if (this.viewMode === 'all_cp') {
                 this.markersLayer.clearLayers();
                 this.renderActivePostals();
@@ -675,9 +708,14 @@ class TerritorialMapApp {
                 this.handleZoomOrMove();
             }
         } catch (err) {
+            if (err.name === 'AbortError') {
+                return; // Cleanly ignore cancelled request
+            }
             console.error('Error fetching geo-provincias data:', err);
         } finally {
-            if (loader) loader.style.display = 'none';
+            if (currentSeq === this.fetchSequence && loader) {
+                loader.style.display = 'none';
+            }
         }
     }
 
