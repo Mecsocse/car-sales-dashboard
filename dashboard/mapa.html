@@ -3,9 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapa Territorial de Ventas de Coches | CarDataSales</title>
-    <meta name="description" content="Mapa interactivo de matriculaciones de turismos en España por provincias, marcas y tecnología.">
+    <title>Mapa de Ventas de Coches en España por Código Postal y Provincia (2026) | CarDataSales</title>
+    <meta name="description" content="Mapa interactivo de matriculaciones de turismos en España con datos oficiales de la DGT 2026. Consulta ventas por código postal, 52 provincias, marcas (Tesla, Toyota, Seat) y coches eléctricos (BEV/PHEV).">
+    <meta name="keywords" content="mapa ventas coches espana, matriculaciones por codigo postal, coches por provincia dgt, matriculaciones coches electricos mapa, donde se venden mas teslas en espana, datos oficiales dgt 2026, matriculaciones turismos espana, mapa territorial dgt">
+    <meta name="author" content="CarDataSales">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+    <link rel="canonical" href="https://cardatasales.com/mapa">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Geo Meta Tags for Spanish Regional Search -->
+    <meta name="geo.region" content="ES">
+    <meta name="geo.placename" content="España">
+    <meta name="geo.position" content="40.4168;-3.7038">
+    <meta name="ICBM" content="40.4168, -3.7038">
+
+    <!-- Open Graph (Facebook, WhatsApp, LinkedIn) -->
+    <meta property="og:locale" content="es_ES">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="CarDataSales">
+    <meta property="og:title" content="Mapa de Ventas de Coches en España por Código Postal (2026) | CarDataSales">
+    <meta property="og:description" content="Descubre dónde se matriculan más coches en España. Microdatos oficiales de la DGT pueblo a pueblo, más de 9.400 códigos postales, marcas y coches eléctricos e híbridos.">
+    <meta property="og:url" content="https://cardatasales.com/mapa">
+    <meta property="og:image" content="https://cardatasales.com/og-card.png">
+    <meta property="og:image:secure_url" content="https://cardatasales.com/og-card.png">
+    <meta property="og:image:type" content="image/png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="Mapa Territorial de Matriculaciones de Coches por Código Postal en España - CarDataSales">
+
+    <!-- Twitter / X Card Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@CarDataSales">
+    <meta name="twitter:creator" content="@CarDataSales">
+    <meta name="twitter:domain" content="cardatasales.com">
+    <meta name="twitter:url" content="https://cardatasales.com/mapa">
+    <meta name="twitter:title" content="Mapa de Ventas de Coches por Código Postal en España (2026)">
+    <meta name="twitter:description" content="Visualiza en tiempo real las matriculaciones de coches por municipios, códigos postales y provincias con microdatos oficiales de la DGT.">
+    <meta name="twitter:image" content="https://cardatasales.com/og-card.png">
+    <meta name="twitter:image:alt" content="Mapa Territorial de Matriculaciones DGT CarDataSales">
+
+    <!-- Schema.org JSON-LD Structured Data (WebApplication, Dataset, Breadcrumbs & FAQ Rich Snippets) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "@id": "https://cardatasales.com/mapa#webapp",
+          "name": "Mapa Territorial de Matriculaciones de Coches",
+          "url": "https://cardatasales.com/mapa",
+          "description": "Herramienta cartográfica interactiva para visualizar las ventas y matriculaciones de turismos en España por provincia y código postal con datos oficiales de la DGT.",
+          "applicationCategory": "BusinessApplication, DataVisualization",
+          "operatingSystem": "All",
+          "inLanguage": "es-ES",
+          "isAccessibleForFree": true,
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "EUR"
+          }
+        },
+        {
+          "@type": "Dataset",
+          "@id": "https://cardatasales.com/mapa#dataset",
+          "name": "Matriculaciones de Turismos por Código Postal y Provincia en España",
+          "description": "Microdatos anonimizados de matriculaciones oficiales de la Dirección General de Tráfico clasificados en las 52 provincias y más de 9.400 códigos postales de España.",
+          "url": "https://cardatasales.com/mapa",
+          "license": "https://datos.gob.es/es/aviso-legal",
+          "temporalCoverage": "2026/..",
+          "spatialCoverage": {
+            "@type": "Place",
+            "name": "España",
+            "geo": {
+              "@type": "GeoCoordinates",
+              "latitude": 40.4168,
+              "longitude": -3.7038
+            }
+          },
+          "creator": {
+            "@type": "Organization",
+            "name": "CarDataSales",
+            "url": "https://cardatasales.com"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Dirección General de Tráfico (DGT)",
+            "url": "https://www.dgt.es"
+          }
+        },
+        {
+          "@type": "BreadcrumbList",
+          "@id": "https://cardatasales.com/mapa#breadcrumbs",
+          "itemListElement": [
+            {
+              "@type": "ListItem",
+              "position": 1,
+              "name": "Inicio",
+              "item": "https://cardatasales.com/"
+            },
+            {
+              "@type": "ListItem",
+              "position": 2,
+              "name": "Mapa Territorial de Ventas",
+              "item": "https://cardatasales.com/mapa"
+            }
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://cardatasales.com/mapa#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "¿Cómo consultar las ventas de coches por código postal en España?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "En CarDataSales puedes explorar el mapa interactivo haciendo zoom a cualquier municipio o pulsando el botón 'Todos los CPs' para ver los más de 9.400 códigos postales de toda España con sus ventas oficiales acumuladas de 2026."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "¿Cuál es la fuente de los datos de matriculación?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Todos los datos proceden de los ficheros diarios y mensuales oficiales de matriculaciones publicados por la Dirección General de Tráfico (DGT) y el portal datos.gob.es."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "¿Se pueden filtrar las ventas por marcas y coches eléctricos?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sí, el mapa cuenta con filtros por marcas (Tesla, Toyota, Dacia, Seat, etc.) y por tipo de motor: 100% Eléctrico (BEV), Enchufable (PHEV), Híbrido (HEV), Gasolina, Diésel y Gas (GLP)."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
 
     <!-- Fonts: Outfit -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +155,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Custom Map CSS -->
-    <link rel="stylesheet" href="css/mapa.css?v=20260914_6">
+    <link rel="stylesheet" href="css/mapa.css?v=20260914_7">
 </head>
 <body>
     <div id="map-wrapper">
@@ -140,6 +276,51 @@
             <span>Cargando datos territoriales...</span>
         </div>
     </div>
+
+    <!-- Semantic SEO & Accessibility Content for Search Engine Indexing -->
+    <article class="seo-semantic-content" aria-label="Información sobre matriculaciones por código postal y provincia en España">
+        <header>
+            <h1>Mapa de Ventas de Coches en España por Código Postal y Provincia (2026)</h1>
+            <p>
+                Visualización cartográfica interactiva de las matriculaciones oficiales de turismos en España registradas por la Dirección General de Tráfico (DGT).
+                Consulta en tiempo real el volumen de ventas, cuotas de mercado y modelos más vendidos desglosados en las 52 provincias españolas y más de 9.400 códigos postales.
+            </p>
+        </header>
+
+        <section>
+            <h2>Desglose por Comunidades Autónomas y Provincias</h2>
+            <p>
+                El mapa cubre la totalidad del territorio nacional incluyendo la Comunidad de Madrid, Cataluña (Barcelona, Girona, Lleida, Tarragona), 
+                Comunidad Valenciana (Valencia, Alicante, Castellón), Andalucía (Sevilla, Málaga, Cádiz, Córdoba, Granada, Almería, Jaén, Huelva), 
+                Galicia (A Coruña, Pontevedra, Lugo, Ourense), País Vasco (Bizkaia, Gipuzkoa, Álava), Castilla y León, Castilla-La Mancha, 
+                Aragón, Canarias, Illes Balears, Región de Murcia, Principado de Asturias, Cantabria, Navarra, La Rioja, Extremadura, Ceuta y Melilla.
+            </p>
+        </section>
+
+        <section>
+            <h2>Penetración de Vehículos Eléctricos e Híbridos (BEV, PHEV, HEV)</h2>
+            <p>
+                Analiza la adopción de la movilidad eléctrica municipio a municipio. Filtra matriculaciones por tecnología de propulsión: 
+                vehículos 100% eléctricos (BEV), híbridos enchufables (PHEV), híbridos no enchufables (HEV/MHEV), así como motorizaciones tradicionales de gasolina, diésel y gas (GLP/GNC).
+            </p>
+        </section>
+
+        <section>
+            <h2>Ranking de Marcas y Modelos por Municipio</h2>
+            <p>
+                Explora las marcas líderes del mercado español como Toyota, Dacia, SEAT, Volkswagen, Hyundai, Kia, Renault, Peugeot y Tesla. 
+                Descubre qué modelos lideran las matriculaciones en cada distrito postal, desde núcleos urbanos de alta densidad hasta flotas corporativas y zonas residenciales.
+            </p>
+        </section>
+
+        <footer>
+            <nav aria-label="Enlaces relacionados">
+                <a href="/">Dashboard Principal de Ventas de Coches</a> |
+                <a href="/ultima-matricula-dgt">Última Matrícula DGT Hoy</a> |
+                <a href="/prevision-matriculas">Previsión de Matrículas en España</a>
+            </nav>
+        </footer>
+    </article>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

@@ -514,3 +514,18 @@ body, html {
         display: none; /* Hidden on small mobile to give full space to map */
     }
 }
+
+/* -------------------------------------------------------------
+   Semantic SEO & Accessibility Hidden Container (Crawlable by Googlebot)
+   ------------------------------------------------------------- */
+.seo-semantic-content {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: normal;
+    border: 0;
+}

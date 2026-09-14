@@ -118,6 +118,12 @@
               "position": 3,
               "name": "Previsión de Matrículas",
               "item": "https://cardatasales.com/prevision-matriculas"
+            },
+            {
+              "@type": "ListItem",
+              "position": 4,
+              "name": "Mapa Territorial de Ventas",
+              "item": "https://cardatasales.com/mapa"
             }
           ]
         },
@@ -288,6 +294,12 @@
                         <span>Comparar Modelos</span>
                     </button>
 
+                    <!-- Interactive Territorial Map Button -->
+                    <a href="/mapa" class="btn btn-primary" id="btn-header-mapa" style="background: linear-gradient(135deg, #059669, #047857); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28); text-decoration: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias">
+                        <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
+                        <span>Mapa por CPs</span>
+                    </a>
+
                     <!-- About Project Button -->
                     <button class="btn btn-secondary" id="btn-open-about-modal">
                         <i data-lucide="info"></i>
@@ -350,6 +362,12 @@
                             <i data-lucide="git-compare" style="width: 15px; height: 15px; color: #2563eb;"></i>
                             <span>Comparar Modelos</span>
                         </button>
+
+                        <!-- Mapa Territorial Quick Button in Toolbar -->
+                        <a href="/mapa" id="btn-toolbar-mapa" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #059669; text-decoration: none; cursor: pointer; transition: all 0.2s ease;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias">
+                            <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #059669;"></i>
+                            <span>Ver Mapa CPs</span>
+                        </a>
 
                         <div class="active-period-badge" id="active-period-tag" style="background: #2563eb; color: #ffffff; padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
                             ✨ Visualizando: Septiembre 2026 (Mes Actual)
@@ -1318,6 +1336,7 @@
             <strong>CarDataSales</strong> · Inteligencia del mercado automotor con datos de la DGT oficial.
         </div>
         <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <a href="/mapa" style="font-weight: 700; color: #059669;">Mapa Territorial</a>
             <a href="#" id="footer-link-about">Sobre el proyecto</a>
             <a href="#" id="footer-link-privacy">Privacidad y Cookies</a>
             <a href="#" id="footer-link-plate">Última matrícula</a>
