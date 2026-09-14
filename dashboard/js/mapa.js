@@ -102,11 +102,10 @@ class TerritorialMapApp {
         // Add Zoom Control to bottom-right
         L.control.zoom({ position: 'bottomright' }).addTo(this.map);
 
-        // Modern CartoDB Positron clean base tiles
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> | Fuente: DGT',
-            subdomains: 'abcd',
-            maxZoom: 19
+        // Clean OpenStreetMap tiles (No API key required, 100% free and reliable)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Fuente: DGT',
+            maxZoom: 18
         }).addTo(this.map);
 
         this.markersLayer = L.layerGroup().addTo(this.map);
