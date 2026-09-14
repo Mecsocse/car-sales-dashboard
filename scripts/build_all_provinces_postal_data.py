@@ -374,3 +374,16 @@ for prefix, cp_dict in sorted(prov_postals.items()):
 
 with open(os.path.join(out_dir, 'bounds.json'), 'w', encoding='utf-8') as f:
     json.dump(prov_bounds, f, ensure_ascii=False, indent=2)
+
+# Generate unified all_spain_cp.json
+all_spain = {}
+for prefix in sorted(prov_postals.keys()):
+    cp_file = os.path.join(out_dir, f'cp_{prefix}.json')
+    if os.path.exists(cp_file):
+        with open(cp_file, 'r', encoding='utf-8') as f:
+            all_spain[prefix] = json.load(f)
+
+with open(os.path.join(out_dir, 'all_spain_cp.json'), 'w', encoding='utf-8') as f:
+    json.dump(all_spain, f, ensure_ascii=False, separators=(',', ':'))
+print('Generated all_spain_cp.json successfully.')
+

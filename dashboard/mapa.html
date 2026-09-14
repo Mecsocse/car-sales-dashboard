@@ -19,7 +19,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Custom Map CSS -->
-    <link rel="stylesheet" href="css/mapa.css?v=20260914_5">
+    <link rel="stylesheet" href="css/mapa.css?v=20260914_6">
 </head>
 <body>
     <div id="map-wrapper">
@@ -81,6 +81,18 @@
                         <option value="2023">Año 2023</option>
                     </select>
                 </div>
+
+                <!-- Selector de Vista: Provincias vs Todos los CPs -->
+                <div class="view-mode-toggle" id="view-mode-toggle" role="group" aria-label="Modo de visualización">
+                    <button type="button" class="toggle-pill active" id="btn-mode-prov" data-mode="prov" title="Vista por provincias (desglose automático al hacer zoom)">
+                        <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+                        <span>Provincias</span>
+                    </button>
+                    <button type="button" class="toggle-pill" id="btn-mode-cp" data-mode="all_cp" title="Ver todas las bolitas de códigos postales en toda España (incluso con Zoom Out)">
+                        <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
+                        <span>Todos los CPs</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Return to Dashboard Link -->
@@ -133,6 +145,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Custom Map Script -->
-    <script src="js/mapa.js?v=20260914_5"></script>
+    <script src="js/mapa.js?v=20260914_6"></script>
 </body>
 </html>

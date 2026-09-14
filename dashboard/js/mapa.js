@@ -135,6 +135,9 @@ class TerritorialMapApp {
         this.loadedPostalData = {}; // prefix -> array of postal nodes
         this.activePostalPrefixes = new Set();
         this.isPostalViewActive = false;
+        this.viewMode = 'prov'; // 'prov' or 'all_cp'
+        this.allSpainDataLoaded = false;
+        this.loadingAllSpainPromise = null;
 
         this.init();
     }
@@ -142,18 +145,20 @@ class TerritorialMapApp {
     async init() {
         this.initLeaflet();
         this.bindEvents();
+        if (window.lucide) lucide.createIcons();
         await this.loadBrandsCatalog();
         await this.fetchAndRender();
     }
 
     initLeaflet() {
-        // Initialize Map centered on Spain
+        // Initialize Map centered on Spain with hardware-accelerated canvas for 60fps
         this.map = L.map('map', {
             center: [40.0, -3.7],
             zoom: 6,
             minZoom: 5,
             maxZoom: 17,
-            zoomControl: false
+            zoomControl: false,
+            preferCanvas: true
         });
 
         // Add Zoom Control to bottom-right
@@ -180,10 +185,120 @@ class TerritorialMapApp {
         }
     }
 
+    async setViewMode(mode) {
+        if (this.viewMode === mode) return;
+        this.viewMode = mode;
+
+        const btnProv = document.getElementById('btn-mode-prov');
+        const btnCp = document.getElementById('btn-mode-cp');
+        if (btnProv && btnCp) {
+            if (mode === 'all_cp') {
+                btnProv.classList.remove('active');
+                btnCp.classList.add('active');
+            } else {
+                btnCp.classList.remove('active');
+                btnProv.classList.add('active');
+            }
+        }
+
+        if (mode === 'all_cp') {
+            await this.enableAllCpMode();
+        } else {
+            this.disableAllCpMode();
+        }
+    }
+
+    async loadAllSpainPostalData() {
+        if (this.allSpainDataLoaded) return;
+        if (this.loadingAllSpainPromise) return this.loadingAllSpainPromise;
+
+        const loader = document.getElementById('map-loader');
+        const loaderSpan = loader ? loader.querySelector('span') : null;
+        const originalText = loaderSpan ? loaderSpan.innerText : '';
+        if (loader) {
+            if (loaderSpan) loaderSpan.innerText = 'Cargando códigos postales de toda España...';
+            loader.style.display = 'flex';
+        }
+
+        this.loadingAllSpainPromise = (async () => {
+            try {
+                const res = await fetch('/data/cp/all_spain_cp.json');
+                if (res.ok) {
+                    const allData = await res.json();
+                    Object.entries(allData).forEach(([prefix, items]) => {
+                        this.loadedPostalData[prefix] = items;
+                    });
+                    this.allSpainDataLoaded = true;
+                } else {
+                    const prefixes = Object.keys(PROVINCIA_BOUNDS);
+                    await Promise.all(prefixes.map(async p => {
+                        if (!this.loadedPostalData[p]) {
+                            try {
+                                const r = await fetch(`/data/cp/cp_${p}.json`);
+                                if (r.ok) this.loadedPostalData[p] = await r.json();
+                            } catch (e) {}
+                        }
+                    }));
+                    this.allSpainDataLoaded = true;
+                }
+            } catch (err) {
+                console.error('Error loading all_spain_cp.json:', err);
+            } finally {
+                if (loader) {
+                    loader.style.display = 'none';
+                    if (loaderSpan) loaderSpan.innerText = originalText;
+                }
+            }
+        })();
+
+        await this.loadingAllSpainPromise;
+    }
+
+    async enableAllCpMode() {
+        await this.loadAllSpainPostalData();
+
+        // Hide all provincial markers
+        this.markersLayer.clearLayers();
+        this.hiddenProvinceMarkers.clear();
+
+        // Activate all loaded postal prefixes
+        this.activePostalPrefixes = new Set(Object.keys(this.loadedPostalData));
+        this.isPostalViewActive = true;
+
+        this.renderActivePostals();
+        this.showDrilldownBadge(true, 'Toda España (9.442 CPs)');
+    }
+
+    disableAllCpMode() {
+        this.postalLayer.clearLayers();
+        this.isPostalViewActive = false;
+
+        // Restore provincial bubbles
+        if (this.currentData) {
+            const brandSelect = document.getElementById('filter-brand');
+            const fuelSelect = document.getElementById('filter-fuel');
+            const brand = brandSelect ? brandSelect.value : '';
+            const fuel = fuelSelect ? fuelSelect.value : '';
+            this.renderBubbles(this.currentData, brand, fuel);
+        }
+
+        this.handleZoomOrMove();
+    }
+
     async handleZoomOrMove() {
         const zoom = this.map.getZoom();
         const bounds = this.map.getBounds();
 
+        if (this.viewMode === 'all_cp') {
+            // In all_cp mode, postal bubbles are always active regardless of zoom
+            if (this.allSpainDataLoaded) {
+                this.renderActivePostals();
+                this.showDrilldownBadge(true, 'Toda España (9.442 CPs)');
+            }
+            return;
+        }
+
+        // Standard provincial view mode
         if (zoom >= 9) {
             // Find which provinces intersect the current viewport bounds
             const visible = [];
@@ -246,7 +361,7 @@ class TerritorialMapApp {
             }
         }
 
-        // When zoom < 9 or no provinces visible
+        // When zoom < 9 or no provinces visible in standard mode
         if (this.isPostalViewActive) {
             this.postalLayer.clearLayers();
             this.hiddenProvinceMarkers.forEach(norm => {
@@ -272,7 +387,8 @@ class TerritorialMapApp {
                 const wrapper = document.getElementById('map-wrapper');
                 if (wrapper) wrapper.appendChild(badge);
             }
-            badge.innerHTML = `<span class="badge-dot"></span><span>Desglose Códigos Postales: ${label || 'España'}</span>`;
+            const prefix = this.viewMode === 'all_cp' ? 'Modo:' : 'Desglose Códigos Postales:';
+            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${label || 'España'}</span>`;
             badge.style.display = 'flex';
         } else {
             if (badge) badge.style.display = 'none';
@@ -297,6 +413,13 @@ class TerritorialMapApp {
         const brand = brandSelect ? brandSelect.value : '';
         const fuel = fuelSelect ? fuelSelect.value : '';
 
+        const bounds = this.map.getBounds();
+        const bPad = bounds.pad(0.12);
+        const bSouth = bPad.getSouth();
+        const bNorth = bPad.getNorth();
+        const bWest = bPad.getWest();
+        const bEast = bPad.getEast();
+
         const activeItems = [];
         let maxUnits = 1;
 
@@ -305,6 +428,11 @@ class TerritorialMapApp {
             if (!list) return;
 
             list.forEach(node => {
+                // Viewport bounding check
+                if (node.lat < bSouth || node.lat > bNorth || node.lng < bWest || node.lng > bEast) {
+                    return;
+                }
+
                 let units = 0;
                 if (brand) {
                     units = (node.brands && node.brands[brand]) || 0;
@@ -324,20 +452,47 @@ class TerritorialMapApp {
         if (activeItems.length === 0) return;
 
         const colors = this.getBubbleColors(brand, fuel);
+        const zoom = this.map.getZoom();
+
+        let zoomFactor = 1.0;
+        let baseMin = 3.5;
+        let weight = 1.5;
+
+        if (zoom <= 6) {
+            zoomFactor = 0.42;
+            baseMin = 1.8;
+            weight = 0.8;
+        } else if (zoom === 7) {
+            zoomFactor = 0.58;
+            baseMin = 2.4;
+            weight = 1.0;
+        } else if (zoom === 8) {
+            zoomFactor = 0.78;
+            baseMin = 3.0;
+            weight = 1.2;
+        } else {
+            zoomFactor = 1.0;
+            baseMin = 3.5;
+            weight = 1.5;
+        }
 
         activeItems.forEach(({ node, units }) => {
-            const radius = this.computePostalRadius(units, maxUnits);
+            const rawRadius = this.computePostalRadius(units, maxUnits);
+            const radius = Math.max(baseMin, rawRadius * zoomFactor);
 
             // Dynamic opacity & weight based on volume
-            let fillOpacity = 0.55;
-            let weight = 1.5;
-            if (units >= 10) {
-                fillOpacity = 0.72;
-                weight = 2.0;
-            }
-            if (units >= 40) {
-                fillOpacity = 0.85;
-                weight = 2.5;
+            let fillOpacity = 0.60;
+            if (zoom <= 6) {
+                fillOpacity = units >= 10 ? 0.75 : 0.60;
+            } else {
+                if (units >= 10) {
+                    fillOpacity = 0.75;
+                    weight = Math.max(weight, 2.0);
+                }
+                if (units >= 40) {
+                    fillOpacity = 0.88;
+                    weight = Math.max(weight, 2.5);
+                }
             }
 
             const circle = L.circleMarker([node.lat, node.lng], {
@@ -345,14 +500,14 @@ class TerritorialMapApp {
                 fillColor: colors.fill,
                 fillOpacity: fillOpacity,
                 color: colors.stroke,
-                weight: weight,
-                className: 'interactive-bubble'
+                weight: weight
             });
 
             // Hover tooltip
+            const nodeDisplayName = node.name || 'Municipio';
             circle.bindTooltip(`
                 <div style="font-family: inherit; font-size: 12px; font-weight: 700;">
-                    CP ${node.cp} - ${node.name}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.</span>
+                    CP ${node.cp} - ${nodeDisplayName}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.</span>
                 </div>
             `, {
                 direction: 'top',
@@ -397,11 +552,11 @@ class TerritorialMapApp {
             const popupContent = `
                 <div class="popup-header">
                     <span class="popup-title">CP ${node.cp}</span>
-                    <span class="popup-ccaa">${node.name}</span>
+                    <span class="popup-ccaa">${nodeDisplayName}</span>
                 </div>
                 <div class="popup-stat-row">
                     <span style="color: #64748b;">Total Turismos (2026):</span>
-                    <strong style="font-size: 14px; color: #0f172a;">${node.total.toLocaleString('es-ES')} un.</strong>
+                    <strong style="font-size: 14px; color: #0f172a;">${(node.total || 0).toLocaleString('es-ES')} un.</strong>
                 </div>
                 ${filterNotice}
                 ${topModelsHtml}
@@ -430,6 +585,16 @@ class TerritorialMapApp {
                 el.addEventListener('change', () => this.fetchAndRender());
             }
         });
+
+        // View Mode toggle: Provincias vs Todos los CPs
+        const btnProv = document.getElementById('btn-mode-prov');
+        const btnCp = document.getElementById('btn-mode-cp');
+        if (btnProv) {
+            btnProv.addEventListener('click', () => this.setViewMode('prov'));
+        }
+        if (btnCp) {
+            btnCp.addEventListener('click', () => this.setViewMode('all_cp'));
+        }
     }
 
     async loadBrandsCatalog() {
@@ -501,9 +666,14 @@ class TerritorialMapApp {
             const data = await res.json();
             this.currentData = data;
 
-            this.renderBubbles(data, brand, fuel);
             this.renderSidebar(data, brand, fuel);
-            this.handleZoomOrMove();
+            if (this.viewMode === 'all_cp') {
+                this.markersLayer.clearLayers();
+                this.renderActivePostals();
+            } else {
+                this.renderBubbles(data, brand, fuel);
+                this.handleZoomOrMove();
+            }
         } catch (err) {
             console.error('Error fetching geo-provincias data:', err);
         } finally {
@@ -514,6 +684,8 @@ class TerritorialMapApp {
     renderBubbles(data, brand, fuel) {
         this.markersLayer.clearLayers();
         this.provinceMarkersMap = {};
+
+        if (this.viewMode === 'all_cp') return;
 
         if (!data || !data.provinces || data.provinces.length === 0) return;
 
@@ -659,6 +831,8 @@ class TerritorialMapApp {
                 if (marker) {
                     const latlng = marker.getLatLng();
                     this.map.flyTo(latlng, 9, { duration: 1 });
+                } else if (COORDS_NORMALIZED[norm]) {
+                    this.map.flyTo(COORDS_NORMALIZED[norm], 9, { duration: 1 });
                 }
             });
         });
