@@ -71,6 +71,23 @@ Object.entries(PROVINCIA_COORDS).forEach(([k, v]) => {
     COORDS_NORMALIZED[normalizeName(k)] = v;
 });
 
+const PROVINCIA_PREFIX = {
+    'ALAVA': '01', 'ARABA': '01', 'ALBACETE': '02', 'ALICANTE': '03', 'ALACANT': '03',
+    'ALMERIA': '04', 'AVILA': '05', 'BADAJOZ': '06', 'ILLES BALEARS': '07', 'BALEARES': '07',
+    'BARCELONA': '08', 'BURGOS': '09', 'CACERES': '10', 'CADIZ': '11', 'CASTELLON': '12',
+    'CASTELLO': '12', 'CIUDAD REAL': '13', 'CORDOBA': '14', 'A CORUNA': '15', 'LA CORUNA': '15',
+    'CUENCA': '16', 'GIRONA': '17', 'GERONA': '17', 'GRANADA': '18', 'GUADALAJARA': '19',
+    'GIPUZKOA': '20', 'GUIPUZCOA': '20', 'HUELVA': '21', 'HUESCA': '22', 'JAEN': '23',
+    'LEON': '24', 'LLEIDA': '25', 'LERIDA': '25', 'LA RIOJA': '26', 'RIOJA': '26',
+    'LUGO': '27', 'MADRID': '28', 'MALAGA': '29', 'MURCIA': '30', 'NAVARRA': '31',
+    'OURENSE': '32', 'ORENSE': '32', 'ASTURIAS': '33', 'PALENCIA': '34', 'LAS PALMAS': '35',
+    'PONTEVEDRA': '36', 'SALAMANCA': '37', 'SANTA CRUZ DE TENERIFE': '38', 'TENERIFE': '38',
+    'CANTABRIA': '39', 'SEGOVIA': '40', 'SEVILLA': '41', 'SORIA': '42', 'TARRAGONA': '43',
+    'TERUEL': '44', 'TOLEDO': '45', 'VALENCIA': '46', 'VALLADOLID': '47',
+    'BIZKAIA': '48', 'VIZCAYA': '48', 'ZAMORA': '49', 'ZARAGOZA': '50', 'CEUTA': '51',
+    'MELILLA': '52'
+};
+
 class TerritorialMapApp {
     constructor() {
         this.map = null;
@@ -78,8 +95,10 @@ class TerritorialMapApp {
         this.postalLayer = null;
         this.currentData = null;
         this.brandsCatalog = null;
-        this.barcelonaPostalData = null;
         this.provinceMarkersMap = {};
+        this.hiddenProvinceMarkers = new Set();
+        this.loadedPostalData = {}; // prefix -> array of postal nodes
+        this.activePostalPrefixes = new Set();
         this.isPostalViewActive = false;
 
         this.init();
@@ -88,10 +107,7 @@ class TerritorialMapApp {
     async init() {
         this.initLeaflet();
         this.bindEvents();
-        await Promise.all([
-            this.loadBrandsCatalog(),
-            this.loadPostalData()
-        ]);
+        await this.loadBrandsCatalog();
         await this.fetchAndRender();
     }
 
@@ -101,7 +117,7 @@ class TerritorialMapApp {
             center: [40.0, -3.7],
             zoom: 6,
             minZoom: 5,
-            maxZoom: 15,
+            maxZoom: 16,
             zoomControl: false
         });
 
@@ -121,78 +137,127 @@ class TerritorialMapApp {
         this.map.on('zoomend moveend', () => this.handleZoomOrMove());
     }
 
-    async loadPostalData() {
-        try {
-            const res = await fetch('/data/geo_barcelona_cp_2026.json');
-            if (res.ok) {
-                this.barcelonaPostalData = await res.json();
-            } else {
-                const res2 = await fetch('data/geo_barcelona_cp_2026.json');
-                if (res2.ok) {
-                    this.barcelonaPostalData = await res2.json();
-                }
-            }
-        } catch (err) {
-            console.error('Failed to load Barcelona postal data:', err);
+    zoomToProvince(provName) {
+        const norm = normalizeName(provName);
+        const coords = COORDS_NORMALIZED[norm];
+        if (coords) {
+            this.map.flyTo(coords, 9, { duration: 1 });
         }
     }
 
-    zoomToBarcelona() {
-        this.map.flyTo([41.3879, 2.1699], 9, { duration: 1 });
-    }
-
-    handleZoomOrMove() {
-        if (!this.barcelonaPostalData) return;
-
+    async handleZoomOrMove() {
         const zoom = this.map.getZoom();
         const bounds = this.map.getBounds();
-        // Barcelona bounding box: [lat: 41.1 to 42.3, lng: 1.3 to 2.85]
-        const bcnBounds = L.latLngBounds([41.1, 1.3], [42.3, 2.85]);
-        const intersectsBcn = bounds.intersects(bcnBounds);
 
-        if (zoom >= 9 && intersectsBcn) {
-            // Hide Barcelona province bubble
-            const bcnMarker = this.provinceMarkersMap['BARCELONA'];
-            if (bcnMarker && this.markersLayer.hasLayer(bcnMarker)) {
-                this.markersLayer.removeLayer(bcnMarker);
-            }
-
-            this.renderBarcelonaPostals();
-            this.showDrilldownBadge(true);
-            this.isPostalViewActive = true;
-        } else {
-            if (this.isPostalViewActive) {
-                this.postalLayer.clearLayers();
-                const bcnMarker = this.provinceMarkersMap['BARCELONA'];
-                if (bcnMarker && !this.markersLayer.hasLayer(bcnMarker)) {
-                    bcnMarker.addTo(this.markersLayer);
+        if (zoom >= 9) {
+            // Find which provinces are in the current viewport
+            const visible = [];
+            Object.entries(PROVINCIA_COORDS).forEach(([provName, coords]) => {
+                const latLng = L.latLng(coords[0], coords[1]);
+                if (bounds.pad(0.25).contains(latLng)) {
+                    const norm = normalizeName(provName);
+                    const prefix = PROVINCIA_PREFIX[norm];
+                    if (prefix) {
+                        visible.push({ norm, prefix, provName });
+                    }
                 }
-                this.showDrilldownBadge(false);
-                this.isPostalViewActive = false;
+            });
+
+            if (visible.length > 0) {
+                // Hide provincial markers for visible provinces
+                visible.forEach(v => {
+                    const marker = this.provinceMarkersMap[v.norm];
+                    if (marker && this.markersLayer.hasLayer(marker)) {
+                        this.markersLayer.removeLayer(marker);
+                        this.hiddenProvinceMarkers.add(v.norm);
+                    }
+                });
+
+                // Restore markers for provinces that panned out of view
+                const visibleNorms = new Set(visible.map(v => v.norm));
+                this.hiddenProvinceMarkers.forEach(norm => {
+                    if (!visibleNorms.has(norm)) {
+                        const marker = this.provinceMarkersMap[norm];
+                        if (marker && !this.markersLayer.hasLayer(marker)) {
+                            marker.addTo(this.markersLayer);
+                        }
+                        this.hiddenProvinceMarkers.delete(norm);
+                    }
+                });
+
+                // Fetch postal JSONs for visible provinces
+                const loads = visible.map(async v => {
+                    if (!this.loadedPostalData[v.prefix]) {
+                        try {
+                            const res = await fetch(`/data/cp/cp_${v.prefix}.json`);
+                            if (res.ok) {
+                                this.loadedPostalData[v.prefix] = await res.json();
+                            }
+                        } catch (err) {
+                            console.warn(`Error loading cp_${v.prefix}.json:`, err);
+                        }
+                    }
+                });
+                await Promise.all(loads);
+
+                this.activePostalPrefixes = new Set(visible.map(v => v.prefix));
+                this.renderActivePostals();
+
+                const provNames = visible.map(v => v.provName);
+                const label = provNames.length <= 2 
+                    ? provNames.join(', ') 
+                    : `${provNames.slice(0, 2).join(', ')} (+${provNames.length - 2})`;
+                this.showDrilldownBadge(true, label);
+                this.isPostalViewActive = true;
+                return;
             }
+        }
+
+        // When zoom < 9 or no provinces visible
+        if (this.isPostalViewActive) {
+            this.postalLayer.clearLayers();
+            this.hiddenProvinceMarkers.forEach(norm => {
+                const marker = this.provinceMarkersMap[norm];
+                if (marker && !this.markersLayer.hasLayer(marker)) {
+                    marker.addTo(this.markersLayer);
+                }
+            });
+            this.hiddenProvinceMarkers.clear();
+            this.activePostalPrefixes.clear();
+            this.showDrilldownBadge(false);
+            this.isPostalViewActive = false;
         }
     }
 
-    showDrilldownBadge(visible) {
+    showDrilldownBadge(visible, label) {
         let badge = document.getElementById('bcn-drilldown-badge');
         if (visible) {
             if (!badge) {
                 badge = document.createElement('div');
                 badge.id = 'bcn-drilldown-badge';
                 badge.className = 'bcn-drilldown-badge';
-                badge.innerHTML = '<span class="badge-dot"></span><span>Desglose Códigos Postales: Barcelona</span>';
                 const wrapper = document.getElementById('map-wrapper');
                 if (wrapper) wrapper.appendChild(badge);
             }
+            badge.innerHTML = `<span class="badge-dot"></span><span>Desglose Códigos Postales: ${label || 'España'}</span>`;
             badge.style.display = 'flex';
         } else {
             if (badge) badge.style.display = 'none';
         }
     }
 
-    renderBarcelonaPostals() {
+    computePostalRadius(units, maxUnits) {
+        if (units <= 0) return 0;
+        if (units === 1) return 3.5;
+        if (units === 2) return 5.0;
+        if (maxUnits <= 2) return 5.0;
+        // Logarithmic scale so medium volumes (10-30 units) stand out clearly
+        const ratio = Math.log(units) / Math.log(maxUnits);
+        return Math.max(3.5, Math.min(27, 5.0 + ratio * 22));
+    }
+
+    renderActivePostals() {
         this.postalLayer.clearLayers();
-        if (!this.barcelonaPostalData || this.barcelonaPostalData.length === 0) return;
 
         const brandSelect = document.getElementById('filter-brand');
         const fuelSelect = document.getElementById('filter-fuel');
@@ -202,20 +267,25 @@ class TerritorialMapApp {
         const activeItems = [];
         let maxUnits = 1;
 
-        this.barcelonaPostalData.forEach(node => {
-            let units = 0;
-            if (brand) {
-                units = node.brands[brand] || 0;
-            } else if (fuel) {
-                units = node.fuels[fuel] || 0;
-            } else {
-                units = node.total;
-            }
+        this.activePostalPrefixes.forEach(prefix => {
+            const list = this.loadedPostalData[prefix];
+            if (!list) return;
 
-            if (units > 0) {
-                if (units > maxUnits) maxUnits = units;
-                activeItems.push({ node, units });
-            }
+            list.forEach(node => {
+                let units = 0;
+                if (brand) {
+                    units = (node.brands && node.brands[brand]) || 0;
+                } else if (fuel) {
+                    units = (node.fuels && node.fuels[fuel]) || 0;
+                } else {
+                    units = node.total || 0;
+                }
+
+                if (units > 0) {
+                    if (units > maxUnits) maxUnits = units;
+                    activeItems.push({ node, units });
+                }
+            });
         });
 
         if (activeItems.length === 0) return;
@@ -223,14 +293,26 @@ class TerritorialMapApp {
         const colors = this.getBubbleColors(brand, fuel);
 
         activeItems.forEach(({ node, units }) => {
-            const radius = Math.max(4.5, Math.min(26, Math.sqrt(units / maxUnits) * 22));
+            const radius = this.computePostalRadius(units, maxUnits);
+
+            // Dynamic opacity & weight based on volume
+            let fillOpacity = 0.55;
+            let weight = 1.5;
+            if (units >= 10) {
+                fillOpacity = 0.72;
+                weight = 2.0;
+            }
+            if (units >= 40) {
+                fillOpacity = 0.85;
+                weight = 2.5;
+            }
 
             const circle = L.circleMarker([node.lat, node.lng], {
                 radius: radius,
                 fillColor: colors.fill,
-                fillOpacity: 0.65,
+                fillOpacity: fillOpacity,
                 color: colors.stroke,
-                weight: 1.5,
+                weight: weight,
                 className: 'interactive-bubble'
             });
 
@@ -295,10 +377,10 @@ class TerritorialMapApp {
             circle.bindPopup(popupContent);
 
             circle.on('mouseover', function () {
-                this.setStyle({ fillOpacity: 0.9, weight: 2.5 });
+                this.setStyle({ fillOpacity: 0.95, weight: 3 });
             });
             circle.on('mouseout', function () {
-                this.setStyle({ fillOpacity: 0.65, weight: 1.5 });
+                this.setStyle({ fillOpacity: fillOpacity, weight: weight });
             });
 
             circle.addTo(this.postalLayer);
@@ -470,11 +552,9 @@ class TerritorialMapApp {
                     <strong>${p.share}%</strong>
                 </div>
                 ${topModelsHtml}
-                ${norm === 'BARCELONA' ? `
-                    <div style="margin-top: 10px; padding: 7px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; color: #166534; font-weight: 700; text-align: center; cursor: pointer;" onclick="window.TerritorialMap && window.TerritorialMap.zoomToBarcelona()">
-                        🔍 Haz zoom para ver el desglose por Códigos Postales
-                    </div>
-                ` : ''}
+                <div style="margin-top: 10px; padding: 7px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; color: #166534; font-weight: 700; text-align: center; cursor: pointer;" onclick="window.TerritorialMap && window.TerritorialMap.zoomToProvince('${p.provincia}')">
+                    🔍 Ver desglose por Códigos Postales
+                </div>
             `;
 
             circle.bindPopup(popupContent);
@@ -489,8 +569,8 @@ class TerritorialMapApp {
 
             this.provinceMarkersMap[norm] = circle;
 
-            // Do not add Barcelona provincial marker if postal view is currently active
-            if (this.isPostalViewActive && norm === 'BARCELONA') {
+            // Do not add provincial marker if postal view is currently active for this province
+            if (this.hiddenProvinceMarkers.has(norm)) {
                 return;
             }
 
@@ -545,11 +625,7 @@ class TerritorialMapApp {
                 const marker = this.provinceMarkersMap[norm];
                 if (marker) {
                     const latlng = marker.getLatLng();
-                    const targetZoom = norm === 'BARCELONA' ? 9 : 8;
-                    this.map.flyTo(latlng, targetZoom, { duration: 1 });
-                    if (norm !== 'BARCELONA') {
-                        setTimeout(() => marker.openPopup(), 1000);
-                    }
+                    this.map.flyTo(latlng, 9, { duration: 1 });
                 }
             });
         });
