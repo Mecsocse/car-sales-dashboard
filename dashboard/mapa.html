@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Territorial de Ventas de Coches | CarDataSales</title>
+    <meta name="description" content="Mapa interactivo de matriculaciones de turismos en España por provincias, marcas y tecnología.">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+
+    <!-- Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Custom Map CSS -->
+    <link rel="stylesheet" href="css/mapa.css?v=20260914">
+</head>
+<body>
+    <div id="map-wrapper">
+        <!-- Leaflet Map Container -->
+        <div id="map"></div>
+
+        <!-- Floating Glassmorphic Header & Filters -->
+        <header class="map-header">
+            <a href="/" class="brand-section" title="Ir al Dashboard Principal">
+                <div class="brand-logo-icon">
+                    <i data-lucide="map-pin" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div>
+                    <div class="brand-title">CarDataSales</div>
+                    <div class="brand-subtitle">Mapa Territorial de Ventas</div>
+                </div>
+            </a>
+
+            <!-- Filters Strip -->
+            <div class="filters-strip">
+                <!-- Marca -->
+                <div class="filter-group">
+                    <label for="filter-brand">Marca</label>
+                    <select id="filter-brand" title="Filtrar por Marca">
+                        <option value="">Todas las marcas</option>
+                    </select>
+                </div>
+
+                <!-- Tecnología / Carburante -->
+                <div class="filter-group">
+                    <label for="filter-fuel">Motor</label>
+                    <select id="filter-fuel" title="Filtrar por Carburante o Tecnología">
+                        <option value="">Todos los motores</option>
+                        <option value="ELECTRICO">⚡ 100% Eléctrico (BEV)</option>
+                        <option value="PHEV">🔌 Enchufable (PHEV)</option>
+                        <option value="HEV">🌿 Híbrido (HEV/MHEV)</option>
+                        <option value="GASOLINA">⛽ Gasolina</option>
+                        <option value="DIESEL">🛢️ Diésel</option>
+                        <option value="GLP">💨 Gas (GLP/GNC)</option>
+                    </select>
+                </div>
+
+                <!-- Período Temporal -->
+                <div class="filter-group">
+                    <label for="filter-period">Período</label>
+                    <select id="filter-period" title="Seleccionar Período">
+                        <option value="2026" selected>Año 2026</option>
+                        <option value="2026-09">Sep 2026 (En curso)</option>
+                        <option value="2026-08">Ago 2026</option>
+                        <option value="2026-07">Jul 2026</option>
+                        <option value="2026-06">Jun 2026</option>
+                        <option value="2026-05">May 2026</option>
+                        <option value="2026-04">Abr 2026</option>
+                        <option value="2026-03">Mar 2026</option>
+                        <option value="2026-02">Feb 2026</option>
+                        <option value="2026-01">Ene 2026</option>
+                        <option value="2025">Año 2025</option>
+                        <option value="2024">Año 2024</option>
+                        <option value="2023">Año 2023</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Return to Dashboard Link -->
+            <a href="/" class="btn-back-dashboard">
+                <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
+                <span>Volver al Dashboard</span>
+            </a>
+        </header>
+
+        <!-- Floating Sidebar (KPIs & Top Provinces Ranking) -->
+        <aside class="map-sidebar">
+            <!-- KPI Total -->
+            <div class="sidebar-card">
+                <div class="kpi-title">Total Matriculaciones</div>
+                <div class="kpi-value" id="sidebar-nat-total">--</div>
+                <div class="kpi-subtitle" id="sidebar-filter-desc">Cargando datos...</div>
+            </div>
+
+            <!-- Top Provinces Ranking List -->
+            <div class="sidebar-card ranking-card">
+                <div class="ranking-title">
+                    <span>Top Provincias</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #64748b;">(Clic para enfocar)</span>
+                </div>
+                <div class="ranking-list" id="sidebar-ranking-list">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Map Legend -->
+        <div class="map-legend">
+            <div>Volumen de matriculaciones</div>
+            <div class="legend-scale">
+                <div class="legend-circle-small"></div>
+                <span>Menor</span>
+                <div class="legend-circle-large"></div>
+                <span>Mayor volumen</span>
+            </div>
+        </div>
+
+        <!-- Loader Overlay -->
+        <div id="map-loader">
+            <div class="spinner"></div>
+            <span>Cargando datos territoriales...</span>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Custom Map Script -->
+    <script src="js/mapa.js?v=20260914"></script>
+</body>
+</html>

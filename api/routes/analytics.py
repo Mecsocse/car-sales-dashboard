@@ -1748,6 +1748,132 @@ def get_models_compare(
     _MODELS_COMPARE_CACHE[cache_key] = result
     return result
 
+_GEO_PROVINCIAS_CACHE = {}
+
+@router.get("/analytics/geo-provincias")
+def get_geo_provincias(
+    year: str = Query('2026'),
+    month: Optional[str] = Query(None),
+    brand: Optional[str] = Query(None),
+    fuel: Optional[str] = Query(None),
+    conn: Any = Depends(get_db)
+):
+    """
+    Retorna les matriculacions per a les 52 províncies d'Espanya
+    amb volum total, quota nacional i top models de cada província.
+    """
+    # Normalize params
+    if not isinstance(year, str): year = '2026'
+    if not isinstance(month, str) or not month.strip(): month = None
+    if not isinstance(brand, str) or not brand.strip() or brand.strip().upper() in ('TODAS', 'ALL', 'TODOS'): brand = None
+    if not isinstance(fuel, str) or not fuel.strip() or fuel.strip().upper() in ('TODOS', 'ALL'): fuel = None
+
+    def _val(r, col, idx=0, default=None):
+        if not r: return default
+        if isinstance(r, dict): return r.get(col, default)
+        try: return r[idx]
+        except Exception: return default
+
+    cache_key = f"geo_{year}_{month}_{brand}_{fuel}"
+    if cache_key in _GEO_PROVINCIAS_CACHE:
+        return _GEO_PROVINCIAS_CACHE[cache_key]
+
+    c = conn.cursor()
+
+    where_clauses = ["provincia IS NOT NULL", "provincia != ''"]
+    params = []
+
+    if month:
+        where_clauses.append("mes_str = ?")
+        params.append(month)
+    else:
+        where_clauses.append("anio_str = ?")
+        params.append(year)
+
+    if brand:
+        where_clauses.append("UPPER(marca_clean) = ?")
+        params.append(brand.strip().upper())
+
+    if fuel:
+        f_up = fuel.strip().upper()
+        if 'ELECTRICO' in f_up or 'BEV' in f_up:
+            where_clauses.append("carburante_std = 'ELECTRICO'")
+        elif 'PHEV' in f_up or 'ENCHUFABLE' in f_up:
+            where_clauses.append("carburante_std = 'ENCHUFABLE'")
+        elif 'HEV' in f_up or 'HIBRIDO' in f_up:
+            where_clauses.append("carburante_std IN ('HIBRIDO', 'MHEV')")
+        elif 'DIESEL' in f_up or 'DIÉSEL' in f_up:
+            where_clauses.append("carburante_std = 'DIESEL'")
+        elif 'GASOLINA' in f_up:
+            where_clauses.append("carburante_std = 'GASOLINA'")
+        elif 'GLP' in f_up or 'GNC' in f_up or 'GAS' in f_up:
+            where_clauses.append("carburante_std IN ('GLP', 'GNC', 'GAS')")
+
+    where_sql = " AND ".join(where_clauses)
+
+    # 1. Total nacional en el període/filtre
+    exec_query(c, f"SELECT SUM(total_unidades) as nat_total FROM ventas_mensuales_resumen WHERE {where_sql}", params)
+    nat_row = c.fetchone()
+    nat_total = _val(nat_row, 'nat_total', 0, 1) or 1
+
+    # 2. Total per província
+    exec_query(c, f"""
+        SELECT provincia, ccaa, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE {where_sql}
+        GROUP BY provincia, ccaa
+        ORDER BY total DESC
+    """, params)
+    prov_rows = c.fetchall()
+
+    # 3. Top models per província
+    exec_query(c, f"""
+        SELECT provincia, UPPER(modelo_full) as modelo, SUM(total_unidades) as total
+        FROM ventas_mensuales_resumen
+        WHERE {where_sql}
+        GROUP BY provincia, UPPER(modelo_full)
+        ORDER BY provincia, total DESC
+    """, params)
+    model_rows = c.fetchall()
+
+    prov_models = {}
+    for mr in model_rows:
+        p = _val(mr, 'provincia', 0)
+        if p not in prov_models:
+            prov_models[p] = []
+        if len(prov_models[p]) < 3:
+            prov_models[p].append({
+                'modelo': _val(mr, 'modelo', 1),
+                'total': _val(mr, 'total', 2, 0)
+            })
+
+    provinces_data = []
+    for r in prov_rows:
+        prov = _val(r, 'provincia', 0)
+        tot = _val(r, 'total', 2, 0)
+        share = round((tot / nat_total) * 100, 2)
+        provinces_data.append({
+            'provincia': prov,
+            'ccaa': _val(r, 'ccaa', 1),
+            'total': tot,
+            'share': share,
+            'top_models': prov_models.get(prov, [])
+        })
+
+    result = {
+        "year": year,
+        "month": month,
+        "brand": brand,
+        "fuel": fuel,
+        "national_total": nat_total if (nat_row and _val(nat_row, 'nat_total', 0, 0)) else 0,
+        "provinces": provinces_data
+    }
+
+    if len(_GEO_PROVINCIAS_CACHE) > 200:
+        _GEO_PROVINCIAS_CACHE.clear()
+    _GEO_PROVINCIAS_CACHE[cache_key] = result
+    return result
+
 def warm_cache():
     """Pre-calculates the most common queries and loads them into RAM at boot."""
     try:
