@@ -176,6 +176,16 @@ def read_root():
 def read_seo_landing_pages(request: Request):
     return HTMLResponse(content=get_customized_seo_html(request.url.path), status_code=200)
 
+@app.get("/mapa")
+@app.get("/mapa/")
+@app.get("/mapa.html")
+def read_mapa_page():
+    p = os.path.join(DASHBOARD_DIR, "mapa.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página de mapa no encontrada")
+
+
 @app.get("/favicon.svg")
 def get_favicon_svg():
     p = os.path.join(DASHBOARD_DIR, "favicon.svg")
