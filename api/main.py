@@ -100,11 +100,14 @@ def trigger_dgt_ingest(days: int = 3, force: bool = False):
 # Serve static dashboard files safely without shadowing /api
 css_dir = os.path.join(DASHBOARD_DIR, "css")
 js_dir = os.path.join(DASHBOARD_DIR, "js")
+data_dir = os.path.join(DASHBOARD_DIR, "data")
 
 if os.path.exists(css_dir):
     app.mount("/css", StaticFiles(directory=css_dir), name="css")
 if os.path.exists(js_dir):
     app.mount("/js", StaticFiles(directory=js_dir), name="js")
+if os.path.exists(data_dir):
+    app.mount("/data", StaticFiles(directory=data_dir), name="data")
 
 _SEO_HTML_CACHE = {}
 

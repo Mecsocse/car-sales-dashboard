@@ -75,9 +75,12 @@ class TerritorialMapApp {
     constructor() {
         this.map = null;
         this.markersLayer = null;
+        this.postalLayer = null;
         this.currentData = null;
         this.brandsCatalog = null;
+        this.barcelonaPostalData = null;
         this.provinceMarkersMap = {};
+        this.isPostalViewActive = false;
 
         this.init();
     }
@@ -85,7 +88,10 @@ class TerritorialMapApp {
     async init() {
         this.initLeaflet();
         this.bindEvents();
-        await this.loadBrandsCatalog();
+        await Promise.all([
+            this.loadBrandsCatalog(),
+            this.loadPostalData()
+        ]);
         await this.fetchAndRender();
     }
 
@@ -95,7 +101,7 @@ class TerritorialMapApp {
             center: [40.0, -3.7],
             zoom: 6,
             minZoom: 5,
-            maxZoom: 12,
+            maxZoom: 15,
             zoomControl: false
         });
 
@@ -109,6 +115,194 @@ class TerritorialMapApp {
         }).addTo(this.map);
 
         this.markersLayer = L.layerGroup().addTo(this.map);
+        this.postalLayer = L.layerGroup().addTo(this.map);
+
+        // Listen to zoom and movement
+        this.map.on('zoomend moveend', () => this.handleZoomOrMove());
+    }
+
+    async loadPostalData() {
+        try {
+            const res = await fetch('/data/geo_barcelona_cp_2026.json');
+            if (res.ok) {
+                this.barcelonaPostalData = await res.json();
+            } else {
+                const res2 = await fetch('data/geo_barcelona_cp_2026.json');
+                if (res2.ok) {
+                    this.barcelonaPostalData = await res2.json();
+                }
+            }
+        } catch (err) {
+            console.error('Failed to load Barcelona postal data:', err);
+        }
+    }
+
+    zoomToBarcelona() {
+        this.map.flyTo([41.3879, 2.1699], 9, { duration: 1 });
+    }
+
+    handleZoomOrMove() {
+        if (!this.barcelonaPostalData) return;
+
+        const zoom = this.map.getZoom();
+        const bounds = this.map.getBounds();
+        // Barcelona bounding box: [lat: 41.1 to 42.3, lng: 1.3 to 2.85]
+        const bcnBounds = L.latLngBounds([41.1, 1.3], [42.3, 2.85]);
+        const intersectsBcn = bounds.intersects(bcnBounds);
+
+        if (zoom >= 9 && intersectsBcn) {
+            // Hide Barcelona province bubble
+            const bcnMarker = this.provinceMarkersMap['BARCELONA'];
+            if (bcnMarker && this.markersLayer.hasLayer(bcnMarker)) {
+                this.markersLayer.removeLayer(bcnMarker);
+            }
+
+            this.renderBarcelonaPostals();
+            this.showDrilldownBadge(true);
+            this.isPostalViewActive = true;
+        } else {
+            if (this.isPostalViewActive) {
+                this.postalLayer.clearLayers();
+                const bcnMarker = this.provinceMarkersMap['BARCELONA'];
+                if (bcnMarker && !this.markersLayer.hasLayer(bcnMarker)) {
+                    bcnMarker.addTo(this.markersLayer);
+                }
+                this.showDrilldownBadge(false);
+                this.isPostalViewActive = false;
+            }
+        }
+    }
+
+    showDrilldownBadge(visible) {
+        let badge = document.getElementById('bcn-drilldown-badge');
+        if (visible) {
+            if (!badge) {
+                badge = document.createElement('div');
+                badge.id = 'bcn-drilldown-badge';
+                badge.className = 'bcn-drilldown-badge';
+                badge.innerHTML = '<span class="badge-dot"></span><span>Desglose Códigos Postales: Barcelona</span>';
+                const wrapper = document.getElementById('map-wrapper');
+                if (wrapper) wrapper.appendChild(badge);
+            }
+            badge.style.display = 'flex';
+        } else {
+            if (badge) badge.style.display = 'none';
+        }
+    }
+
+    renderBarcelonaPostals() {
+        this.postalLayer.clearLayers();
+        if (!this.barcelonaPostalData || this.barcelonaPostalData.length === 0) return;
+
+        const brandSelect = document.getElementById('filter-brand');
+        const fuelSelect = document.getElementById('filter-fuel');
+        const brand = brandSelect ? brandSelect.value : '';
+        const fuel = fuelSelect ? fuelSelect.value : '';
+
+        const activeItems = [];
+        let maxUnits = 1;
+
+        this.barcelonaPostalData.forEach(node => {
+            let units = 0;
+            if (brand) {
+                units = node.brands[brand] || 0;
+            } else if (fuel) {
+                units = node.fuels[fuel] || 0;
+            } else {
+                units = node.total;
+            }
+
+            if (units > 0) {
+                if (units > maxUnits) maxUnits = units;
+                activeItems.push({ node, units });
+            }
+        });
+
+        if (activeItems.length === 0) return;
+
+        const colors = this.getBubbleColors(brand, fuel);
+
+        activeItems.forEach(({ node, units }) => {
+            const radius = Math.max(4.5, Math.min(26, Math.sqrt(units / maxUnits) * 22));
+
+            const circle = L.circleMarker([node.lat, node.lng], {
+                radius: radius,
+                fillColor: colors.fill,
+                fillOpacity: 0.65,
+                color: colors.stroke,
+                weight: 1.5,
+                className: 'interactive-bubble'
+            });
+
+            // Hover tooltip
+            circle.bindTooltip(`
+                <div style="font-family: inherit; font-size: 12px; font-weight: 700;">
+                    CP ${node.cp} - ${node.name}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.</span>
+                </div>
+            `, {
+                direction: 'top',
+                offset: [0, -radius],
+                className: 'bubble-tooltip'
+            });
+
+            // Popup detail
+            const pctOfCp = node.total > 0 ? Math.round((units / node.total) * 100) : 0;
+            let filterNotice = '';
+            if (brand) {
+                filterNotice = `
+                    <div class="popup-stat-row">
+                        <span style="color: #64748b;">Marca ${brand}:</span>
+                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% del CP)</strong>
+                    </div>
+                `;
+            } else if (fuel) {
+                filterNotice = `
+                    <div class="popup-stat-row">
+                        <span style="color: #64748b;">Motor ${fuel}:</span>
+                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% del CP)</strong>
+                    </div>
+                `;
+            }
+
+            let topModelsHtml = '';
+            if (node.top_models && node.top_models.length > 0) {
+                topModelsHtml = `
+                    <div class="popup-top-models">
+                        <div class="popup-models-title">Top Modelos en CP ${node.cp} (2026)</div>
+                        ${node.top_models.map(m => `
+                            <div class="popup-model-line">
+                                <span><strong>${m.modelo}</strong></span>
+                                <span style="font-weight: 700; color: #0f172a;">${m.total.toLocaleString('es-ES')} un.</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            const popupContent = `
+                <div class="popup-header">
+                    <span class="popup-title">CP ${node.cp}</span>
+                    <span class="popup-ccaa">${node.name}</span>
+                </div>
+                <div class="popup-stat-row">
+                    <span style="color: #64748b;">Total Turismos (2026):</span>
+                    <strong style="font-size: 14px; color: #0f172a;">${node.total.toLocaleString('es-ES')} un.</strong>
+                </div>
+                ${filterNotice}
+                ${topModelsHtml}
+            `;
+
+            circle.bindPopup(popupContent);
+
+            circle.on('mouseover', function () {
+                this.setStyle({ fillOpacity: 0.9, weight: 2.5 });
+            });
+            circle.on('mouseout', function () {
+                this.setStyle({ fillOpacity: 0.65, weight: 1.5 });
+            });
+
+            circle.addTo(this.postalLayer);
+        });
     }
 
     bindEvents() {
@@ -194,6 +388,7 @@ class TerritorialMapApp {
 
             this.renderBubbles(data, brand, fuel);
             this.renderSidebar(data, brand, fuel);
+            this.handleZoomOrMove();
         } catch (err) {
             console.error('Error fetching geo-provincias data:', err);
         } finally {
@@ -275,6 +470,11 @@ class TerritorialMapApp {
                     <strong>${p.share}%</strong>
                 </div>
                 ${topModelsHtml}
+                ${norm === 'BARCELONA' ? `
+                    <div style="margin-top: 10px; padding: 7px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; color: #166534; font-weight: 700; text-align: center; cursor: pointer;" onclick="window.TerritorialMap && window.TerritorialMap.zoomToBarcelona()">
+                        🔍 Haz zoom para ver el desglose por Códigos Postales
+                    </div>
+                ` : ''}
             `;
 
             circle.bindPopup(popupContent);
@@ -287,8 +487,14 @@ class TerritorialMapApp {
                 this.setStyle({ fillOpacity: 0.55, weight: 2 });
             });
 
-            circle.addTo(this.markersLayer);
             this.provinceMarkersMap[norm] = circle;
+
+            // Do not add Barcelona provincial marker if postal view is currently active
+            if (this.isPostalViewActive && norm === 'BARCELONA') {
+                return;
+            }
+
+            circle.addTo(this.markersLayer);
         });
     }
 
@@ -339,8 +545,11 @@ class TerritorialMapApp {
                 const marker = this.provinceMarkersMap[norm];
                 if (marker) {
                     const latlng = marker.getLatLng();
-                    this.map.flyTo(latlng, 8, { duration: 1 });
-                    setTimeout(() => marker.openPopup(), 1000);
+                    const targetZoom = norm === 'BARCELONA' ? 9 : 8;
+                    this.map.flyTo(latlng, targetZoom, { duration: 1 });
+                    if (norm !== 'BARCELONA') {
+                        setTimeout(() => marker.openPopup(), 1000);
+                    }
                 }
             });
         });
