@@ -1755,6 +1755,7 @@ def get_geo_provincias(
     year: str = Query('2026'),
     month: Optional[str] = Query(None),
     brand: Optional[str] = Query(None),
+    model: Optional[str] = Query(None),
     fuel: Optional[str] = Query(None),
     conn: Any = Depends(get_db)
 ):
@@ -1766,6 +1767,7 @@ def get_geo_provincias(
     if not isinstance(year, str): year = '2026'
     if not isinstance(month, str) or not month.strip(): month = None
     if not isinstance(brand, str) or not brand.strip() or brand.strip().upper() in ('TODAS', 'ALL', 'TODOS'): brand = None
+    if not isinstance(model, str) or not model.strip() or model.strip().upper() in ('TODOS', 'ALL', 'TODAS'): model = None
     if not isinstance(fuel, str) or not fuel.strip() or fuel.strip().upper() in ('TODOS', 'ALL'): fuel = None
 
     def _val(r, col, idx=0, default=None):
@@ -1774,7 +1776,7 @@ def get_geo_provincias(
         try: return r[idx]
         except Exception: return default
 
-    cache_key = f"geo_{year}_{month}_{brand}_{fuel}"
+    cache_key = f"geo_{year}_{month}_{brand}_{model}_{fuel}"
     if cache_key in _GEO_PROVINCIAS_CACHE:
         return _GEO_PROVINCIAS_CACHE[cache_key]
 
@@ -1793,6 +1795,11 @@ def get_geo_provincias(
     if brand:
         where_clauses.append("UPPER(marca_clean) = ?")
         params.append(brand.strip().upper())
+
+    if model:
+        m_clean = model.strip().upper()
+        where_clauses.append("(UPPER(modelo_clean) = ? OR UPPER(marca_clean || ' ' || modelo_clean) = ?)")
+        params.extend([m_clean, m_clean])
 
     if fuel:
         f_up = fuel.strip().upper()
@@ -1841,7 +1848,7 @@ def get_geo_provincias(
         p = _val(mr, 'provincia', 0)
         if p not in prov_models:
             prov_models[p] = []
-        if len(prov_models[p]) < 3:
+        if len(prov_models[p]) < 10:
             prov_models[p].append({
                 'modelo': _val(mr, 'modelo', 1),
                 'total': _val(mr, 'total', 2, 0)

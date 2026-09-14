@@ -409,6 +409,18 @@ body, html {
     margin-top: 8px;
     padding-top: 8px;
     border-top: 1px dashed #e2e8f0;
+    max-height: 185px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.popup-top-models::-webkit-scrollbar {
+    width: 4px;
+}
+
+.popup-top-models::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
 }
 
 .popup-models-title {
@@ -416,7 +428,8 @@ body, html {
     font-weight: 800;
     text-transform: uppercase;
     color: #64748b;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+    letter-spacing: 0.03em;
 }
 
 .popup-model-line {
@@ -424,8 +437,24 @@ body, html {
     color: #334155;
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 8px;
-    padding: 2px 0;
+    padding: 2.5px 0;
+    border-bottom: 1px solid #f8fafc;
+}
+
+.popup-model-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+    margin-right: 6px;
 }
 
 /* Loading Overlay */

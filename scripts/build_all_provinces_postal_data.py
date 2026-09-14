@@ -226,6 +226,8 @@ print(f'Found {len(files)} files to process for 2026.')
 
 t0 = time.time()
 prov_postals = {f'{i:02d}': {} for i in range(1, 53)}
+national_models = {}
+national_brand_models = {}
 
 total_records = 0
 for fpath in files:
@@ -286,6 +288,11 @@ for fpath in files:
             m_full = f'{marca_clean} {modelo_clean}'.strip().upper()
             node['_models'][m_full] = node['_models'].get(m_full, 0) + 1
 
+            national_models[m_full] = national_models.get(m_full, 0) + 1
+            if marca_clean not in national_brand_models:
+                national_brand_models[marca_clean] = {}
+            national_brand_models[marca_clean][modelo_clean] = national_brand_models[marca_clean].get(modelo_clean, 0) + 1
+
 dt = time.time() - t0
 print(f'Extracted {total_records} turismos across all 52 provinces in {dt:.2f}s!')
 
@@ -326,13 +333,14 @@ for prefix, cp_dict in sorted(prov_postals.items()):
                     angle = 2 * math.pi * idx / m
                     node['lat'] = round(base_lat + R * math.sin(angle), 4)
                     node['lng'] = round(base_lng + (R * math.cos(angle)) / cos_lat, 4)
+                    node['lng'] = round(base_lng + (R * math.cos(angle)) / cos_lat, 4)
 
     prov_list = []
     prov_total_cars = 0
     for cp, node in cp_dict.items():
         prov_total_cars += node['total']
-        sorted_m = sorted(node['_models'].items(), key=lambda x: x[1], reverse=True)[:3]
-        top_models = [{'modelo': m[0], 'total': m[1]} for m in sorted_m]
+        sorted_m = sorted(node['_models'].items(), key=lambda x: x[1], reverse=True)
+        top_models = [{'modelo': m[0], 'total': m[1]} for m in sorted_m[:10]]
         
         prov_list.append({
             'cp': node['cp'],
@@ -342,7 +350,8 @@ for prefix, cp_dict in sorted(prov_postals.items()):
             'total': node['total'],
             'brands': node['brands'],
             'fuels': node['fuels'],
-            'top_models': top_models
+            'top_models': top_models,
+            'models': { m[0]: m[1] for m in sorted_m }
         })
         
     prov_list.sort(key=lambda x: x['total'], reverse=True)
@@ -367,7 +376,30 @@ if os.path.exists(os.path.join(out_dir, 'cp_08.json')):
 with open(os.path.join(out_dir, 'index.json'), 'w', encoding='utf-8') as f:
     json.dump(index_manifest, f, ensure_ascii=False, indent=2)
 
+# Generate models catalog for UI selector
+top_50_spain = [
+    {'full_model': m[0], 'total': m[1]}
+    for m in sorted(national_models.items(), key=lambda x: x[1], reverse=True)[:50]
+]
+
+brands_catalog = {}
+for brand, models_dict in sorted(national_brand_models.items()):
+    sorted_bm = sorted(models_dict.items(), key=lambda x: x[1], reverse=True)
+    brands_catalog[brand] = [
+        {'model': m[0], 'full_model': f'{brand} {m[0]}', 'total': m[1]}
+        for m in sorted_bm if m[1] >= 2
+    ]
+
+catalog = {
+    'top_models_spain': top_50_spain,
+    'brand_models': brands_catalog
+}
+with open(os.path.join(out_dir, 'models_catalog.json'), 'w', encoding='utf-8') as f:
+    json.dump(catalog, f, ensure_ascii=False, indent=2)
+
 print(f'Generated {active_provinces} province files in {out_dir}/ ({total_bytes / 1024:.1f} KB total).')
+print(f'Generated models_catalog.json with {len(top_50_spain)} national top models and {len(brands_catalog)} brands.')
+
 
 # Compute province bounds
 prov_bounds = {}

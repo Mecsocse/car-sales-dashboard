@@ -130,6 +130,7 @@ class TerritorialMapApp {
         this.postalLayer = null;
         this.currentData = null;
         this.brandsCatalog = null;
+        this.modelsCatalog = null;
         this.provinceMarkersMap = {};
         this.hiddenProvinceMarkers = new Set();
         this.loadedPostalData = {}; // prefix -> array of postal nodes
@@ -149,6 +150,7 @@ class TerritorialMapApp {
         this.bindEvents();
         if (window.lucide) lucide.createIcons();
         await this.loadBrandsCatalog();
+        await this.loadModelsCatalog();
         await this.fetchAndRender();
     }
 
@@ -411,8 +413,10 @@ class TerritorialMapApp {
         this.postalLayer.clearLayers();
 
         const brandSelect = document.getElementById('filter-brand');
+        const modelSelect = document.getElementById('filter-model');
         const fuelSelect = document.getElementById('filter-fuel');
         const brand = brandSelect ? brandSelect.value : '';
+        const model = modelSelect ? modelSelect.value : '';
         const fuel = fuelSelect ? fuelSelect.value : '';
 
         const bounds = this.map.getBounds();
@@ -436,7 +440,9 @@ class TerritorialMapApp {
                 }
 
                 let units = 0;
-                if (brand) {
+                if (model) {
+                    units = (node.models && node.models[model]) || 0;
+                } else if (brand) {
                     units = (node.brands && node.brands[brand]) || 0;
                 } else if (fuel) {
                     units = (node.fuels && node.fuels[fuel]) || 0;
@@ -507,9 +513,10 @@ class TerritorialMapApp {
 
             // Hover tooltip
             const nodeDisplayName = node.name || 'Municipio';
+            const filterLabel = model ? ` (${model})` : (brand ? ` (${brand})` : '');
             circle.bindTooltip(`
                 <div style="font-family: inherit; font-size: 12px; font-weight: 700;">
-                    CP ${node.cp} - ${nodeDisplayName}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.</span>
+                    CP ${node.cp} - ${nodeDisplayName}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.${filterLabel}</span>
                 </div>
             `, {
                 direction: 'top',
@@ -520,7 +527,14 @@ class TerritorialMapApp {
             // Popup detail
             const pctOfCp = node.total > 0 ? Math.round((units / node.total) * 100) : 0;
             let filterNotice = '';
-            if (brand) {
+            if (model) {
+                filterNotice = `
+                    <div class="popup-stat-row">
+                        <span style="color: #64748b;">Modelo ${model}:</span>
+                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% del CP)</strong>
+                    </div>
+                `;
+            } else if (brand) {
                 filterNotice = `
                     <div class="popup-stat-row">
                         <span style="color: #64748b;">Marca ${brand}:</span>
@@ -541,9 +555,9 @@ class TerritorialMapApp {
                 topModelsHtml = `
                     <div class="popup-top-models">
                         <div class="popup-models-title">Top Modelos en CP ${node.cp} (2026)</div>
-                        ${node.top_models.map(m => `
+                        ${node.top_models.map((m, idx) => `
                             <div class="popup-model-line">
-                                <span><strong>${m.modelo}</strong></span>
+                                <span><span class="popup-model-badge">#${idx+1}</span><strong>${m.modelo}</strong></span>
                                 <span style="font-weight: 700; color: #0f172a;">${m.total.toLocaleString('es-ES')} un.</span>
                             </div>
                         `).join('')}
@@ -579,13 +593,25 @@ class TerritorialMapApp {
 
     bindEvents() {
         const brandSelect = document.getElementById('filter-brand');
+        const modelSelect = document.getElementById('filter-model');
         const fuelSelect = document.getElementById('filter-fuel');
         const periodSelect = document.getElementById('filter-period');
 
-        [brandSelect, fuelSelect, periodSelect].forEach(el => {
+        if (brandSelect) {
+            brandSelect.addEventListener('change', () => {
+                const b = brandSelect.value;
+                this.populateModelsDropdown(b);
+                this.fetchAndRender();
+            });
+        }
+
+        if (modelSelect) {
+            modelSelect.addEventListener('change', () => this.fetchAndRender());
+        }
+
+        [fuelSelect, periodSelect].forEach(el => {
             if (el) {
                 el.addEventListener('change', () => this.fetchAndRender());
-                el.addEventListener('input', () => this.fetchAndRender());
             }
         });
 
@@ -598,6 +624,44 @@ class TerritorialMapApp {
         if (btnCp) {
             btnCp.addEventListener('click', () => this.setViewMode('all_cp'));
         }
+    }
+
+    async loadModelsCatalog() {
+        try {
+            const res = await fetch('/data/cp/models_catalog.json');
+            if (res.ok) {
+                this.modelsCatalog = await res.json();
+                this.populateModelsDropdown();
+            }
+        } catch (err) {
+            console.error('Failed to load models catalog for map:', err);
+        }
+    }
+
+    populateModelsDropdown(brand = '') {
+        const modelSelect = document.getElementById('filter-model');
+        if (!modelSelect) return;
+
+        const currentVal = modelSelect.value;
+        let html = '<option value="">Todos los modelos</option>';
+
+        if (brand && this.modelsCatalog && this.modelsCatalog.brand_models && this.modelsCatalog.brand_models[brand]) {
+            const bModels = this.modelsCatalog.brand_models[brand];
+            html = `<option value="">Todos los modelos de ${brand}</option>`;
+            bModels.forEach(m => {
+                const isSel = (currentVal === m.full_model) ? 'selected' : '';
+                html += `<option value="${m.full_model}" ${isSel}>${m.model} (${m.total.toLocaleString('es-ES')} un.)</option>`;
+            });
+        } else if (this.modelsCatalog && this.modelsCatalog.top_models_spain) {
+            html += '<optgroup label="Top 50 Modelos más vendidos">';
+            this.modelsCatalog.top_models_spain.forEach(m => {
+                const isSel = (currentVal === m.full_model) ? 'selected' : '';
+                html += `<option value="${m.full_model}" ${isSel}>${m.full_model} (${m.total.toLocaleString('es-ES')} un.)</option>`;
+            });
+            html += '</optgroup>';
+        }
+
+        modelSelect.innerHTML = html;
     }
 
     async loadBrandsCatalog() {
@@ -653,12 +717,26 @@ class TerritorialMapApp {
 
     async fetchAndRender() {
         const brandSelect = document.getElementById('filter-brand');
+        const modelSelect = document.getElementById('filter-model');
         const fuelSelect = document.getElementById('filter-fuel');
         const periodSelect = document.getElementById('filter-period');
 
         const brand = brandSelect ? brandSelect.value : '';
+        const model = modelSelect ? modelSelect.value : '';
         const fuel = fuelSelect ? fuelSelect.value : '';
         const periodVal = periodSelect ? periodSelect.value : '2026';
+
+        // Auto-load postal data if model is selected to compute CP ranking
+        if (model && !this.allSpainDataLoaded) {
+            this.loadAllSpainPostalData().then(() => {
+                if (this.viewMode === 'all_cp' || this.isPostalViewActive) {
+                    this.renderActivePostals();
+                }
+                if (this.currentData) {
+                    this.renderSidebar(this.currentData, brand, model, fuel);
+                }
+            });
+        }
 
         // 1. Instant local update for active postal bubbles (0ms latency)
         if (this.viewMode === 'all_cp' || this.isPostalViewActive) {
@@ -685,6 +763,7 @@ class TerritorialMapApp {
             q = `year=${periodVal}`;
         }
         if (brand) q += `&brand=${encodeURIComponent(brand)}`;
+        if (model) q += `&model=${encodeURIComponent(model)}`;
         if (fuel) q += `&fuel=${encodeURIComponent(fuel)}`;
 
         try {
@@ -698,7 +777,7 @@ class TerritorialMapApp {
             }
 
             this.currentData = data;
-            this.renderSidebar(data, brand, fuel);
+            this.renderSidebar(data, brand, model, fuel);
 
             if (this.viewMode === 'all_cp') {
                 this.markersLayer.clearLayers();
@@ -771,9 +850,9 @@ class TerritorialMapApp {
                 topModelsHtml = `
                     <div class="popup-top-models">
                         <div class="popup-models-title">Top Modelos en ${p.provincia}</div>
-                        ${p.top_models.map(m => `
+                        ${p.top_models.map((m, idx) => `
                             <div class="popup-model-line">
-                                <span><strong>${m.modelo}</strong></span>
+                                <span><span class="popup-model-badge">#${idx+1}</span><strong>${m.modelo}</strong></span>
                                 <span style="font-weight: 700; color: #0f172a;">${m.total.toLocaleString('es-ES')} un.</span>
                             </div>
                         `).join('')}
@@ -821,23 +900,90 @@ class TerritorialMapApp {
         });
     }
 
-    renderSidebar(data, brand, fuel) {
+    renderSidebar(data, brand, model, fuel) {
         const kpiVal = document.getElementById('sidebar-nat-total');
         const kpiSub = document.getElementById('sidebar-filter-desc');
         const rankingContainer = document.getElementById('sidebar-ranking-list');
+        const rankingTitle = document.querySelector('.ranking-title');
 
         if (kpiVal) {
             kpiVal.textContent = (data.national_total || 0).toLocaleString('es-ES');
         }
 
         if (kpiSub) {
-            const bTxt = brand ? brand : 'Todas las marcas';
+            const mTxt = model ? model : (brand ? brand : 'Todas las marcas');
             const fTxt = fuel ? fuel : 'Todos los carburantes';
             const pTxt = data.month || `Año ${data.year || '2026'}`;
-            kpiSub.textContent = `${bTxt} • ${fTxt} • ${pTxt}`;
+            kpiSub.textContent = `${mTxt} • ${fTxt} • ${pTxt}`;
         }
 
-        if (!rankingContainer || !data.provinces) return;
+        if (!rankingContainer) return;
+
+        // If a specific model is selected AND we have postal data, show the CP ranking for that model!
+        if (model) {
+            if (rankingTitle) {
+                rankingTitle.innerHTML = `🏆 Dónde se venden más <strong>${model}</strong>`;
+            }
+
+            // Aggregate all CPs that have sales of this model
+            const cpMatches = [];
+            Object.values(this.loadedPostalData).forEach(nodes => {
+                nodes.forEach(n => {
+                    const u = (n.models && n.models[model]) || 0;
+                    if (u > 0) {
+                        cpMatches.push({
+                            cp: n.cp,
+                            name: n.name,
+                            lat: n.lat,
+                            lng: n.lng,
+                            total: u
+                        });
+                    }
+                });
+            });
+
+            if (cpMatches.length > 0) {
+                cpMatches.sort((a, b) => b.total - a.total);
+                const maxU = cpMatches[0].total;
+                const top25 = cpMatches.slice(0, 25);
+
+                let html = '';
+                top25.forEach((item, idx) => {
+                    const pctBar = Math.max(5, (item.total / maxU) * 100);
+                    html += `
+                        <div class="ranking-item" data-lat="${item.lat}" data-lng="${item.lng}" data-cp="${item.cp}" style="cursor: pointer;" title="Hacer clic para ver en el mapa">
+                            <div class="ranking-item-top">
+                                <span><strong>#${idx + 1}</strong> CP ${item.cp} <small style="color: #64748b;">(${item.name})</small></span>
+                                <span style="font-weight: 800; color: #0f172a;">${item.total.toLocaleString('es-ES')} un.</span>
+                            </div>
+                            <div class="ranking-bar-bg">
+                                <div class="ranking-bar-fill" style="width: ${pctBar}%; background: linear-gradient(90deg, #2563eb, #3b82f6);"></div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                rankingContainer.innerHTML = html;
+
+                rankingContainer.querySelectorAll('.ranking-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const lat = parseFloat(item.dataset.lat);
+                        const lng = parseFloat(item.dataset.lng);
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            this.map.flyTo([lat, lng], 13, { duration: 1.2 });
+                        }
+                    });
+                });
+                return;
+            }
+        }
+
+        // Default: Provincial ranking
+        if (rankingTitle) {
+            rankingTitle.textContent = 'Top Provincias por Volumen';
+        }
+
+        if (!data || !data.provinces) return;
 
         const maxTotal = Math.max(...data.provinces.map(p => p.total), 1);
         const top15 = data.provinces.slice(0, 15);
