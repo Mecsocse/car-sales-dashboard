@@ -88,6 +88,41 @@ const PROVINCIA_PREFIX = {
     'MELILLA': '52'
 };
 
+const PREFIX_TO_NAME = {
+    '01': 'Álava', '02': 'Albacete', '03': 'Alicante', '04': 'Almería', '05': 'Ávila',
+    '06': 'Badajoz', '07': 'Illes Balears', '08': 'Barcelona', '09': 'Burgos', '10': 'Cáceres',
+    '11': 'Cádiz', '12': 'Castellón', '13': 'Ciudad Real', '14': 'Córdoba', '15': 'A Coruña',
+    '16': 'Cuenca', '17': 'Girona', '18': 'Granada', '19': 'Guadalajara', '20': 'Gipuzkoa',
+    '21': 'Huelva', '22': 'Huesca', '23': 'Jaén', '24': 'León', '25': 'Lleida',
+    '26': 'La Rioja', '27': 'Lugo', '28': 'Madrid', '29': 'Málaga', '30': 'Murcia',
+    '31': 'Navarra', '32': 'Ourense', '33': 'Asturias', '34': 'Palencia', '35': 'Las Palmas',
+    '36': 'Pontevedra', '37': 'Salamanca', '38': 'Santa Cruz de Tenerife', '39': 'Cantabria', '40': 'Segovia',
+    '41': 'Sevilla', '42': 'Soria', '43': 'Tarragona', '44': 'Teruel', '45': 'Toledo',
+    '46': 'Valencia', '47': 'Valladolid', '48': 'Bizkaia', '49': 'Zamora', '50': 'Zaragoza',
+    '51': 'Ceuta', '52': 'Melilla'
+};
+
+const PROVINCIA_BOUNDS = {
+    '01': [[42.39, -3.23], [43.26, -2.19]], '02': [[38.01, -2.85], [39.46, -0.88]], '03': [[37.76, -1.19], [39.40, 0.25]],
+    '04': [[36.60, -3.16], [37.81, -1.56]], '05': [[40.05, -5.74], [41.22, -4.15]], '06': [[37.96, -7.38], [39.46, -4.68]],
+    '07': [[38.56, 1.18], [40.10, 4.39]], '08': [[41.10, 1.31], [42.35, 2.85]], '09': [[41.40, -4.34], [43.22, -2.52]],
+    '10': [[39.03, -7.44], [40.55, -5.10]], '11': [[35.95, -6.53], [37.03, -5.07]], '12': [[39.65, -0.80], [40.82, 0.58]],
+    '13': [[38.30, -5.07], [39.58, -2.60]], '14': [[37.13, -5.66], [38.70, -2.88]], '15': [[42.27, -9.36], [43.84, -7.64]],
+    '16': [[39.17, -3.23], [40.69, -1.15]], '17': [[41.30, 1.73], [42.56, 3.39]], '18': [[36.60, -4.36], [37.91, -2.38]],
+    '19': [[40.08, -3.56], [41.37, -1.49]], '20': [[42.87, -2.63], [43.47, -1.68]], '21': [[36.91, -7.57], [38.24, -6.12]],
+    '22': [[41.37, -0.92], [42.88, 0.82]], '23': [[37.31, -4.31], [38.56, -2.40]], '24': [[41.97, -7.11], [43.27, -4.75]],
+    '25': [[41.01, 0.25], [42.93, 2.28]], '26': [[41.86, -3.20], [42.72, -1.65]], '27': [[42.21, -8.48], [43.80, -6.87]],
+    '28': [[39.90, -4.59], [41.23, -3.00]], '29': [[36.25, -5.44], [37.37, -3.51]], '30': [[37.30, -2.25], [38.71, -0.59]],
+    '31': [[41.82, -2.58], [43.39, -0.82]], '32': [[41.74, -8.85], [43.27, -6.75]], '33': [[42.82, -7.24], [43.73, -4.47]],
+    '34': [[41.69, -5.07], [43.06, -3.90]], '35': [[27.63, -16.67], [29.26, -13.36]], '36': [[41.80, -8.97], [43.48, -7.80]],
+    '37': [[40.18, -6.92], [41.37, -5.05]], '38': [[27.54, -18.20], [28.93, -16.05]], '39': [[42.69, -4.87], [43.58, -3.07]],
+    '40': [[40.61, -4.79], [41.62, -3.26]], '41': [[36.75, -6.61], [38.19, -4.57]], '42': [[40.99, -3.46], [42.20, -1.71]],
+    '43': [[40.44, 0.15], [41.63, 2.08]], '44': [[39.81, -1.82], [41.39, 0.37]], '45': [[39.31, -5.38], [40.34, -2.90]],
+    '46': [[38.59, -1.53], [40.25, 0.20]], '47': [[41.04, -5.60], [42.37, -3.96]], '48': [[42.94, -3.54], [43.52, -2.15]],
+    '49': [[41.06, -7.06], [42.27, -5.21]], '50': [[40.89, -2.20], [42.77, 0.43]], '51': [[35.78, -5.44], [35.99, -5.20]],
+    '52': [[35.17, -3.05], [35.40, -2.84]]
+};
+
 class TerritorialMapApp {
     constructor() {
         this.map = null;
@@ -117,7 +152,7 @@ class TerritorialMapApp {
             center: [40.0, -3.7],
             zoom: 6,
             minZoom: 5,
-            maxZoom: 16,
+            maxZoom: 17,
             zoomControl: false
         });
 
@@ -150,16 +185,14 @@ class TerritorialMapApp {
         const bounds = this.map.getBounds();
 
         if (zoom >= 9) {
-            // Find which provinces are in the current viewport
+            // Find which provinces intersect the current viewport bounds
             const visible = [];
-            Object.entries(PROVINCIA_COORDS).forEach(([provName, coords]) => {
-                const latLng = L.latLng(coords[0], coords[1]);
-                if (bounds.pad(0.25).contains(latLng)) {
+            Object.entries(PROVINCIA_BOUNDS).forEach(([prefix, pBbox]) => {
+                const provLatLngBounds = L.latLngBounds(pBbox[0], pBbox[1]);
+                if (bounds.intersects(provLatLngBounds)) {
+                    const provName = PREFIX_TO_NAME[prefix] || `Provincia ${prefix}`;
                     const norm = normalizeName(provName);
-                    const prefix = PROVINCIA_PREFIX[norm];
-                    if (prefix) {
-                        visible.push({ norm, prefix, provName });
-                    }
+                    visible.push({ prefix, provName, norm });
                 }
             });
 

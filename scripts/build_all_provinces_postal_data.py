@@ -47,6 +47,18 @@ BCN_CITY_DISTRICTS = {
     '08042': 'Barcelona (Nou Barris / Canyelles)'
 }
 
+
+SANT_CUGAT_DISTRICTS = {
+    '08172': {'name': 'Sant Cugat (Centre / Monestir)', 'lat': 41.4674, 'lng': 2.0830},
+    '08173': {'name': 'Sant Cugat (Nord / Parc Central / Coll Favà)', 'lat': 41.4785, 'lng': 2.0870},
+    '08174': {'name': 'Sant Cugat (Valldoreix)', 'lat': 41.4550, 'lng': 2.0670},
+    '08195': {'name': 'Sant Cugat (Mira-sol)', 'lat': 41.4680, 'lng': 2.0520},
+    '08196': {'name': 'Sant Cugat (Les Planes)', 'lat': 41.4280, 'lng': 2.0950},
+    '08197': {'name': 'Sant Cugat (Valldoreix Sud / Can Monmany)', 'lat': 41.4460, 'lng': 2.0620},
+    '08198': {'name': 'Sant Cugat (La Floresta)', 'lat': 41.4420, 'lng': 2.0730},
+    '08190': {'name': 'Sant Cugat (Can Mates / Can Sant Joan)', 'lat': 41.4850, 'lng': 2.0700}
+}
+
 MAD_CITY_DISTRICTS = {
     '28001': 'Madrid (Salamanca / Recoletos)',
     '28002': 'Madrid (Chamartín / Prosperidad)',
@@ -126,6 +138,10 @@ with urllib.request.urlopen(req, timeout=20) as resp:
                             name = BCN_CITY_DISTRICTS[cp]
                         elif cp in MAD_CITY_DISTRICTS:
                             name = MAD_CITY_DISTRICTS[cp]
+                        elif cp in SANT_CUGAT_DISTRICTS:
+                            name = SANT_CUGAT_DISTRICTS[cp]['name']
+                            lat = SANT_CUGAT_DISTRICTS[cp]['lat']
+                            lng = SANT_CUGAT_DISTRICTS[cp]['lng']
                         else:
                             name = place
                             
@@ -276,6 +292,32 @@ for prefix, cp_dict in sorted(prov_postals.items()):
         continue
     active_provinces += 1
     
+    # 4b. Cartographic dispersion for duplicate coordinates
+    coords_map = {}
+    for cp, node in cp_dict.items():
+        key = (round(node['lat'], 4), round(node['lng'], 4))
+        coords_map.setdefault(key, []).append(node)
+
+    import math
+    for key, nodes in coords_map.items():
+        if len(nodes) > 1:
+            nodes.sort(key=lambda x: x['total'], reverse=True)
+            base_lat, base_lng = key
+            R = 0.0075  # ~800m offset
+            lat_rad = math.radians(base_lat)
+            cos_lat = max(math.cos(lat_rad), 0.2)
+            if len(nodes) == 2:
+                nodes[0]['lat'] = round(base_lat + R * 0.45, 4)
+                nodes[0]['lng'] = round(base_lng - (R * 0.45) / cos_lat, 4)
+                nodes[1]['lat'] = round(base_lat - R * 0.45, 4)
+                nodes[1]['lng'] = round(base_lng + (R * 0.45) / cos_lat, 4)
+            else:
+                m = len(nodes) - 1
+                for idx, node in enumerate(nodes[1:]):
+                    angle = 2 * math.pi * idx / m
+                    node['lat'] = round(base_lat + R * math.sin(angle), 4)
+                    node['lng'] = round(base_lng + (R * math.cos(angle)) / cos_lat, 4)
+
     prov_list = []
     prov_total_cars = 0
     for cp, node in cp_dict.items():
@@ -317,3 +359,18 @@ with open(os.path.join(out_dir, 'index.json'), 'w', encoding='utf-8') as f:
     json.dump(index_manifest, f, ensure_ascii=False, indent=2)
 
 print(f'Generated {active_provinces} province files in {out_dir}/ ({total_bytes / 1024:.1f} KB total).')
+
+# Compute province bounds
+prov_bounds = {}
+for prefix, cp_dict in sorted(prov_postals.items()):
+    if not cp_dict: continue
+    lats = [x['lat'] for x in cp_dict.values() if x['lat'] != 0]
+    lngs = [x['lng'] for x in cp_dict.values() if x['lng'] != 0]
+    if lats and lngs:
+        prov_bounds[prefix] = [
+            [round(min(lats) - 0.08, 4), round(min(lngs) - 0.08, 4)],
+            [round(max(lats) + 0.08, 4), round(max(lngs) + 0.08, 4)]
+        ]
+
+with open(os.path.join(out_dir, 'bounds.json'), 'w', encoding='utf-8') as f:
+    json.dump(prov_bounds, f, ensure_ascii=False, indent=2)
