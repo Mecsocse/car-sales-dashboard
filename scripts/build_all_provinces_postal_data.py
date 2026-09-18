@@ -117,6 +117,63 @@ MAD_CITY_DISTRICTS = {
     '28055': 'Madrid (Hortaleza / Valdebebas)'
 }
 
+EXACT_POSTAL_OVERRIDES = {
+    # Arganda del Rey & Rivas-Vaciamadrid (Fixes Julian Gonzalez report)
+    '28500': {'name': 'Arganda del Rey', 'lat': 40.3006, 'lng': -3.4372},
+    '28521': {'name': 'Rivas-Vaciamadrid (Urbanizaciones)', 'lat': 40.3530, 'lng': -3.5450},
+    '28522': {'name': 'Rivas-Vaciamadrid (Futura / Centro)', 'lat': 40.3440, 'lng': -3.5320},
+    '28523': {'name': 'Rivas-Vaciamadrid (Santa Mónica / Este)', 'lat': 40.3380, 'lng': -3.5180},
+    '28524': {'name': 'Rivas-Vaciamadrid (Polígono Industrial)', 'lat': 40.3300, 'lng': -3.5100},
+    '28529': {'name': 'Rivas-Vaciamadrid (Oficial)', 'lat': 40.3440, 'lng': -3.5350},
+    
+    # Navacerrada & Sierra de Madrid
+    '28491': {'name': 'Navacerrada (Pueblo)', 'lat': 40.7280, 'lng': -4.0160},
+    '28470': {'name': 'Navacerrada (Puerto)', 'lat': 40.7890, 'lng': -4.0040},
+    '28780': {'name': 'Gargantilla del Lozoya', 'lat': 40.9631, 'lng': -3.7161},
+    '28790': {'name': 'Rascafría', 'lat': 40.9044, 'lng': -3.8797},
+    '28478': {'name': 'Cercedilla (Las Dehesas)', 'lat': 40.7511, 'lng': -4.0583},
+
+    # Missing postal codes that hit default fallback (40.0, -3.7)
+    '03787': {'name': 'Els Poblets / El Verger', 'lat': 38.8475, 'lng': 0.0167},
+    '09117': {'name': 'Buniel / Burgos', 'lat': 42.3108, 'lng': -3.8219},
+    '09452': {'name': 'Gumiel de Izán', 'lat': 41.7725, 'lng': -3.6886},
+    '09631': {'name': 'Salas de los Infantes', 'lat': 42.0222, 'lng': -3.2917},
+    '14248': {'name': 'Pozoblanco / El Guijo', 'lat': 38.5000, 'lng': -4.7833},
+    '15228': {'name': 'Bertamiráns / Ames', 'lat': 42.8625, 'lng': -8.6533},
+    '15950': {'name': 'Ribeira', 'lat': 42.5564, 'lng': -8.9931},
+    '24359': {'name': 'Castrotierra de la Valduerna', 'lat': 42.3022, 'lng': -5.9922},
+    '27242': {'name': 'Meira', 'lat': 43.2136, 'lng': -7.2942},
+    '32535': {'name': 'O Irixo', 'lat': 42.5133, 'lng': -8.1189},
+    '36200': {'name': 'Vigo (Central)', 'lat': 42.2406, 'lng': -8.7207},
+    '36408': {'name': 'O Porriño', 'lat': 42.1611, 'lng': -8.6186},
+    '36130': {'name': 'Vilaboa', 'lat': 42.3592, 'lng': -8.6389},
+    '37194': {'name': 'Carbajosa de la Sagrada', 'lat': 40.9322, 'lng': -5.6517},
+    '37862': {'name': 'Calvarrasa de Arriba', 'lat': 40.9233, 'lng': -5.5567},
+    '39780': {'name': 'Liendo', 'lat': 43.3942, 'lng': -3.3764},
+    '45009': {'name': 'Toledo (Polígono Industrial)', 'lat': 39.8700, 'lng': -3.9550},
+    '46128': {'name': 'Port Saplaya (Alboraya)', 'lat': 39.5139, 'lng': -0.3236},
+    '48540': {'name': 'Trucios-Turtzioz', 'lat': 43.2847, 'lng': -3.2786},
+    '48290': {'name': 'Elorrio', 'lat': 43.1306, 'lng': -3.0536},
+    '49193': {'name': 'Morales del Vino', 'lat': 41.4475, 'lng': -5.7314},
+    '50057': {'name': 'Zaragoza (Puerto Venecia)', 'lat': 41.6214, 'lng': -0.8847}
+}
+
+PROV_CAPITAL_COORDS = {
+    '01': (42.8469, -2.6716), '02': (38.9943, -1.8585), '03': (38.3452, -0.4810), '04': (36.8381, -2.4597),
+    '05': (40.6567, -4.6813), '06': (38.8794, -6.9706), '07': (39.5696, 2.6502), '08': (41.3879, 2.1699),
+    '09': (42.3440, -3.6969), '10': (39.4753, -6.3724), '11': (36.5271, -6.2886), '12': (39.9864, -0.0513),
+    '13': (38.9848, -3.9274), '14': (37.8882, -4.7794), '15': (43.3623, -8.4115), '16': (40.0704, -2.1374),
+    '17': (41.9794, 2.8214), '18': (37.1773, -3.5986), '19': (40.6327, -3.1673), '20': (43.3183, -1.9812),
+    '21': (37.2614, -6.9447), '22': (42.1362, -0.4087), '23': (37.7796, -3.7849), '24': (42.5987, -5.5671),
+    '25': (41.6176, 0.6200), '26': (42.4658, -2.4499), '27': (43.0125, -7.5558), '28': (40.4168, -3.7038),
+    '29': (36.7213, -4.4214), '30': (37.9922, -1.1307), '31': (42.8125, -1.6458), '32': (42.3358, -7.8639),
+    '33': (43.3619, -5.8494), '34': (42.0095, -4.5288), '35': (28.1235, -15.4363), '36': (42.4336, -8.6480),
+    '37': (40.9701, -5.6635), '38': (28.4636, -16.2518), '39': (43.4623, -3.8099), '40': (40.9429, -4.1088),
+    '41': (37.3891, -5.9845), '42': (41.7640, -2.4688), '43': (41.1189, 1.2445), '44': (40.3456, -1.1072),
+    '45': (39.8628, -4.0273), '46': (39.4699, -0.3763), '47': (41.6523, -4.7245), '48': (43.2630, -2.9350),
+    '49': (41.5033, -5.7446), '50': (41.6488, -0.8891), '51': (35.8894, -5.3198), '52': (35.2923, -2.9381)
+}
+
 print('1. Loading GeoNames coordinates for all Spanish postal codes...')
 geonames_url = 'https://download.geonames.org/export/zip/ES.zip'
 req = urllib.request.Request(geonames_url, headers={'User-Agent': 'CarDataSales/1.0'})
@@ -152,7 +209,15 @@ with urllib.request.urlopen(req, timeout=20) as resp:
                                 'lng': round(lng, 4)
                             }
 
-print(f'Loaded {len(cp_geo)} distinct postal codes with coordinates.')
+# Apply curated exact coordinates and name overrides
+for cp, item in EXACT_POSTAL_OVERRIDES.items():
+    cp_geo[cp] = {
+        'name': item['name'],
+        'lat': round(item['lat'], 4),
+        'lng': round(item['lng'], 4)
+    }
+
+print(f'Loaded {len(cp_geo)} distinct postal codes with coordinates (overrides applied).')
 
 def map_fuel(code_char):
     if code_char == '0': return 'GASOLINA'
@@ -269,7 +334,8 @@ for fpath in files:
                 
             prov_dict = prov_postals[prefix]
             if cp not in prov_dict:
-                geo_info = cp_geo.get(cp, {'name': f'CP {cp}', 'lat': 40.0, 'lng': -3.7})
+                cap_lat, cap_lng = PROV_CAPITAL_COORDS.get(prefix, (40.4168, -3.7038))
+                geo_info = cp_geo.get(cp, {'name': f'CP {cp}', 'lat': cap_lat, 'lng': cap_lng})
                 prov_dict[cp] = {
                     'cp': cp,
                     'name': geo_info['name'],

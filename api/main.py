@@ -63,22 +63,38 @@ def startup_event():
 
     def _run_dgt_background_watcher():
         import time
-        from datetime import datetime
-        # Wait 45s after boot to let app initialize smoothly
-        time.sleep(45)
+        from datetime import datetime, timezone
+        # Wait 30s after boot to let app initialize smoothly
+        time.sleep(30)
         while True:
+            sleep_duration = 900
             try:
-                # Active hours: 10:00 to 19:30 UTC / Spain time
-                now = datetime.now()
-                # Run lightweight catchup (skips existing dates in 2s, ingests newly published DGT files)
-                if 9 <= now.hour <= 20:
+                # Use UTC explicitly: Spain (CEST) is UTC+2 in summer, UTC+1 in winter
+                # DGT publishes daily matriculaciones between 07:15 and 08:30 UTC (09:15 - 10:30 Spain time)
+                now_utc = datetime.now(timezone.utc)
+                hour_utc = now_utc.hour
+                minute_utc = now_utc.minute
+                weekday = now_utc.weekday() # 0 = Monday, 4 = Friday
+
+                # Active window: 07:00 UTC to 20:00 UTC (09:00 to 22:00 Spain CEST)
+                if 7 <= hour_utc <= 20:
                     from agents.extractor.dgt_spain import DGTSpainExtractor
                     extractor = DGTSpainExtractor()
                     extractor.auto_catchup(days_back=3)
+                
+                # High-frequency morning window (07:10 to 08:45 UTC / 09:10 to 10:45 CEST) on weekdays
+                # Poll every 60 seconds so we ingest within 1 minute of DGT publishing!
+                if weekday < 5 and ((hour_utc == 7 and minute_utc >= 10) or (hour_utc == 8 and minute_utc <= 45)):
+                    sleep_duration = 60
+                elif 7 <= hour_utc <= 20:
+                    sleep_duration = 900 # 15 minutes during regular day
+                else:
+                    sleep_duration = 1800 # 30 minutes during night
             except Exception as e:
                 print("DGT Background Watcher notice:", e)
-            # Check every 15 minutes
-            time.sleep(900)
+                sleep_duration = 120
+            
+            time.sleep(sleep_duration)
 
     threading.Thread(target=_run_dgt_background_watcher, daemon=True).start()
 
