@@ -527,6 +527,142 @@ body, html {
 }
 
 /* -------------------------------------------------------------
+   Search CP / Municipio Styles
+   ------------------------------------------------------------- */
+.search-cp-group {
+    position: relative;
+    min-width: 170px;
+    max-width: 220px;
+}
+
+.search-cp-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-cp-icon {
+    position: absolute;
+    left: 8px;
+    width: 14px;
+    height: 14px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.search-cp-box input {
+    width: 100%;
+    padding: 6px 24px 6px 28px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #0f172a;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.search-cp-box input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.search-cp-clear {
+    position: absolute;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+.search-cp-clear:hover {
+    color: #0f172a;
+}
+
+.search-cp-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    min-width: 240px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    z-index: 1000;
+}
+
+.search-cp-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+}
+.search-cp-item:last-child {
+    border-bottom: none;
+}
+.search-cp-item:hover, .search-cp-item.selected {
+    background: #eff6ff;
+}
+.search-cp-badge {
+    font-weight: 800;
+    color: #2563eb;
+    margin-right: 6px;
+    font-variant-numeric: tabular-nums;
+}
+.search-cp-name {
+    color: #1e293b;
+    font-weight: 600;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.search-cp-units {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+.search-cp-no-results {
+    padding: 12px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+/* Pulsing halo for searched marker */
+@keyframes markerPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 20px rgba(37, 99, 235, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    }
+}
+.marker-highlight-pulse {
+    animation: markerPulse 1.8s infinite;
+    border-radius: 50%;
+}
+
+/* -------------------------------------------------------------
    Responsive Design
    ------------------------------------------------------------- */
 @media (max-width: 900px) {

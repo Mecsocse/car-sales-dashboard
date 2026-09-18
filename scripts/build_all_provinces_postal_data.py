@@ -126,6 +126,26 @@ EXACT_POSTAL_OVERRIDES = {
     '28524': {'name': 'Rivas-Vaciamadrid (Polígono Industrial)', 'lat': 40.3300, 'lng': -3.5100},
     '28529': {'name': 'Rivas-Vaciamadrid (Oficial)', 'lat': 40.3440, 'lng': -3.5350},
     
+    # Palau-solità i Plegamans & Sant Sadurní d'Anoia & Palautordera
+    '08184': {'name': 'Palau-solità i Plegamans', 'lat': 41.5872, 'lng': 2.1794},
+    '08770': {'name': "Sant Sadurní d'Anoia", 'lat': 41.4244, 'lng': 1.7853},
+    '08460': {'name': 'Santa Maria de Palautordera', 'lat': 41.6967, 'lng': 2.4556},
+    '08461': {'name': 'Sant Esteve de Palautordera', 'lat': 41.7050, 'lng': 2.4333},
+    
+    # L'Hospitalet de Llobregat (Fixes 25km displacement to northern Barcelona)
+    '08901': {'name': "L'Hospitalet (Centre / Sanfeliu)", 'lat': 41.3615, 'lng': 2.1008},
+    '08902': {'name': "L'Hospitalet (Collblanc / Torrassa)", 'lat': 41.3650, 'lng': 2.1220},
+    '08903': {'name': "L'Hospitalet (Collblanc)", 'lat': 41.3710, 'lng': 2.1150},
+    '08904': {'name': "L'Hospitalet (La Florida)", 'lat': 41.3670, 'lng': 2.1090},
+    '08905': {'name': "L'Hospitalet (Pubilla Cases)", 'lat': 41.3680, 'lng': 2.1020},
+    '08906': {'name': "L'Hospitalet (Can Serra)", 'lat': 41.3640, 'lng': 2.0950},
+    '08907': {'name': "L'Hospitalet (Bellvitge)", 'lat': 41.3530, 'lng': 2.1110},
+    '08908': {'name': "L'Hospitalet (Gornal / Granvia)", 'lat': 41.3480, 'lng': 2.1190},
+    
+    # Badia del Vallès & L'Ametlla del Vallès
+    '08214': {'name': 'Badia del Vallès', 'lat': 41.5090, 'lng': 2.1150},
+    '08480': {'name': "L'Ametlla del Vallès", 'lat': 41.6730, 'lng': 2.2600},
+
     # Navacerrada & Sierra de Madrid
     '28491': {'name': 'Navacerrada (Pueblo)', 'lat': 40.7280, 'lng': -4.0160},
     '28470': {'name': 'Navacerrada (Puerto)', 'lat': 40.7890, 'lng': -4.0040},
@@ -178,7 +198,20 @@ print('1. Loading GeoNames coordinates for all Spanish postal codes...')
 geonames_url = 'https://download.geonames.org/export/zip/ES.zip'
 req = urllib.request.Request(geonames_url, headers={'User-Agent': 'CarDataSales/1.0'})
 
-cp_geo = {}
+def score_geonames_candidate(parts):
+    place = parts[2].strip()
+    admin3 = parts[7].strip() if len(parts) > 7 else ''
+    acc = int(parts[11]) if len(parts) > 11 and parts[11].isdigit() else 1
+    score = acc * 10
+    place_l = place.lower()
+    for bad_prefix in ['can ', 'mas ', 'cal ', 'urbanizacion', 'poligono', 'poligon', 'barrio', 'colonia', 'ventorro', 'emisora', 'diseminado', 'caserio', 'aldea']:
+        if place_l.startswith(bad_prefix):
+            score -= 15
+    if admin3 and (admin3.lower() in place_l or place_l in admin3.lower()):
+        score += 20
+    return score
+
+cp_candidates = {}
 with urllib.request.urlopen(req, timeout=20) as resp:
     with zipfile.ZipFile(io.BytesIO(resp.read())) as z:
         with z.open('ES.txt') as f:
@@ -187,27 +220,33 @@ with urllib.request.urlopen(req, timeout=20) as resp:
                 if len(parts) >= 11:
                     cp = parts[1].strip()
                     if len(cp) == 5 and cp.isdigit():
-                        place = parts[2].strip()
-                        lat = float(parts[9])
-                        lng = float(parts[10])
-                        
-                        if cp in BCN_CITY_DISTRICTS:
-                            name = BCN_CITY_DISTRICTS[cp]
-                        elif cp in MAD_CITY_DISTRICTS:
-                            name = MAD_CITY_DISTRICTS[cp]
-                        elif cp in SANT_CUGAT_DISTRICTS:
-                            name = SANT_CUGAT_DISTRICTS[cp]['name']
-                            lat = SANT_CUGAT_DISTRICTS[cp]['lat']
-                            lng = SANT_CUGAT_DISTRICTS[cp]['lng']
-                        else:
-                            name = place
-                            
-                        if cp not in cp_geo:
-                            cp_geo[cp] = {
-                                'name': name,
-                                'lat': round(lat, 4),
-                                'lng': round(lng, 4)
-                            }
+                        if cp not in cp_candidates:
+                            cp_candidates[cp] = []
+                        cp_candidates[cp].append(parts)
+
+cp_geo = {}
+for cp, candidates in cp_candidates.items():
+    best = max(candidates, key=score_geonames_candidate)
+    place = best[2].strip()
+    lat = float(best[9])
+    lng = float(best[10])
+
+    if cp in BCN_CITY_DISTRICTS:
+        name = BCN_CITY_DISTRICTS[cp]
+    elif cp in MAD_CITY_DISTRICTS:
+        name = MAD_CITY_DISTRICTS[cp]
+    elif cp in SANT_CUGAT_DISTRICTS:
+        name = SANT_CUGAT_DISTRICTS[cp]['name']
+        lat = SANT_CUGAT_DISTRICTS[cp]['lat']
+        lng = SANT_CUGAT_DISTRICTS[cp]['lng']
+    else:
+        name = place
+
+    cp_geo[cp] = {
+        'name': name,
+        'lat': round(lat, 4),
+        'lng': round(lng, 4)
+    }
 
 # Apply curated exact coordinates and name overrides
 for cp, item in EXACT_POSTAL_OVERRIDES.items():
@@ -493,4 +532,21 @@ for prefix in sorted(prov_postals.keys()):
 with open(os.path.join(out_dir, 'all_spain_cp.json'), 'w', encoding='utf-8') as f:
     json.dump(all_spain, f, ensure_ascii=False, separators=(',', ':'))
 print('Generated all_spain_cp.json successfully.')
+
+# Generate lightweight search index for instant CP / town autocomplete
+search_index = []
+for prefix, nodes in prov_postals.items():
+    for cp, node in nodes.items():
+        search_index.append({
+            'cp': cp,
+            'name': node['name'],
+            'lat': node['lat'],
+            'lng': node['lng'],
+            'total': node['total'],
+            'prov': prefix
+        })
+search_index.sort(key=lambda x: x['total'], reverse=True)
+with open(os.path.join(out_dir, 'cp_search_index.json'), 'w', encoding='utf-8') as f:
+    json.dump(search_index, f, ensure_ascii=False, separators=(',', ':'))
+print(f'Generated cp_search_index.json with {len(search_index)} entries ({os.path.getsize(os.path.join(out_dir, "cp_search_index.json")) / 1024:.1f} KB).')
 

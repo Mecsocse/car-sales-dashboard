@@ -7,6 +7,8 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
     ? 'http://127.0.0.1:8000'
     : (window.location.hostname.includes('cardatasales.com') ? '' : 'https://car-sales-api-jafd.onrender.com');
 
+const DATA_VERSION = '20260918_v3';
+
 const PROVINCIA_COORDS = {
     'Madrid': [40.4168, -3.7038],
     'Barcelona': [41.3879, 2.1699],
@@ -141,6 +143,7 @@ class TerritorialMapApp {
         this.loadingAllSpainPromise = null;
         this.activeAbortController = null;
         this.fetchSequence = 0;
+        this.searchIndex = [];
 
         this.init();
     }
@@ -148,9 +151,11 @@ class TerritorialMapApp {
     async init() {
         this.initLeaflet();
         this.bindEvents();
+        this.initSearch();
         if (window.lucide) lucide.createIcons();
         await this.loadBrandsCatalog();
         await this.loadModelsCatalog();
+        await this.loadSearchIndex();
         await this.fetchAndRender();
     }
 
@@ -226,7 +231,7 @@ class TerritorialMapApp {
 
         this.loadingAllSpainPromise = (async () => {
             try {
-                const res = await fetch('/data/cp/all_spain_cp.json');
+                const res = await fetch(`/data/cp/all_spain_cp.json?v=${DATA_VERSION}`);
                 if (res.ok) {
                     const allData = await res.json();
                     Object.entries(allData).forEach(([prefix, items]) => {
@@ -238,7 +243,7 @@ class TerritorialMapApp {
                     await Promise.all(prefixes.map(async p => {
                         if (!this.loadedPostalData[p]) {
                             try {
-                                const r = await fetch(`/data/cp/cp_${p}.json`);
+                                const r = await fetch(`/data/cp/cp_${p}.json?v=${DATA_VERSION}`);
                                 if (r.ok) this.loadedPostalData[p] = await r.json();
                             } catch (e) {}
                         }
@@ -341,7 +346,7 @@ class TerritorialMapApp {
                 const loads = visible.map(async v => {
                     if (!this.loadedPostalData[v.prefix]) {
                         try {
-                            const res = await fetch(`/data/cp/cp_${v.prefix}.json`);
+                            const res = await fetch(`/data/cp/cp_${v.prefix}.json?v=${DATA_VERSION}`);
                             if (res.ok) {
                                 this.loadedPostalData[v.prefix] = await res.json();
                             }
@@ -624,6 +629,176 @@ class TerritorialMapApp {
         if (btnCp) {
             btnCp.addEventListener('click', () => this.setViewMode('all_cp'));
         }
+    }
+
+    async loadSearchIndex() {
+        try {
+            const res = await fetch(`/data/cp/cp_search_index.json?v=${DATA_VERSION}`);
+            if (res.ok) {
+                this.searchIndex = await res.json();
+            }
+        } catch (err) {
+            console.warn('Could not load cp_search_index:', err);
+        }
+    }
+
+    initSearch() {
+        const input = document.getElementById('search-cp-input');
+        const clearBtn = document.getElementById('search-cp-clear');
+        const resultsEl = document.getElementById('search-cp-results');
+        if (!input || !resultsEl) return;
+
+        let debounceTimer = null;
+        let selectedIndex = -1;
+        let currentMatches = [];
+
+        const renderResults = (matches) => {
+            currentMatches = matches;
+            selectedIndex = -1;
+            if (matches.length === 0) {
+                resultsEl.innerHTML = '<div class="search-cp-no-results">No se encontró ningún código postal o municipio</div>';
+                resultsEl.style.display = 'block';
+                return;
+            }
+            resultsEl.innerHTML = matches.map((m, idx) => `
+                <div class="search-cp-item" data-idx="${idx}">
+                    <span class="search-cp-badge">${m.cp}</span>
+                    <span class="search-cp-name">${m.name}</span>
+                    <span class="search-cp-units">${(m.total || 0).toLocaleString('es-ES')} uds</span>
+                </div>
+            `).join('');
+            resultsEl.style.display = 'block';
+
+            resultsEl.querySelectorAll('.search-cp-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    const idx = parseInt(el.dataset.idx, 10);
+                    if (currentMatches[idx]) {
+                        this.flyToCp(currentMatches[idx]);
+                        resultsEl.style.display = 'none';
+                    }
+                });
+            });
+        };
+
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            const val = input.value.trim();
+            if (clearBtn) clearBtn.style.display = val ? 'block' : 'none';
+
+            if (val.length < 2) {
+                resultsEl.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                if (!this.searchIndex || this.searchIndex.length === 0) return;
+                const qNorm = normalizeName(val);
+                const isNumeric = /^\d+$/.test(val);
+                const matches = [];
+
+                for (let i = 0; i < this.searchIndex.length; i++) {
+                    const node = this.searchIndex[i];
+                    if (isNumeric) {
+                        if (node.cp.startsWith(val)) matches.push(node);
+                    } else {
+                        if (normalizeName(node.name).includes(qNorm) || node.cp.startsWith(val)) {
+                            matches.push(node);
+                        }
+                    }
+                    if (matches.length >= 10) break;
+                }
+                renderResults(matches);
+            }, 120);
+        });
+
+        input.addEventListener('keydown', (e) => {
+            if (resultsEl.style.display === 'none' || currentMatches.length === 0) return;
+
+            const items = resultsEl.querySelectorAll('.search-cp-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedIndex = Math.min(selectedIndex + 1, currentMatches.length - 1);
+                items.forEach((it, i) => it.classList.toggle('selected', i === selectedIndex));
+                if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedIndex = Math.max(selectedIndex - 1, 0);
+                items.forEach((it, i) => it.classList.toggle('selected', i === selectedIndex));
+                if (items[selectedIndex]) items[selectedIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const target = selectedIndex >= 0 ? currentMatches[selectedIndex] : currentMatches[0];
+                if (target) {
+                    this.flyToCp(target);
+                    resultsEl.style.display = 'none';
+                }
+            } else if (e.key === 'Escape') {
+                resultsEl.style.display = 'none';
+            }
+        });
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                input.value = '';
+                clearBtn.style.display = 'none';
+                resultsEl.style.display = 'none';
+                input.focus();
+            });
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !resultsEl.contains(e.target)) {
+                resultsEl.style.display = 'none';
+            }
+        });
+    }
+
+    async flyToCp(node) {
+        const input = document.getElementById('search-cp-input');
+        if (input) {
+            input.value = `${node.cp} - ${node.name}`;
+        }
+        const clearBtn = document.getElementById('search-cp-clear');
+        if (clearBtn) clearBtn.style.display = 'block';
+
+        // 1. Ensure province postal data is loaded
+        const prefix = node.prov || node.cp.substring(0, 2);
+        if (!this.loadedPostalData[prefix]) {
+            try {
+                const res = await fetch(`/data/cp/cp_${prefix}.json?v=${DATA_VERSION}`);
+                if (res.ok) {
+                    this.loadedPostalData[prefix] = await res.json();
+                }
+            } catch (err) {
+                console.warn(`Error loading cp_${prefix}.json:`, err);
+            }
+        }
+
+        // 2. Smoothly fly map to coordinates at zoom 13
+        this.map.flyTo([node.lat, node.lng], 13, { duration: 1.2 });
+
+        // 3. Highlight bubble and trigger popup once arrived
+        setTimeout(() => {
+            let targetMarker = null;
+            this.postalLayer.eachLayer(layer => {
+                if (layer.getLatLng) {
+                    const ll = layer.getLatLng();
+                    const dist = Math.hypot(ll.lat - node.lat, ll.lng - node.lng);
+                    if (dist < 0.015) {
+                        targetMarker = layer;
+                    }
+                }
+            });
+
+            if (targetMarker) {
+                targetMarker.openPopup();
+                const el = targetMarker.getElement();
+                if (el) {
+                    el.classList.add('marker-highlight-pulse');
+                    setTimeout(() => el.classList.remove('marker-highlight-pulse'), 4500);
+                }
+            }
+        }, 1350);
     }
 
     async loadModelsCatalog() {
