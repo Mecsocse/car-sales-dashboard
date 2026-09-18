@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Metodología y Fuentes de Datos DGT | CarDataSales</title>
+    <meta name="description" content="Conoce en detalle la metodología técnica de CarDataSales: procesamiento de microdatos de la DGT, clasificación de turismos, combustibles (BEV, PHEV) y geocodificación.">
+    <link rel="canonical" href="https://cardatasales.com/metodologia">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/pages.css?v=20260918_v1">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-container">
+            <a href="/" class="brand-link">
+                <div class="brand-icon">🚗</div>
+                <div>
+                    <div class="brand-name">CarDataSales</div>
+                    <div class="brand-tagline">Inteligencia de Mercado DGT</div>
+                </div>
+            </a>
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="/">Dashboard</a></li>
+                    <li><a href="/mapa">Mapa Territorial</a></li>
+                    <li><a href="/ultima-matricula-dgt">Última Matrícula</a></li>
+                    <li><a href="/prevision-matriculas">Previsión</a></li>
+                    <li><a href="/sobre-nosotros">Sobre Nosotros</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="content-wrapper">
+        <div class="breadcrumbs">
+            <a href="/">Inicio</a> <span>/</span> <span>Metodología</span>
+        </div>
+
+        <article class="content-card">
+            <h1 class="page-title">Metodología y Tratamiento de Microdatos</h1>
+            <div class="page-subtitle">Rigor estadístico, arquitectura de datos y criterios técnicos de filtrado de la DGT</div>
+            <div class="page-meta">
+                <span>Equipo de Ingeniería de Datos CarDataSales</span>
+                <span>•</span>
+                <span>Documento Técnico v2.4</span>
+            </div>
+
+            <p>La fiabilidad de los análisis estadísticos de <strong>CarDataSales</strong> se sustenta en un pipeline automatizado de ingesta, limpieza y normalización que procesa a diario los microdatos oficiales de matriculación emitidos por la <strong>Dirección General de Tráfico (DGT)</strong>.</p>
+
+            <h2>1. Fuente de Datos Primaria</h2>
+            <p>Los datos en bruto provienen de dos vías oficiales:</p>
+            <ul>
+                <li><strong>Microdatos diarios de matriculación:</strong> Ficheros diarios en formato de ancho fijo (Fixed-Width Format) que la DGT publica cada jornada laborable con el detalle de las operaciones cerradas en las distintas jefaturas provinciales de tráfico.</li>
+                <li><strong>Consolidados mensuales de datos abiertos:</strong> Publicaciones periódicas a través del catálogo nacional de datos abiertos (<a href="https://datos.gob.es" target="_blank" rel="noopener">datos.gob.es</a>).</li>
+            </ul>
+
+            <h2>2. Filtrado Estricto de Turismos (Categoría M1)</h2>
+            <p>En el mercado del automóvil, a menudo se confunden las cifras de vehículos totales con las de turismos de pasajeros. Para ofrecer datos homogéneos y comparables con los estándares de la industria europea (ACEA) y las patronales (ANFAC):</p>
+            <div class="callout-box">
+                <strong>Criterio de Inclusión:</strong> Filtramos estrictamente los vehículos de tipo <strong>Tipo 40 (Turismos M1)</strong>. Quedan excluidos camiones pesados, furgonetas comerciales ligeras (categoría N1, salvo derivados clasificados como turismo), motocicletas, ciclomotores, tractores y remolques agrícolas.
+            </div>
+
+            <h2>3. Normalización de Marcas y Modelos</h2>
+            <p>Los ficheros en bruto de la DGT introducen con frecuencia variaciones ortográficas, erratas o denominaciones comerciales heredadas (por ejemplo: «SEAT, S.A.», «SEAT IBIZA 1.0», «SEAT IBIZA STYLE»).</p>
+            <p>Nuestro motor de normalización aplica un diccionario de más de 400 marcas y catálogos de palabras clave de modelos para consolidar registros dispersos bajo una única denominación canónica limpia (por ejemplo, agrupar todas las variantes bajo <em>SEAT IBIZA</em> o <em>TESLA MODEL 3</em>), permitiendo rankings comparativos 100% exactos.</p>
+
+            <h2>4. Clasificación de Tecnologías de Propulsión y Combustibles</h2>
+            <p>Para analizar la transición energética con precisión, cruzamos el código numérico de carburante de la DGT con las cadenas descriptivas de ficha técnica homologada:</p>
+            <div class="table-wrapper">
+                <table class="content-table">
+                    <thead>
+                        <tr>
+                            <th>Categoría CarDataSales</th>
+                            <th>Definición Técnica</th>
+                            <th>Distintivo Ambiental DGT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>100% Eléctrico (BEV)</strong></td>
+                            <td>Vehículo eléctrico de batería pura, sin motor de combustión.</td>
+                            <td>Etiqueta CERO Azul</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Híbrido Enchufable (PHEV)</strong></td>
+                            <td>Batería recargable en red con motor térmico auxiliar (autonomía &gt; 40 km).</td>
+                            <td>Etiqueta CERO Azul</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Híbrido No Enchufable (HEV/MHEV)</strong></td>
+                            <td>Híbridos autorrecargables y microhíbridos de 48V.</td>
+                            <td>Etiqueta ECO</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gas (GLP / GNC)</strong></td>
+                            <td>Bifuel con gas licuado de petróleo o gas natural comprimido.</td>
+                            <td>Etiqueta ECO</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gasolina</strong></td>
+                            <td>Motores de combustión interna tradicional sin hibridación.</td>
+                            <td>Etiqueta C / B</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Diésel</strong></td>
+                            <td>Motores diésel convencionales sin hibridación de tracción.</td>
+                            <td>Etiqueta C / B</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>5. Georreferenciación por Código Postal</h2>
+            <p>A diferencia de los resúmenes provinciales tradicionales, CarDataSales desglosa las matriculaciones por código postal. Para ello:</p>
+            <ul>
+                <li>Se extrae el código postal de 5 dígitos del domicilio de matriculación reflejado en el registro de la DGT.</li>
+                <li>Se cruza con las bases geográficas de coordenadas municipales y distritos urbanos de España.</li>
+                <li>Se aplica una matriz de dispersión cartográfica controlada en núcleos de alta densidad y coordenadas compartidas para evitar el solapamiento de marcadores en el mapa interactivo.</li>
+            </ul>
+
+            <h2>6. Compromiso de Transparencia</h2>
+            <p>CarDataSales recalcula y verifica la consistencia histórica de las series cada vez que la DGT publica actualizaciones o rectificaciones retroactivas, garantizando que el usuario siempre visualice el acumulado más verídico posible.</p>
+        </article>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                        <span style="font-size: 20px;">🚗</span>
+                        <strong style="font-size: 16px; color: #0f172a;">CarDataSales</strong>
+                    </div>
+                    <p style="font-size: 13px; color: #64748b; line-height: 1.6;">
+                        Plataforma independiente líder en monitorización diaria de ventas y matriculaciones de coches en España con microdatos oficiales de la DGT.
+                    </p>
+                </div>
+                <div class="footer-col">
+                    <h4>Herramientas</h4>
+                    <ul>
+                        <li><a href="/">Dashboard General</a></li>
+                        <li><a href="/mapa">Mapa de Códigos Postales</a></li>
+                        <li><a href="/ultima-matricula-dgt">Última Matrícula DGT</a></li>
+                        <li><a href="/prevision-matriculas">Previsión de Letras</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Información</h4>
+                    <ul>
+                        <li><a href="/sobre-nosotros">Sobre Nosotros</a></li>
+                        <li><a href="/metodologia" style="font-weight: 700; color: #2563eb;">Metodología DGT</a></li>
+                        <li><a href="/contacto">Contacto</a></li>
+                        <li><a href="https://x.com/CarDataSales" target="_blank" rel="noopener">Twitter / X</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="/politica-de-privacidad">Política de Privacidad</a></li>
+                        <li><a href="/aviso-legal">Aviso Legal</a></li>
+                        <li><a href="/politica-de-cookies">Política de Cookies</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; 2026 CarDataSales. Todos los derechos reservados.</span>
+                <span>Fuente de datos: Dirección General de Tráfico (DGT) / datos.gob.es</span>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

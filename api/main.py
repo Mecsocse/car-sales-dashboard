@@ -186,14 +186,82 @@ def read_root():
 @app.get("/informe-septiembre-2026/")
 @app.get("/matriculaciones-septiembre-2026")
 @app.get("/ventas-septiembre-2026")
-@app.get("/ultima-matricula-dgt")
-@app.get("/ultima-matricula-dgt/")
-@app.get("/prevision-matriculas")
-@app.get("/prevision-matriculas/")
-@app.get("/matriculas")
-@app.get("/matriculas/")
 def read_seo_landing_pages(request: Request):
     return HTMLResponse(content=get_customized_seo_html(request.url.path), status_code=200)
+
+@app.get("/ultima-matricula-dgt")
+@app.get("/ultima-matricula-dgt/")
+@app.get("/ultima-matricula-dgt.html")
+@app.get("/matriculas")
+@app.get("/matriculas/")
+def read_ultima_matricula_page():
+    p = os.path.join(DASHBOARD_DIR, "ultima-matricula-dgt.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/prevision-matriculas")
+@app.get("/prevision-matriculas/")
+@app.get("/prevision-matriculas.html")
+def read_prevision_matriculas_page():
+    p = os.path.join(DASHBOARD_DIR, "prevision-matriculas.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/metodologia")
+@app.get("/metodologia/")
+@app.get("/metodologia.html")
+def read_metodologia_page():
+    p = os.path.join(DASHBOARD_DIR, "metodologia.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/sobre-nosotros")
+@app.get("/sobre-nosotros/")
+@app.get("/sobre-nosotros.html")
+def read_sobre_nosotros_page():
+    p = os.path.join(DASHBOARD_DIR, "sobre-nosotros.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/contacto")
+@app.get("/contacto/")
+@app.get("/contacto.html")
+def read_contacto_page():
+    p = os.path.join(DASHBOARD_DIR, "contacto.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/politica-de-privacidad")
+@app.get("/politica-de-privacidad/")
+@app.get("/politica-de-privacidad.html")
+def read_privacidad_page():
+    p = os.path.join(DASHBOARD_DIR, "politica-de-privacidad.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/aviso-legal")
+@app.get("/aviso-legal/")
+@app.get("/aviso-legal.html")
+def read_aviso_legal_page():
+    p = os.path.join(DASHBOARD_DIR, "aviso-legal.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
+@app.get("/politica-de-cookies")
+@app.get("/politica-de-cookies/")
+@app.get("/politica-de-cookies.html")
+def read_cookies_page():
+    p = os.path.join(DASHBOARD_DIR, "politica-de-cookies.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
 
 @app.get("/mapa")
 @app.get("/mapa/")
