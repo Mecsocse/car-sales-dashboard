@@ -1,8 +1,8 @@
 // components.js - Reusable UI Components
 
-function createMetricCard(title, value, delta, deltaIcon, deltaColor, extraText, iconName = "bar-chart-2") {
+function createMetricCard(title, value, delta, deltaIcon, deltaColor, extraText, iconName = "bar-chart-2", extraAttrs = "") {
     return `
-        <div class="glass-panel metric-card">
+        <div class="glass-panel metric-card" ${extraAttrs}>
             <div class="metric-header">
                 <span>${title}</span>
                 <i data-lucide="${iconName}"></i>
@@ -93,12 +93,12 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
         </div>
     `;
 
+    const brandAttrs = `id="card-top-brand" style="cursor: pointer; transition: transform 0.15s ease;" onclick="if(window.App) window.App.openBrandModal('${topBrandVal !== 'N/A' ? topBrandVal : ''}')" title="Haz clic para ver el Análisis Integral de Marca"`;
+
     container.innerHTML = `
         ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, compLabel, "car")}
         ${quotaCardHtml}
-        <div style="cursor: pointer; transition: transform 0.15s ease;" onclick="if(window.App) window.App.openBrandModal('${topBrandVal !== 'N/A' ? topBrandVal : ''}')" title="Haz clic para ver el Análisis Integral de Marca">
-            ${createMetricCard("Marca Ganadora", topBrandVal, topBrandUnits, "award", "text-green", "👆 Clic para análisis completo", "award")}
-        </div>
+        ${createMetricCard("Marca Ganadora", topBrandVal, topBrandUnits, "award", "text-green", "👆 Clic para análisis completo", "award", brandAttrs)}
         ${createMetricCard("Modelo Ganador", topModelVal, topModelUnits, "trophy", "text-purple", "Modelo más vendido", "trophy")}
     `;
 

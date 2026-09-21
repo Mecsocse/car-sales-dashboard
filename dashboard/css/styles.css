@@ -135,6 +135,12 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
     margin-bottom: 24px;
+    align-items: stretch;
+}
+
+.metrics-grid > div,
+.metrics-grid > .metric-card {
+    height: 100%;
 }
 
 .metric-card {
@@ -144,6 +150,12 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.metric-card[onclick]:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .metric-header {
