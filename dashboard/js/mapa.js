@@ -825,13 +825,13 @@ class TerritorialMapApp {
             html = `<option value="">Todos los modelos de ${brand}</option>`;
             bModels.forEach(m => {
                 const isSel = (currentVal === m.full_model) ? 'selected' : '';
-                html += `<option value="${m.full_model}" ${isSel}>${m.model} (${m.total.toLocaleString('es-ES')} un.)</option>`;
+                html += `<option value="${m.full_model}" ${isSel}>${m.model}</option>`;
             });
         } else if (this.modelsCatalog && this.modelsCatalog.top_models_spain) {
             html += '<optgroup label="Top 50 Modelos más vendidos">';
             this.modelsCatalog.top_models_spain.forEach(m => {
                 const isSel = (currentVal === m.full_model) ? 'selected' : '';
-                html += `<option value="${m.full_model}" ${isSel}>${m.full_model} (${m.total.toLocaleString('es-ES')} un.)</option>`;
+                html += `<option value="${m.full_model}" ${isSel}>${m.full_model}</option>`;
             });
             html += '</optgroup>';
         }
