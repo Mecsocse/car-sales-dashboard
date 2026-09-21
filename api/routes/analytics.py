@@ -1443,6 +1443,40 @@ def get_brand_deepdive(
             "total": y_rows.get(yr, 0)
         } for yr in ['2023', '2024', '2025', '2026']]
 
+        # 3b. Ventas por trimestres (Q1-Q4)
+        exec_query(c, f"""
+            SELECT anio_str,
+                   CASE
+                     WHEN substr(mes_str, 6, 2) IN ('01','02','03') THEN 'Q1'
+                     WHEN substr(mes_str, 6, 2) IN ('04','05','06') THEN 'Q2'
+                     WHEN substr(mes_str, 6, 2) IN ('07','08','09') THEN 'Q3'
+                     ELSE 'Q4'
+                   END as trimestre,
+                   SUM(total_unidades) as total
+            FROM ventas_mensuales_resumen
+            WHERE anio_str IN ('2024', '2025', '2026') AND UPPER(marca_clean) = ? {where_ccaa}
+            GROUP BY anio_str, trimestre
+            ORDER BY anio_str ASC, trimestre ASC
+        """, p_y)
+        q_rows = c.fetchall()
+        q_map = { (_val(r, 'anio_str', 0), _val(r, 'trimestre', 1)): _val(r, 'total', 2, 0) for r in q_rows }
+
+        quarters_order = [
+            ('2024', 'Q1'), ('2024', 'Q2'), ('2024', 'Q3'), ('2024', 'Q4'),
+            ('2025', 'Q1'), ('2025', 'Q2'), ('2025', 'Q3'), ('2025', 'Q4'),
+            ('2026', 'Q1'), ('2026', 'Q2'), ('2026', 'Q3')
+        ]
+        if ('2026', 'Q4') in q_map:
+            quarters_order.append(('2026', 'Q4'))
+
+        quarterly_data = [{
+            "quarter": f"{yr} {q}",
+            "anio": yr,
+            "q": q,
+            "total": q_map.get((yr, q), 0),
+            "in_progress": (yr == '2026' and q == 'Q3')
+        } for yr, q in quarters_order]
+
         # 4. Desglose de Modelos
         p_mod = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]
         exec_query(c, f"""
@@ -1490,6 +1524,7 @@ def get_brand_deepdive(
             "market_share": market_share,
             "monthly": monthly_data,
             "yearly": yearly_data,
+            "quarterly": quarterly_data,
             "models": models_data,
             "fuel_mix": fuel_data
         }

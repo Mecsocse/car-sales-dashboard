@@ -42,6 +42,7 @@ class DashboardApp {
         this.evModelsMode = 'bev';
         this.evBrandsMode = 'bev';
         this.chartQuotaMode = 'bev';
+        this.brandYearlyMode = 'quarterly';
 
         // Active filters state
         this.filters = {
@@ -1304,6 +1305,17 @@ class DashboardApp {
             });
         });
 
+        // Toggle mode for Brand Yearly Tab: Quarterly (Q1-Q4) vs Total Anual
+        const yearlyModeBtns = document.querySelectorAll('#brand-yearly-mode-toggle .chart-toggle-btn');
+        yearlyModeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                yearlyModeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.brandYearlyMode = btn.dataset.mode;
+                this.renderBrandYearlyChart();
+            });
+        });
+
         // Trigger buttons from dashboard (Header, Toolbar, Card)
         ['btn-header-brand-analysis', 'btn-toolbar-brand-analysis', 'btn-card-brand-analysis'].forEach(btnId => {
             const btn = document.getElementById(btnId);
@@ -1518,12 +1530,53 @@ class DashboardApp {
         if (tabId === 'monthly') {
             window.DashboardCharts.initBrandMonthlyChart('brandMonthlyChart', ba.monthly, bb ? bb.monthly : null, labelA, labelB);
         } else if (tabId === 'yearly') {
-            window.DashboardCharts.initBrandYearlyChart('brandYearlyChart', ba.yearly, bb ? bb.yearly : null, ba.marca, bb ? bb.marca : null);
+            this.renderBrandYearlyChart();
         } else if (tabId === 'models') {
             window.DashboardCharts.initBrandModelsChart('brandModelsChart', ba.models, bb ? bb.models : null, labelA, labelB);
         } else if (tabId === 'fuels') {
             window.DashboardCharts.initBrandFuelMixChart('brandFuelMixChart', ba.fuel_mix, bb ? bb.fuel_mix : null, labelA, labelB);
         }
+    }
+
+    renderBrandYearlyChart() {
+        if (!this.brandDeepDiveData) return;
+        const data = this.brandDeepDiveData;
+        const ba = data.brand_a;
+        const bb = data.brand_b;
+        if (!ba) return;
+
+        const mode = this.brandYearlyMode || 'quarterly';
+        const subtitle = document.getElementById('brand-yearly-subtitle');
+        const periodHint = document.getElementById('brand-yearly-period-hint');
+        const footnote = document.getElementById('brand-yearly-footnote');
+
+        if (subtitle) {
+            subtitle.textContent = mode === 'quarterly' 
+                ? 'Evolución por Trimestres (Q1-Q4)' 
+                : 'Ventas Totales por Año';
+        }
+        if (periodHint) {
+            periodHint.textContent = mode === 'quarterly' ? '(2024 - 2026)' : '(2023 - 2026)';
+        }
+        if (footnote) {
+            footnote.style.display = mode === 'quarterly' ? 'block' : 'none';
+        }
+
+        const yearlyModeBtns = document.querySelectorAll('#brand-yearly-mode-toggle .chart-toggle-btn');
+        yearlyModeBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+
+        window.DashboardCharts.initBrandYearlyChart(
+            'brandYearlyChart',
+            ba.yearly,
+            bb ? bb.yearly : null,
+            ba.marca,
+            bb ? bb.marca : null,
+            ba.quarterly,
+            bb ? bb.quarterly : null,
+            mode
+        );
     }
 
     // -------------------------------------------------------------

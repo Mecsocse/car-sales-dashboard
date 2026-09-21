@@ -33,6 +33,34 @@ const alwaysShowValuesPlugin = {
     }
 };
 
+// Custom plugin to render exact numeric values above vertical bars
+const verticalBarValueLabelsPlugin = {
+    id: 'verticalBarValueLabels',
+    afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        const isMultiDataset = chart.data.datasets.length > 1;
+        if (isMultiDataset && chart.width < 560) return;
+
+        chart.data.datasets.forEach((dataset, i) => {
+            const meta = chart.getDatasetMeta(i);
+            if (meta.hidden) return;
+            meta.data.forEach((bar, index) => {
+                const val = dataset.data[index];
+                if (val !== undefined && val !== null && val > 0) {
+                    ctx.save();
+                    ctx.fillStyle = '#0f172a';
+                    const fontSize = isMultiDataset ? 9 : 11;
+                    ctx.font = `bold ${fontSize}px Outfit, sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(val.toLocaleString('es-ES'), bar.x, bar.y - 4);
+                    ctx.restore();
+                }
+            });
+        });
+    }
+};
+
 function initDailyEvolutionChart(ctxId, data, onDateClick) {
     const el = document.getElementById(ctxId);
     if (!el) return;
@@ -893,46 +921,125 @@ function initBrandMonthlyChart(ctxId, monthlyA, monthlyB, nameA, nameB) {
     });
 }
 
-function initBrandYearlyChart(ctxId, yearlyA, yearlyB, nameA, nameB) {
+function initBrandYearlyChart(ctxId, yearlyA, yearlyB, nameA, nameB, quarterlyA, quarterlyB, mode = 'quarterly') {
     const el = document.getElementById(ctxId);
     if (!el) return;
     const ctx = el.getContext('2d');
     if (charts[ctxId]) charts[ctxId].destroy();
 
-    const labels = (yearlyA || []).map(y => y.anio);
-    const datasets = [{
-        label: nameA,
-        data: (yearlyA || []).map(y => y.total),
-        backgroundColor: '#2563eb', // Brand A: Blue
-        borderRadius: 6
-    }];
+    const isQuarterly = mode === 'quarterly' && quarterlyA && quarterlyA.length > 0;
+    let labels = [];
+    let datasets = [];
+    let tooltipCallbacks = {};
 
-    if (yearlyB && nameB) {
-        datasets.push({
-            label: nameB,
-            data: (yearlyB || []).map(y => y.total),
-            backgroundColor: '#dc2626', // Brand B: Red
+    if (isQuarterly) {
+        labels = quarterlyA.map(q => q.quarter);
+        const yearColors = {
+            '2022': '#b91c1c',
+            '2023': '#16a34a',
+            '2024': '#ea580c',
+            '2025': '#fb7185',
+            '2026': '#2563eb'
+        };
+
+        if (!nameB || !quarterlyB) {
+            // Single Brand Mode: Distinct bar color per year (José Antonio style)
+            const colorsA = quarterlyA.map(q => yearColors[q.anio] || '#2563eb');
+            datasets = [{
+                label: nameA,
+                data: quarterlyA.map(q => q.total),
+                backgroundColor: colorsA,
+                borderRadius: 5,
+                borderSkipped: false
+            }];
+            tooltipCallbacks = {
+                title: (items) => {
+                    const idx = items[0].dataIndex;
+                    const qObj = quarterlyA[idx];
+                    const extra = qObj && qObj.in_progress ? ' (En curso)' : '';
+                    return `${items[0].label}${extra}`;
+                },
+                label: (ctx) => ` ${nameA}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+            };
+        } else {
+            // Comparator Mode: Brand A (Blue) vs Brand B (Red) side-by-side
+            datasets = [
+                {
+                    label: nameA,
+                    data: quarterlyA.map(q => q.total),
+                    backgroundColor: '#2563eb',
+                    borderRadius: 5,
+                    borderSkipped: false
+                },
+                {
+                    label: nameB,
+                    data: quarterlyB.map(q => q.total),
+                    backgroundColor: '#dc2626',
+                    borderRadius: 5,
+                    borderSkipped: false
+                }
+            ];
+            tooltipCallbacks = {
+                title: (items) => {
+                    const idx = items[0].dataIndex;
+                    const qObj = quarterlyA[idx];
+                    const extra = qObj && qObj.in_progress ? ' (En curso)' : '';
+                    return `${items[0].label}${extra}`;
+                },
+                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+            };
+        }
+    } else {
+        // Annual Total Mode
+        labels = (yearlyA || []).map(y => y.anio);
+        datasets = [{
+            label: nameA,
+            data: (yearlyA || []).map(y => y.total),
+            backgroundColor: '#2563eb',
             borderRadius: 6
-        });
+        }];
+        if (yearlyB && nameB) {
+            datasets.push({
+                label: nameB,
+                data: (yearlyB || []).map(y => y.total),
+                backgroundColor: '#dc2626',
+                borderRadius: 6
+            });
+        }
+        tooltipCallbacks = {
+            label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
+        };
     }
 
     charts[ctxId] = new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
+        plugins: [verticalBarValueLabelsPlugin],
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: !!nameB, position: 'top' },
+                legend: { 
+                    display: !!nameB && !!(isQuarterly ? quarterlyB : yearlyB), 
+                    position: 'top' 
+                },
                 tooltip: {
-                    callbacks: {
-                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('es-ES')} un.`
-                    }
+                    callbacks: tooltipCallbacks
                 }
             },
             scales: {
-                x: { grid: { display: false } },
-                y: { grid: { color: '#f1f5f9' }, ticks: { callback: (v) => v.toLocaleString('es-ES') } }
+                x: { 
+                    grid: { display: false },
+                    ticks: {
+                        color: '#475569',
+                        font: { weight: '600', size: 11 }
+                    }
+                },
+                y: { 
+                    grid: { color: '#f1f5f9' }, 
+                    ticks: { callback: (v) => v.toLocaleString('es-ES') },
+                    grace: '14%'
+                }
             }
         }
     });

@@ -1143,8 +1143,25 @@
 
                 <!-- Tab 2: Yearly -->
                 <div class="brand-tab-pane" id="brand-tab-yearly" style="display: none;">
-                    <div class="modal-chart-container" style="height: 320px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                        <div>
+                            <span style="font-size: 13px; font-weight: 700; color: #334155;" id="brand-yearly-subtitle">
+                                Evolución por Trimestres (Q1-Q4)
+                            </span>
+                            <span style="font-size: 11px; color: #94a3b8; margin-left: 6px;" id="brand-yearly-period-hint">
+                                (2024 - 2026)
+                            </span>
+                        </div>
+                        <div class="chart-toggle-group" id="brand-yearly-mode-toggle">
+                            <button type="button" class="chart-toggle-btn active" data-mode="quarterly">Por Trimestres (Q1-Q4)</button>
+                            <button type="button" class="chart-toggle-btn" data-mode="yearly">Total Anual</button>
+                        </div>
+                    </div>
+                    <div class="modal-chart-container" style="height: 330px;">
                         <canvas id="brandYearlyChart"></canvas>
+                    </div>
+                    <div id="brand-yearly-footnote" style="font-size: 11px; color: #94a3b8; text-align: right; margin-top: 6px;">
+                        *2026 Q3 en curso hasta cierre del trimestre
                     </div>
                 </div>
 
@@ -1542,9 +1559,9 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260913_models_v2"></script>
+    <script src="js/charts.js?v=20260921_quarterly"></script>
     <script src="js/components.js?v=20260921_kpi"></script>
     <script src="js/insights.js?v=20260913_models_v2"></script>
-    <script src="js/app.js?v=20260913_models_v2"></script>
+    <script src="js/app.js?v=20260921_quarterly"></script>
 </body>
 </html>
