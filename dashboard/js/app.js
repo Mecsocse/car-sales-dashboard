@@ -1428,7 +1428,7 @@ class DashboardApp {
         const yearParam = this.currentModalYear;
         const ccaaParam = this.selectedCcaa ? `&ccaa=${encodeURIComponent(this.selectedCcaa)}` : '';
         const compParam = brandB ? `&brand_b=${encodeURIComponent(brandB)}` : '';
-        const url = `${API_BASE}/api/analytics/brand-deepdive?brand_a=${encodeURIComponent(brandA)}${compParam}&year=${yearParam}${ccaaParam}`;
+        const url = `${API_BASE}/api/analytics/brand-deepdive?brand_a=${encodeURIComponent(brandA)}${compParam}&year=${yearParam}${ccaaParam}&_t=${Date.now()}`;
 
         const subtitle = document.getElementById('modal-period-subtitle');
         if (subtitle) {
@@ -1437,7 +1437,7 @@ class DashboardApp {
         }
 
         try {
-            const res = await fetch(url);
+            const res = await fetch(url, { cache: 'no-store' });
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
             this.brandDeepDiveData = data;
