@@ -189,6 +189,20 @@ def read_root():
 def read_seo_landing_pages(request: Request):
     return HTMLResponse(content=get_customized_seo_html(request.url.path), status_code=200)
 
+@app.get("/coches-mas-vendidos-espana")
+@app.get("/coches-mas-vendidos-espana/")
+@app.get("/coches-mas-vendidos-espana.html")
+@app.get("/coche-mas-vendido-espana")
+@app.get("/coche-mas-vendido-espana/")
+@app.get("/coche-mas-vendido-espana.html")
+@app.get("/coches-mas-vendidos")
+@app.get("/coches-mas-vendidos/")
+def read_coches_mas_vendidos_page():
+    p = os.path.join(DASHBOARD_DIR, "coches-mas-vendidos-espana.html")
+    if os.path.exists(p):
+        return FileResponse(p, media_type="text/html")
+    raise HTTPException(status_code=404, detail="Página no encontrada")
+
 @app.get("/ultima-matricula-dgt")
 @app.get("/ultima-matricula-dgt/")
 @app.get("/ultima-matricula-dgt.html")
