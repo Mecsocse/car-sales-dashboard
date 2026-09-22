@@ -139,7 +139,19 @@ function initMonthlyEvolutionChart(ctxId, data) {
 
     if (charts[ctxId]) charts[ctxId].destroy();
 
-    const labels = data.map(d => d.mes_nombre);
+    const isEn = window.I18N && window.I18N.getLang() === 'en';
+    const monthAbbrEn = {
+        'enero': 'Jan', 'febrero': 'Feb', 'marzo': 'Mar', 'abril': 'Apr',
+        'mayo': 'May', 'junio': 'Jun', 'julio': 'Jul', 'agosto': 'Aug',
+        'septiembre': 'Sep', 'octubre': 'Oct', 'noviembre': 'Nov', 'diciembre': 'Dec'
+    };
+
+    const labels = data.map(d => {
+        if (isEn && d.mes_nombre) {
+            return monthAbbrEn[d.mes_nombre.toLowerCase()] || d.mes_nombre;
+        }
+        return d.mes_nombre;
+    });
     const totals = data.map(d => d.total);
 
     charts[ctxId] = new Chart(ctx, {
@@ -147,7 +159,7 @@ function initMonthlyEvolutionChart(ctxId, data) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Matriculaciones',
+                label: isEn ? 'Registrations' : 'Matriculaciones',
                 data: totals,
                 backgroundColor: labels.map((_, i) => i === labels.length - 1 ? '#2563eb' : '#94a3b8'),
                 borderRadius: 6
@@ -160,7 +172,7 @@ function initMonthlyEvolutionChart(ctxId, data) {
                 legend: { display: false },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ` ${ctx.parsed.y.toLocaleString('es-ES')} turismos`
+                        label: (ctx) => ` ${ctx.parsed.y.toLocaleString(isEn ? 'en-US' : 'es-ES')} ${isEn ? 'passenger cars' : 'turismos'}`
                     }
                 }
             },
@@ -675,7 +687,10 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
     const ctx = el.getContext('2d');
     if (charts[ctxId]) charts[ctxId].destroy();
 
-    const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const isEn = window.I18N && window.I18N.getLang() === 'en';
+    const monthLabelsEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const monthLabelsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthLabels = isEn ? monthLabelsEn : monthLabelsEs;
     const monthCodes = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
     const YEAR_COLORS = {
@@ -705,7 +720,8 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
             ? Number((validQuotas.reduce((a, b) => a + b, 0) / validQuotas.length).toFixed(1))
             : null;
 
-        const labelText = avgQuota !== null ? `${year} (Media: ${avgQuota}%)` : year;
+        const avgText = isEn ? 'Avg' : 'Media';
+        const labelText = avgQuota !== null ? `${year} (${avgText}: ${avgQuota}%)` : year;
 
         datasets.push({
             label: labelText,
@@ -755,7 +771,10 @@ function initEVCumulativeTrendChart(ctxId, cumulativeData) {
     const ctx = el.getContext('2d');
     if (charts[ctxId]) charts[ctxId].destroy();
 
-    const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const isEn = window.I18N && window.I18N.getLang() === 'en';
+    const monthLabelsEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const monthLabelsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthLabels = isEn ? monthLabelsEn : monthLabelsEs;
     const monthCodes = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
     const YEAR_COLORS = {
@@ -794,7 +813,7 @@ function initEVCumulativeTrendChart(ctxId, cumulativeData) {
                 legend: { position: 'top', align: 'center' },
                 tooltip: {
                     callbacks: {
-                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toLocaleString('es-ES') + ' un.' : 'N/A'}`
+                        label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y !== null ? ctx.parsed.y.toLocaleString(isEn ? 'en-US' : 'es-ES') + (isEn ? ' units' : ' un.') : 'N/A'}`
                     }
                 }
             },
@@ -815,7 +834,10 @@ function initAllTechQuotaChart(ctxId, techData) {
     const ctx = el.getContext('2d');
     if (charts[ctxId]) charts[ctxId].destroy();
 
-    const monthLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const isEn = window.I18N && window.I18N.getLang() === 'en';
+    const monthLabelsEs = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+    const monthLabelsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthLabels = isEn ? monthLabelsEn : monthLabelsEs;
     const monthCodes = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
     const TECH_COLORS = {

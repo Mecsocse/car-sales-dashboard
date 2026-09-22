@@ -155,7 +155,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <!-- Custom Map CSS -->
-    <link rel="stylesheet" href="css/mapa.css?v=20260918_v3">
+    <link rel="stylesheet" href="css/mapa.css?v=20260922_v4">
 
     <!-- Google AdSense -->
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1171398586910114" crossorigin="anonymous"></script>
@@ -253,25 +253,38 @@
                 </div>
             </div>
 
-            <!-- Navigation Links & Language Switcher -->
-            <div style="display: flex; gap: 8px; align-items: center;">
-                <div class="lang-switcher" id="lang-switcher">
+            <!-- Mobile Navigation Actions (Only visible on small screens when sidebar is hidden) -->
+            <div class="header-actions-mobile">
+                <div class="lang-switcher">
                     <button class="lang-btn active" data-lang="es">🇪🇸 ES</button>
                     <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
                 </div>
-                <a href="/coches-mas-vendidos-espana" class="btn-back-dashboard" style="background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.25); text-decoration: none;" title="Ver los coches más vendidos en España">
-                    <span>🏆</span>
-                    <span data-i18n="btn_top_sales">Top Ventas</span>
-                </a>
-                <a href="/" class="btn-back-dashboard" style="text-decoration: none;">
+                <a href="/" class="btn-back-dashboard" style="text-decoration: none;" title="Dashboard">
                     <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
-                    <span data-i18n="btn_dashboard">Dashboard</span>
                 </a>
             </div>
         </header>
 
-        <!-- Floating Sidebar (KPIs & Top Provinces Ranking) -->
+        <!-- Floating Sidebar (Clean Unified Column: Actions + KPI + Ranking) -->
         <aside class="map-sidebar">
+            <!-- Unified Top Actions Card -->
+            <div class="sidebar-card sidebar-actions-card">
+                <div class="lang-switcher" id="lang-switcher">
+                    <button class="lang-btn active" data-lang="es">🇪🇸 ES</button>
+                    <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+                </div>
+                <div class="sidebar-nav-group">
+                    <a href="/coches-mas-vendidos-espana" class="btn-sidebar-sales" title="Ver los coches más vendidos en España">
+                        <span>🏆</span>
+                        <span data-i18n="btn_top_sales">Top Ventas</span>
+                    </a>
+                    <a href="/" class="btn-sidebar-dashboard" style="text-decoration: none;" title="Volver al Dashboard">
+                        <i data-lucide="arrow-left" style="width: 13px; height: 13px;"></i>
+                        <span data-i18n="btn_dashboard">Dashboard</span>
+                    </a>
+                </div>
+            </div>
+
             <!-- KPI Total -->
             <div class="sidebar-card">
                 <div class="kpi-title" data-i18n="total_registrations">Total Matriculaciones</div>
@@ -364,7 +377,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Custom Map Script -->
-    <script src="js/i18n.js?v=20260922_v1"></script>
-    <script src="js/mapa.js?v=20260922_v3"></script>
+    <script src="js/i18n.js?v=20260922_v4"></script>
+    <script src="js/mapa.js?v=20260922_v4"></script>
 </body>
 </html>

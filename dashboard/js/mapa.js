@@ -405,8 +405,10 @@ class TerritorialMapApp {
     }
 
     showDrilldownBadge(visible, label) {
+        if (label) this.lastDrilldownLabel = label;
         let badge = document.getElementById('bcn-drilldown-badge');
         if (visible) {
+            const activeLabel = label || this.lastDrilldownLabel;
             if (!badge) {
                 badge = document.createElement('div');
                 badge.id = 'bcn-drilldown-badge';
@@ -422,7 +424,7 @@ class TerritorialMapApp {
             const isEn = window.I18N && window.I18N.getLang() === 'en';
             const prefix = this.viewMode === 'all_cp' ? (isEn ? 'Mode:' : 'Modo:') : (isEn ? 'Postal Codes Breakdown:' : 'Desglose Códigos Postales:');
             const defaultLabel = isEn ? 'Spain' : 'España';
-            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${label || defaultLabel}${periodSuffix}</span>`;
+            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${activeLabel || defaultLabel}${periodSuffix}</span>`;
             badge.style.display = 'flex';
         } else {
             if (badge) badge.style.display = 'none';
@@ -673,9 +675,9 @@ class TerritorialMapApp {
             btnCp.addEventListener('click', () => this.setViewMode('all_cp'));
         }
 
-        // Global language changed listener
+        // Global language changed listener (instant local update without refetching)
         window.addEventListener('languageChanged', () => {
-            this.fetchAndRender();
+            this.handleLanguageChanged();
         });
     }
 
@@ -861,22 +863,143 @@ class TerritorialMapApp {
         }
     }
 
+    handleLanguageChanged() {
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const brandSelect = document.getElementById('filter-brand');
+        const modelSelect = document.getElementById('filter-model');
+        const fuelSelect = document.getElementById('filter-fuel');
+
+        const brand = brandSelect ? brandSelect.value : '';
+        const model = modelSelect ? modelSelect.value : '';
+        const fuel = fuelSelect ? fuelSelect.value : '';
+
+        // 1. Update dropdown translations
+        this.updateDropdownTranslations(brand);
+
+        // 2. Update search input placeholder
+        const searchInput = document.getElementById('search-cp-input');
+        if (searchInput) {
+            searchInput.placeholder = isEn ? 'e.g. 08770, Palau, Arganda...' : 'Ej: 08770, Palau, Arganda...';
+        }
+
+        // 3. Update sidebar and bubbles immediately with in-memory data (0ms latency, zero network requests)
+        if (this.currentData) {
+            this.renderSidebar(this.currentData, brand, model, fuel);
+            if (this.viewMode !== 'all_cp') {
+                this.renderBubbles(this.currentData, brand, fuel);
+            }
+        }
+
+        // 4. Update drilldown badge if visible
+        if (this.isPostalViewActive || this.viewMode === 'all_cp') {
+            this.showDrilldownBadge(true, this.lastDrilldownLabel);
+        }
+    }
+
+    updateDropdownTranslations(brand = '') {
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+
+        // 1. Brand dropdown
+        this.updateBrandsDropdown();
+
+        // 2. Model dropdown
+        this.populateModelsDropdown(brand);
+
+        // 3. Fuel options
+        const fuelSelect = document.getElementById('filter-fuel');
+        if (fuelSelect) {
+            const curFuel = fuelSelect.value;
+            const fuelLabelsEs = {
+                '': 'Todos los motores',
+                'ELECTRICO': '⚡ 100% Eléctrico (BEV)',
+                'PHEV': '🔌 Enchufable (PHEV)',
+                'HEV': '🌿 Híbrido (HEV/MHEV)',
+                'GASOLINA': '⛽ Gasolina',
+                'DIESEL': '🛢️ Diésel',
+                'GLP': '💨 Gas (GLP/GNC)'
+            };
+            const fuelLabelsEn = {
+                '': 'All powertrains',
+                'ELECTRICO': '⚡ 100% Electric (BEV)',
+                'PHEV': '🔌 Plug-in Hybrid (PHEV)',
+                'HEV': '🌿 Hybrid (HEV/MHEV)',
+                'GASOLINA': '⛽ Petrol',
+                'DIESEL': '🛢️ Diesel',
+                'GLP': '💨 Gas (LPG/CNG)'
+            };
+            const fuelLabels = isEn ? fuelLabelsEn : fuelLabelsEs;
+            Array.from(fuelSelect.options).forEach(opt => {
+                if (fuelLabels[opt.value] !== undefined) {
+                    opt.textContent = fuelLabels[opt.value];
+                }
+            });
+            fuelSelect.value = curFuel;
+        }
+
+        // 4. Period options
+        const periodSelect = document.getElementById('filter-period');
+        if (periodSelect) {
+            const curPeriod = periodSelect.value;
+            const periodLabelsEs = {
+                '2026': 'Año 2026',
+                '2026-09': 'Sep 2026 (En curso)',
+                '2026-08': 'Ago 2026',
+                '2026-07': 'Jul 2026',
+                '2026-06': 'Jun 2026',
+                '2026-05': 'May 2026',
+                '2026-04': 'Abr 2026',
+                '2026-03': 'Mar 2026',
+                '2026-02': 'Feb 2026',
+                '2026-01': 'Ene 2026',
+                '2025': 'Año 2025',
+                '2024': 'Año 2024',
+                '2023': 'Año 2023'
+            };
+            const periodLabelsEn = {
+                '2026': 'Year 2026',
+                '2026-09': 'Sep 2026 (Ongoing)',
+                '2026-08': 'Aug 2026',
+                '2026-07': 'Jul 2026',
+                '2026-06': 'Jun 2026',
+                '2026-05': 'May 2026',
+                '2026-04': 'Apr 2026',
+                '2026-03': 'Mar 2026',
+                '2026-02': 'Feb 2026',
+                '2026-01': 'Jan 2026',
+                '2025': 'Year 2025',
+                '2024': 'Year 2024',
+                '2023': 'Year 2023'
+            };
+            const periodLabels = isEn ? periodLabelsEn : periodLabelsEs;
+            Array.from(periodSelect.options).forEach(opt => {
+                if (periodLabels[opt.value] !== undefined) {
+                    opt.textContent = periodLabels[opt.value];
+                }
+            });
+            periodSelect.value = curPeriod;
+        }
+    }
+
     populateModelsDropdown(brand = '') {
         const modelSelect = document.getElementById('filter-model');
         if (!modelSelect) return;
 
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
         const currentVal = modelSelect.value;
-        let html = '<option value="">Todos los modelos</option>';
+        const allModelsTxt = isEn ? 'All models' : 'Todos los modelos';
+        let html = `<option value="">${allModelsTxt}</option>`;
 
         if (brand && this.modelsCatalog && this.modelsCatalog.brand_models && this.modelsCatalog.brand_models[brand]) {
             const bModels = this.modelsCatalog.brand_models[brand];
-            html = `<option value="">Todos los modelos de ${brand}</option>`;
+            const allBrandTxt = isEn ? `All models from ${brand}` : `Todos los modelos de ${brand}`;
+            html = `<option value="">${allBrandTxt}</option>`;
             bModels.forEach(m => {
                 const isSel = (currentVal === m.full_model) ? 'selected' : '';
                 html += `<option value="${m.full_model}" ${isSel}>${m.model}</option>`;
             });
         } else if (this.modelsCatalog && this.modelsCatalog.top_models_spain) {
-            html += '<optgroup label="Top 50 Modelos más vendidos">';
+            const top50Txt = isEn ? 'Top 50 Best-selling models' : 'Top 50 Modelos más vendidos';
+            html += `<optgroup label="${top50Txt}">`;
             this.modelsCatalog.top_models_spain.forEach(m => {
                 const isSel = (currentVal === m.full_model) ? 'selected' : '';
                 html += `<option value="${m.full_model}" ${isSel}>${m.full_model}</option>`;
@@ -885,6 +1008,7 @@ class TerritorialMapApp {
         }
 
         modelSelect.innerHTML = html;
+        if (currentVal) modelSelect.value = currentVal;
     }
 
     async loadBrandsCatalog() {
@@ -892,19 +1016,27 @@ class TerritorialMapApp {
             const res = await fetch(`${API_BASE}/api/models/catalog`);
             if (res.ok) {
                 this.brandsCatalog = await res.json();
-                const brandSelect = document.getElementById('filter-brand');
-                if (brandSelect) {
-                    const brands = Object.keys(this.brandsCatalog).sort();
-                    let html = '<option value="">Todas las marcas</option>';
-                    brands.forEach(b => {
-                        html += `<option value="${b}">${b}</option>`;
-                    });
-                    brandSelect.innerHTML = html;
-                }
+                this.updateBrandsDropdown();
             }
         } catch (err) {
             console.error('Failed to load brands catalog for map:', err);
         }
+    }
+
+    updateBrandsDropdown() {
+        const brandSelect = document.getElementById('filter-brand');
+        if (!brandSelect || !this.brandsCatalog) return;
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const currentVal = brandSelect.value;
+        const brands = Object.keys(this.brandsCatalog).sort();
+        const allBrandsTxt = isEn ? 'All brands' : 'Todas las marcas';
+        let html = `<option value="">${allBrandsTxt}</option>`;
+        brands.forEach(b => {
+            const isSel = (currentVal === b) ? 'selected' : '';
+            html += `<option value="${b}" ${isSel}>${b}</option>`;
+        });
+        brandSelect.innerHTML = html;
+        if (currentVal) brandSelect.value = currentVal;
     }
 
     getBubbleColors(brand, fuel) {
@@ -1146,8 +1278,19 @@ class TerritorialMapApp {
             const allFuelsTxt = isEn ? 'All powertrains' : 'Todos los carburantes';
             const yrTxt = isEn ? `Year ${data.year || '2026'}` : `Año ${data.year || '2026'}`;
             const mTxt = model ? model : (brand ? brand : allBrandsTxt);
-            const fTxt = fuel ? fuel : allFuelsTxt;
-            const pTxt = data.month || yrTxt;
+            let fTxt = allFuelsTxt;
+            if (fuel) {
+                const fMap = {
+                    'ELECTRICO': isEn ? '⚡ 100% Electric (BEV)' : '⚡ 100% Eléctrico (BEV)',
+                    'PHEV': isEn ? '🔌 Plug-in (PHEV)' : '🔌 Enchufable (PHEV)',
+                    'HEV': isEn ? '🌿 Hybrid (HEV)' : '🌿 Híbrido (HEV)',
+                    'GASOLINA': isEn ? '⛽ Petrol' : '⛽ Gasolina',
+                    'DIESEL': isEn ? '🛢️ Diesel' : '🛢️ Diésel',
+                    'GLP': isEn ? '💨 Gas (LPG)' : '💨 Gas (GLP)'
+                };
+                fTxt = fMap[fuel] || fuel;
+            }
+            const pTxt = data.month ? this.getPeriodDisplay(data.month) : yrTxt;
             kpiSub.textContent = `${mTxt} • ${fTxt} • ${pTxt}`;
         }
 
@@ -1191,8 +1334,9 @@ class TerritorialMapApp {
                 let html = '';
                 top25.forEach((item, idx) => {
                     const pctBar = Math.max(5, (item.total / maxU) * 100);
+                    const clickTxt = isEn ? 'Click to view on map' : 'Hacer clic para ver en el mapa';
                     html += `
-                        <div class="ranking-item" data-lat="${item.lat}" data-lng="${item.lng}" data-cp="${item.cp}" style="cursor: pointer;" title="Hacer clic para ver en el mapa">
+                        <div class="ranking-item" data-lat="${item.lat}" data-lng="${item.lng}" data-cp="${item.cp}" style="cursor: pointer;" title="${clickTxt}">
                             <div class="ranking-item-top">
                                 <span><strong>#${idx + 1}</strong> CP ${item.cp} <small style="color: #64748b;">(${item.name})</small></span>
                                 <span style="font-weight: 800; color: #0f172a;">${item.total.toLocaleString('es-ES')} un.</span>
@@ -1221,7 +1365,9 @@ class TerritorialMapApp {
 
         // Default: Provincial ranking
         if (rankingTitle) {
-            rankingTitle.textContent = isEn ? 'Top Provinces by Volume' : 'Top Provincias por Volumen';
+            const focusTxt = isEn ? '(Click to focus)' : '(Clic para enfocar)';
+            const titleTxt = isEn ? 'Top Provinces by Volume' : 'Top Provincias por Volumen';
+            rankingTitle.innerHTML = `<span data-i18n="top_provinces">${titleTxt}</span> <span style="font-size: 11px; font-weight: 600; color: #64748b;" data-i18n="click_to_focus">${focusTxt}</span>`;
         }
 
         if (!data || !data.provinces) return;

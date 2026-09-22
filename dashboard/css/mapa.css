@@ -37,10 +37,10 @@ body, html {
     position: absolute;
     top: 16px;
     left: 16px;
-    right: 16px;
+    right: 356px;
     z-index: 1000;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-items: center;
     background: rgba(255, 255, 255, 0.94);
     backdrop-filter: blur(12px);
@@ -49,7 +49,11 @@ body, html {
     border-radius: 14px;
     padding: 10px 18px;
     box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.03);
-    gap: 12px;
+    gap: 14px;
+}
+
+.header-actions-mobile {
+    display: none;
 }
 
 .brand-section {
@@ -202,14 +206,14 @@ body, html {
    ------------------------------------------------------------- */
 .map-sidebar {
     position: absolute;
-    top: 86px;
+    top: 16px;
     right: 16px;
     bottom: 24px;
     width: 320px;
     z-index: 1000;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     pointer-events: none;
 }
 
@@ -222,6 +226,63 @@ body, html {
     border-radius: 14px;
     padding: 16px;
     box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
+}
+
+.sidebar-actions-card {
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-sidebar-sales {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(22, 163, 74, 0.1);
+    color: #15803d;
+    border: 1px solid rgba(22, 163, 74, 0.25);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-sidebar-sales:hover {
+    background: rgba(22, 163, 74, 0.18);
+    color: #166534;
+}
+
+.btn-sidebar-dashboard {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-sidebar-dashboard:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #0f172a;
 }
 
 .kpi-title {
@@ -667,10 +728,20 @@ body, html {
    ------------------------------------------------------------- */
 @media (max-width: 900px) {
     .map-header {
+        right: 16px;
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
         padding: 10px;
+    }
+    .header-actions-mobile {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 4px;
+        padding-top: 6px;
+        border-top: 1px solid #f1f5f9;
     }
     .filters-strip {
         justify-content: space-between;

@@ -102,6 +102,7 @@ class DashboardApp {
             this.populateQuickMonthDropdown();
             this.populateHistoricalCompareDropdowns();
             this.updatePeriodTag();
+            this.updateRankingTitles();
             this.bindPeriodEvents();
             this.bindEvents();
             this.bindCompareEvents();
@@ -307,18 +308,6 @@ class DashboardApp {
     }
 
     bindPeriodEvents() {
-        window.addEventListener('languageChanged', () => {
-            this.populateQuickMonthDropdown();
-            this.populateHistoricalCompareDropdowns();
-            this.updatePeriodTag();
-            if (this.lastAllData) {
-                this.renderAllDataPayload(this.lastAllData);
-            }
-            if (this.matrixTableBody) {
-                this.loadMonthlyMatrix(this.matrixSearchInput ? this.matrixSearchInput.value : '', this.matrixLimit);
-            }
-        });
-
         if (this.quickCcaaSelect) {
             this.quickCcaaSelect.addEventListener('change', async (e) => {
                 this.selectedCcaa = e.target.value;
@@ -419,11 +408,18 @@ class DashboardApp {
 
         // Global language changed listener for dynamic reactive UI updates
         window.addEventListener('languageChanged', () => {
+            this.updateRankingTitles();
             this.populateQuickMonthDropdown();
             this.populateHistoricalCompareDropdowns();
             this.updatePeriodTag();
             if (this.lastAllData) {
                 this.renderAllDataPayload(this.lastAllData);
+            }
+            if (this.lastPlateData) {
+                this.renderPlateData(this.lastPlateData);
+            }
+            if (typeof this.loadSecondaryCharts === 'function') {
+                this.loadSecondaryCharts();
             }
             if (typeof this.loadMonthlyMatrix === 'function') {
                 this.loadMonthlyMatrix(this.matrixSearchInput ? this.matrixSearchInput.value : '', this.matrixLimit);
@@ -635,13 +631,10 @@ class DashboardApp {
             btnExtendModels.addEventListener('click', () => {
                 if (this.modelsLimit >= 30) {
                     this.modelsLimit = 10;
-                    btnExtendModels.innerHTML = '<span>Ver 10 más</span>';
                 } else {
                     this.modelsLimit += 10;
-                    btnExtendModels.innerHTML = this.modelsLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
                 }
-                const title = document.getElementById('title-models-ranking');
-                if (title) title.textContent = `Top ${this.modelsLimit} Modelos`;
+                this.updateRankingTitles();
                 if (this.lastAllData) {
                     this.renderAllDataPayload(this.lastAllData);
                 } else {
@@ -655,13 +648,10 @@ class DashboardApp {
             btnExtendEv.addEventListener('click', () => {
                 if (this.evLimit >= 30) {
                     this.evLimit = 10;
-                    btnExtendEv.innerHTML = '<span>Ver 10 más</span>';
                 } else {
                     this.evLimit += 10;
-                    btnExtendEv.innerHTML = this.evLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
                 }
-                const title = document.getElementById('title-ev-ranking');
-                if (title) title.textContent = `Top ${this.evLimit} Eléctricos (BEV)`;
+                this.updateRankingTitles();
                 if (this.lastAllData) {
                     this.renderAllDataPayload(this.lastAllData);
                 } else {
@@ -675,13 +665,10 @@ class DashboardApp {
             btnExtendBrands.addEventListener('click', () => {
                 if (this.brandsLimit >= 30) {
                     this.brandsLimit = 10;
-                    btnExtendBrands.innerHTML = '<span>Ver 10 más</span>';
                 } else {
                     this.brandsLimit += 10;
-                    btnExtendBrands.innerHTML = this.brandsLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
                 }
-                const title = document.getElementById('title-brands-ranking');
-                if (title) title.textContent = `Top ${this.brandsLimit} Marcas`;
+                this.updateRankingTitles();
                 if (this.lastAllData) {
                     this.renderAllDataPayload(this.lastAllData);
                 } else {
@@ -695,13 +682,10 @@ class DashboardApp {
             btnExtendEvBrands.addEventListener('click', () => {
                 if (this.evBrandsLimit >= 30) {
                     this.evBrandsLimit = 10;
-                    btnExtendEvBrands.innerHTML = '<span>Ver 10 más</span>';
                 } else {
                     this.evBrandsLimit += 10;
-                    btnExtendEvBrands.innerHTML = this.evBrandsLimit >= 30 ? '<span>Ver menos</span>' : '<span>Ver 10 más</span>';
                 }
-                const title = document.getElementById('title-ev-brands-ranking');
-                if (title) title.textContent = `Top ${this.evBrandsLimit} Marcas BEV`;
+                this.updateRankingTitles();
                 if (this.lastAllData) {
                     this.renderAllDataPayload(this.lastAllData);
                 } else {
@@ -737,6 +721,36 @@ class DashboardApp {
         });
     }
 
+    updateRankingTitles() {
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const titleModels = document.getElementById('title-models-ranking');
+        if (titleModels) titleModels.textContent = isEn ? `Top ${this.modelsLimit} Models` : `Top ${this.modelsLimit} Modelos`;
+
+        const titleBrands = document.getElementById('title-brands-ranking');
+        if (titleBrands) titleBrands.textContent = isEn ? `Top ${this.brandsLimit} Brands` : `Top ${this.brandsLimit} Marcas`;
+
+        const titleEv = document.getElementById('title-ev-ranking');
+        if (titleEv) titleEv.textContent = isEn ? `Top ${this.evLimit} Electric (BEV)` : `Top ${this.evLimit} Eléctricos (BEV)`;
+
+        const titleEvBrands = document.getElementById('title-ev-brands-ranking');
+        if (titleEvBrands) titleEvBrands.textContent = isEn ? `Top ${this.evBrandsLimit} BEV Brands` : `Top ${this.evBrandsLimit} Marcas BEV`;
+
+        const btnMoreText = isEn ? 'Show 10 more' : 'Ver 10 más';
+        const btnLessText = isEn ? 'Show less' : 'Ver menos';
+
+        const btnExtendModels = document.getElementById('btn-extend-models');
+        if (btnExtendModels) btnExtendModels.innerHTML = `<span>${this.modelsLimit >= 30 ? btnLessText : btnMoreText}</span>`;
+
+        const btnExtendBrands = document.getElementById('btn-extend-brands');
+        if (btnExtendBrands) btnExtendBrands.innerHTML = `<span>${this.brandsLimit >= 30 ? btnLessText : btnMoreText}</span>`;
+
+        const btnExtendEv = document.getElementById('btn-extend-ev');
+        if (btnExtendEv) btnExtendEv.innerHTML = `<span>${this.evLimit >= 30 ? btnLessText : btnMoreText}</span>`;
+
+        const btnExtendEvBrands = document.getElementById('btn-extend-ev-brands');
+        if (btnExtendEvBrands) btnExtendEvBrands.innerHTML = `<span>${this.evBrandsLimit >= 30 ? btnLessText : btnMoreText}</span>`;
+    }
+
     async loadMonthlyMatrix(search = '', limit = 20) {
         if (!this.matrixTableBody) return;
 
@@ -755,19 +769,20 @@ class DashboardApp {
             if (!data) return;
 
             // Define all 12 canonical month columns
+            const isEn = window.I18N && window.I18N.getLang() === 'en';
             const allMonths = [
-                { key: 'ene', label: 'ENE', num: 1 },
-                { key: 'feb', label: 'FEB', num: 2 },
-                { key: 'mar', label: 'MAR', num: 3 },
-                { key: 'abr', label: 'ABR', num: 4 },
-                { key: 'may', label: 'MAY', num: 5 },
-                { key: 'jun', label: 'JUN', num: 6 },
-                { key: 'jul', label: 'JUL', num: 7 },
-                { key: 'ago', label: 'AGO', num: 8 },
-                { key: 'sep', label: 'SEP', num: 9 },
-                { key: 'oct', label: 'OCT', num: 10 },
-                { key: 'nov', label: 'NOV', num: 11 },
-                { key: 'dic', label: 'DIC', num: 12 }
+                { key: 'ene', label: isEn ? 'JAN' : 'ENE', num: 1 },
+                { key: 'feb', label: isEn ? 'FEB' : 'FEB', num: 2 },
+                { key: 'mar', label: isEn ? 'MAR' : 'MAR', num: 3 },
+                { key: 'abr', label: isEn ? 'APR' : 'ABR', num: 4 },
+                { key: 'may', label: isEn ? 'MAY' : 'MAY', num: 5 },
+                { key: 'jun', label: isEn ? 'JUN' : 'JUN', num: 6 },
+                { key: 'jul', label: isEn ? 'JUL' : 'JUL', num: 7 },
+                { key: 'ago', label: isEn ? 'AUG' : 'AGO', num: 8 },
+                { key: 'sep', label: isEn ? 'SEP' : 'SEP', num: 9 },
+                { key: 'oct', label: isEn ? 'OCT' : 'OCT', num: 10 },
+                { key: 'nov', label: isEn ? 'NOV' : 'NOV', num: 11 },
+                { key: 'dic', label: isEn ? 'DEC' : 'DIC', num: 12 }
             ];
 
             const currentYearNum = new Date().getFullYear();
@@ -789,6 +804,9 @@ class DashboardApp {
                 if (th) {
                     const isVisible = activeMonths.some(am => am.key === m.key);
                     th.style.display = isVisible ? '' : 'none';
+                    if (th.childNodes[0]) {
+                        th.childNodes[0].textContent = m.label + ' ';
+                    }
                     const icon = th.querySelector('.sort-icon');
                     if (icon) {
                         icon.textContent = (this.matrixSortBy === m.key) 
@@ -814,12 +832,25 @@ class DashboardApp {
             // Update "Evolución Mensual" chart title dynamically based on active months range
             const evolTitleEl = document.getElementById('monthly-evolution-title');
             if (evolTitleEl && activeMonths.length > 0) {
+                const monthAbbrEn = {
+                    'ENE': 'Jan', 'FEB': 'Feb', 'MAR': 'Mar', 'ABR': 'Apr',
+                    'MAY': 'May', 'JUN': 'Jun', 'JUL': 'Jul', 'AGO': 'Aug',
+                    'SEP': 'Sep', 'OCT': 'Oct', 'NOV': 'Nov', 'DIC': 'Dec'
+                };
                 const firstLabel = activeMonths[0].label;
                 const lastLabel = activeMonths[activeMonths.length - 1].label;
-                const rangeStr = activeMonths.length === 12 
-                    ? 'Ene - Dic' 
-                    : `${firstLabel.charAt(0) + firstLabel.slice(1).toLowerCase()} - ${lastLabel.charAt(0) + lastLabel.slice(1).toLowerCase()}`;
-                evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
+                let rangeStr;
+                if (isEn) {
+                    const firstEn = monthAbbrEn[firstLabel.toUpperCase()] || firstLabel;
+                    const lastEn = monthAbbrEn[lastLabel.toUpperCase()] || lastLabel;
+                    rangeStr = activeMonths.length === 12 ? 'Jan - Dec' : `${firstEn} - ${lastEn}`;
+                    evolTitleEl.textContent = `Monthly Evolution (${rangeStr} ${this.selectedYear})`;
+                } else {
+                    rangeStr = activeMonths.length === 12 
+                        ? 'Ene - Dic' 
+                        : `${firstLabel.charAt(0) + firstLabel.slice(1).toLowerCase()} - ${lastLabel.charAt(0) + lastLabel.slice(1).toLowerCase()}`;
+                    evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
+                }
             }
 
             let html = '';
@@ -1241,12 +1272,25 @@ class DashboardApp {
                     if (evolTitleEl) {
                         const monthsWithData = (data || []).filter(d => (d.total || 0) > 0);
                         if (monthsWithData.length > 0) {
-                            const firstM = monthsWithData[0].mes_nombre;
-                            const lastM = monthsWithData[monthsWithData.length - 1].mes_nombre;
-                            const rangeStr = monthsWithData.length >= 12
-                                ? 'Ene - Dic'
-                                : `${firstM.charAt(0) + firstM.slice(1).toLowerCase()} - ${lastM.charAt(0) + lastM.slice(1).toLowerCase()}`;
-                            evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
+                            const isEn = window.I18N && window.I18N.getLang() === 'en';
+                            const monthAbbrEn = {
+                                'enero': 'Jan', 'febrero': 'Feb', 'marzo': 'Mar', 'abril': 'Apr',
+                                'mayo': 'May', 'junio': 'Jun', 'julio': 'Jul', 'agosto': 'Aug',
+                                'septiembre': 'Sep', 'octubre': 'Oct', 'noviembre': 'Nov', 'diciembre': 'Dec'
+                            };
+                            const firstM = monthsWithData[0].mes_nombre || '';
+                            const lastM = monthsWithData[monthsWithData.length - 1].mes_nombre || '';
+                            if (isEn) {
+                                const f = monthAbbrEn[firstM.toLowerCase()] || firstM.slice(0, 3);
+                                const l = monthAbbrEn[lastM.toLowerCase()] || lastM.slice(0, 3);
+                                const rangeStr = monthsWithData.length >= 12 ? 'Jan - Dec' : `${f} - ${l}`;
+                                evolTitleEl.textContent = `Monthly Evolution (${rangeStr} ${this.selectedYear})`;
+                            } else {
+                                const f = firstM.charAt(0) + firstM.slice(1).toLowerCase();
+                                const l = lastM.charAt(0) + lastM.slice(1).toLowerCase();
+                                const rangeStr = monthsWithData.length >= 12 ? 'Ene - Dic' : `${f} - ${l}`;
+                                evolTitleEl.textContent = `Evolución Mensual (${rangeStr} ${this.selectedYear})`;
+                            }
                         }
                     }
                 }
@@ -2230,74 +2274,92 @@ class DashboardApp {
         try {
             const data = await this.fetchCached(`${API_BASE}/api/analytics/latest-plate`);
             if (!data) return;
-
-            const widgetLetters = document.getElementById('widget-plate-letters');
-            const widgetDate = document.getElementById('widget-plate-date');
-            const modalDisplay = document.getElementById('modal-plate-display');
-            const modalDate = document.getElementById('modal-plate-date');
-            const modalNext = document.getElementById('modal-plate-next');
-            const modalTimeline = document.getElementById('modal-plate-timeline');
-
-            const series = data.latest_series || 'NSD';
-            const dateStr = data.latest_date || '2026-08-28';
-            const nextSeries = data.next_series || 'NSF';
-
-            // Format date readable (e.g. 28 Ago 2026)
-            let formattedShort = dateStr;
-            let formattedLong = dateStr;
-            try {
-                const parts = dateStr.split('-');
-                const d = parseInt(parts[2], 10);
-                const m = parseInt(parts[1], 10);
-                const y = parts[0];
-                const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                const monthsLong = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-                formattedShort = `${d} ${monthsShort[m-1]} ${y}`;
-                formattedLong = `${d} de ${monthsLong[m-1]} de ${y}`;
-            } catch (e) {}
-
-            const num = data.latest_number || '7160';
-            if (widgetLetters) widgetLetters.textContent = `${num} · ${series}`;
-            if (widgetDate) widgetDate.textContent = formattedShort;
-            if (modalDisplay) modalDisplay.textContent = `${num} · ${series}`;
-            if (modalDate) modalDate.textContent = formattedLong;
-            if (modalNext) modalNext.textContent = `0000 · ${nextSeries}`;
-
-            const seoPlateDisplay = document.getElementById('seo-plate-display');
-            const seoPlateDate = document.getElementById('seo-plate-date');
-            const seoPlateNext = document.getElementById('seo-plate-next');
-            if (seoPlateDisplay) seoPlateDisplay.textContent = `${num} · ${series}`;
-            if (seoPlateDate) seoPlateDate.textContent = formattedLong;
-            if (seoPlateNext) seoPlateNext.textContent = `0000 · ${nextSeries}`;
-
-            if (modalTimeline && Array.isArray(data.timeline)) {
-                let html = '';
-                data.timeline.forEach(item => {
-                    let dFmt = item.date;
-                    try {
-                        const [y, m, d] = item.date.split('-');
-                        const monthsShort = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-                        dFmt = `${parseInt(d, 10)} ${monthsShort[parseInt(m, 10)-1]} ${y}`;
-                    } catch(e) {}
-                    const itemPlate = item.full_plate || `${item.number || '9999'} · ${item.series}`;
-                    html += `
-                        <div class="plate-timeline-item">
-                            <span style="font-weight: 800; font-family: monospace; font-size: 13px; background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; color: #0f172a;">
-                                ${itemPlate}
-                            </span>
-                            <span style="color: #64748b; font-weight: 500;">
-                                Registrada el <strong>${dFmt}</strong>
-                            </span>
-                        </div>
-                    `;
-                });
-                modalTimeline.innerHTML = html;
-            }
-
-            if (window.lucide) window.lucide.createIcons();
+            this.lastPlateData = data;
+            this.renderPlateData(data);
         } catch (err) {
             console.warn('Latest plate load notice:', err);
         }
+    }
+
+    renderPlateData(data) {
+        if (!data) return;
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+
+        const widgetLetters = document.getElementById('widget-plate-letters');
+        const widgetDate = document.getElementById('widget-plate-date');
+        const modalDisplay = document.getElementById('modal-plate-display');
+        const modalDate = document.getElementById('modal-plate-date');
+        const modalNext = document.getElementById('modal-plate-next');
+        const modalTimeline = document.getElementById('modal-plate-timeline');
+
+        const series = data.latest_series || 'NSD';
+        const dateStr = data.latest_date || '2026-08-28';
+        const nextSeries = data.next_series || 'NSF';
+
+        // Format date readable
+        let formattedShort = dateStr;
+        let formattedLong = dateStr;
+        try {
+            const parts = dateStr.split('-');
+            const d = parseInt(parts[2], 10);
+            const m = parseInt(parts[1], 10);
+            const y = parts[0];
+            const monthsShortEs = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const monthsLongEs = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            const monthsShortEn = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthsLongEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+            const mShort = isEn ? monthsShortEn : monthsShortEs;
+            const mLong = isEn ? monthsLongEn : monthsLongEs;
+
+            formattedShort = isEn ? `${mShort[m-1]} ${d}, ${y}` : `${d} ${mShort[m-1]} ${y}`;
+            formattedLong = isEn ? `${mLong[m-1]} ${d}, ${y}` : `${d} de ${mLong[m-1]} de ${y}`;
+        } catch (e) {}
+
+        const num = data.latest_number || '7160';
+        if (widgetLetters) widgetLetters.textContent = `${num} · ${series}`;
+        if (widgetDate) widgetDate.textContent = formattedShort;
+        if (modalDisplay) modalDisplay.textContent = `${num} · ${series}`;
+        if (modalDate) modalDate.textContent = formattedLong;
+        if (modalNext) modalNext.textContent = `0000 · ${nextSeries}`;
+
+        const seoPlateDisplay = document.getElementById('seo-plate-display');
+        const seoPlateDate = document.getElementById('seo-plate-date');
+        const seoPlateNext = document.getElementById('seo-plate-next');
+        if (seoPlateDisplay) seoPlateDisplay.textContent = `${num} · ${series}`;
+        if (seoPlateDate) seoPlateDate.textContent = formattedLong;
+        if (seoPlateNext) seoPlateNext.textContent = `0000 · ${nextSeries}`;
+
+        if (modalTimeline && Array.isArray(data.timeline)) {
+            let html = '';
+            const tMonths = isEn 
+                ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+                : ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const regPrefix = isEn ? 'Registered on' : 'Registrada el';
+
+            data.timeline.forEach(item => {
+                let dFmt = item.date;
+                try {
+                    const [y, m, d] = item.date.split('-');
+                    const mIdx = parseInt(m, 10) - 1;
+                    dFmt = isEn ? `${tMonths[mIdx]} ${parseInt(d, 10)}, ${y}` : `${parseInt(d, 10)} ${tMonths[mIdx]} ${y}`;
+                } catch(e) {}
+                const itemPlate = item.full_plate || `${item.number || '9999'} · ${item.series}`;
+                html += `
+                    <div class="plate-timeline-item">
+                        <span style="font-weight: 800; font-family: monospace; font-size: 13px; background: #ffffff; border: 1px solid #cbd5e1; padding: 2px 8px; border-radius: 4px; color: #0f172a;">
+                            ${itemPlate}
+                        </span>
+                        <span style="color: #64748b; font-weight: 500;">
+                            ${regPrefix} <strong>${dFmt}</strong>
+                        </span>
+                    </div>
+                `;
+            });
+            modalTimeline.innerHTML = html;
+        }
+
+        if (window.lucide) window.lucide.createIcons();
     }
 
     bindKpiQuotaToggle() {
