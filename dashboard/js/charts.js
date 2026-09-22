@@ -613,6 +613,8 @@ const annualAvgQuotaPlugin = {
         const { left, right, top, bottom } = chartArea;
 
         const linesToDraw = [];
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const avgBadgeTxt = isEn ? 'Avg' : 'Media';
         chart.data.datasets.forEach(dataset => {
             if (dataset.annualAvg !== undefined && dataset.annualAvg !== null && dataset.showAvgLine) {
                 const yVal = dataset.annualAvg;
@@ -623,7 +625,7 @@ const annualAvgQuotaPlugin = {
                         yVal,
                         yPos,
                         color: dataset.borderColor,
-                        txt: `Media ${dataset.yearLabel}: ${yVal.toFixed(1)}%`
+                        txt: `${avgBadgeTxt} ${dataset.yearLabel}: ${yVal.toFixed(1)}%`
                     });
                 }
             }
@@ -704,21 +706,39 @@ function initEVQuotaTrendChart(ctxId, yearsData) {
     const sortedYears = Object.keys(yearsData).sort().reverse();
     sortedYears.forEach(year => {
         const validQuotas = [];
+        let totalEvYear = 0;
+        let totalUnitsYear = 0;
+        let hasRealUnits = false;
+
         const dataArr = monthCodes.map(m => {
             const item = yearsData[year] ? yearsData[year][m] : null;
-            // Support both formats: direct number (precomputed) or object {quota: N} (RPC)
-            const val = (item !== null && item !== undefined)
-                ? (typeof item === 'number' ? item : (item.quota !== null && item.quota !== undefined ? Number(item.quota) : null))
-                : null;
+            // Support both formats: direct number (precomputed) or object {quota: N, ev_units: X, total_units: Y} (RPC)
+            let val = null;
+            if (item !== null && item !== undefined) {
+                if (typeof item === 'number') {
+                    val = item;
+                } else if (item.quota !== null && item.quota !== undefined) {
+                    val = Number(item.quota);
+                    if (item.ev_units !== undefined && item.total_units !== undefined) {
+                        totalEvYear += Number(item.ev_units || 0);
+                        totalUnitsYear += Number(item.total_units || 0);
+                        hasRealUnits = true;
+                    }
+                }
+            }
             if (val !== null) {
                 validQuotas.push(val);
             }
             return val;
         });
 
-        const avgQuota = validQuotas.length > 0
-            ? Number((validQuotas.reduce((a, b) => a + b, 0) / validQuotas.length).toFixed(1))
-            : null;
+        // Compute real volume-weighted annual quota if monthly unit volumes exist; fallback to arithmetic mean if not
+        let avgQuota = null;
+        if (hasRealUnits && totalUnitsYear > 0) {
+            avgQuota = Number(((totalEvYear / totalUnitsYear) * 100).toFixed(1));
+        } else if (validQuotas.length > 0) {
+            avgQuota = Number((validQuotas.reduce((a, b) => a + b, 0) / validQuotas.length).toFixed(1));
+        }
 
         const avgText = isEn ? 'Avg' : 'Media';
         const labelText = avgQuota !== null ? `${year} (${avgText}: ${avgQuota}%)` : year;
