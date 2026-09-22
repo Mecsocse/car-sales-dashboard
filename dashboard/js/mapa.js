@@ -9,6 +9,14 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
 
 const DATA_VERSION = '20260922_v2';
 
+function trackAnalyticsEvent(name, params = {}) {
+    if (typeof window.gtag === 'function') {
+        try {
+            window.gtag('event', name, params);
+        } catch (e) {}
+    }
+}
+
 const PROVINCIA_COORDS = {
     'Madrid': [40.4168, -3.7038],
     'Barcelona': [41.3879, 2.1699],
@@ -197,6 +205,7 @@ class TerritorialMapApp {
     async setViewMode(mode) {
         if (this.viewMode === mode) return;
         this.viewMode = mode;
+        trackAnalyticsEvent('map_view_mode', { mode });
 
         const btnProv = document.getElementById('btn-mode-prov');
         const btnCp = document.getElementById('btn-mode-cp');
@@ -1080,6 +1089,14 @@ class TerritorialMapApp {
         const model = modelSelect ? modelSelect.value : '';
         const fuel = fuelSelect ? fuelSelect.value : '';
         const periodVal = periodSelect ? periodSelect.value : '2026';
+
+        if (brand || model || fuel) {
+            trackAnalyticsEvent('map_filter', {
+                brand: brand || 'all',
+                model: model || 'all',
+                fuel: fuel || 'all'
+            });
+        }
 
         // Auto-load postal data if model is selected to compute CP ranking
         if (model && !this.allSpainDataLoaded) {

@@ -5,6 +5,14 @@ const isLocal = window.location.hostname === 'localhost' || window.location.host
 const isFile = window.location.protocol === 'file:' || window.location.hostname === '';
 const API_BASE = isLocal ? '' : (isFile ? 'http://127.0.0.1:8000' : 'https://car-sales-api-jafd.onrender.com');
 
+function trackAnalyticsEvent(name, params = {}) {
+    if (typeof window.gtag === 'function') {
+        try {
+            window.gtag('event', name, params);
+        } catch (e) {}
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     window.App = new DashboardApp();
     window.App.init();
@@ -311,6 +319,7 @@ class DashboardApp {
         if (this.quickCcaaSelect) {
             this.quickCcaaSelect.addEventListener('change', async (e) => {
                 this.selectedCcaa = e.target.value;
+                trackAnalyticsEvent('filter_ccaa', { region: this.selectedCcaa || 'ES Toda España' });
                 if (this.ccaaFilter) this.ccaaFilter.value = this.selectedCcaa;
                 await this.loadProvincesForCcaa(this.selectedCcaa);
                 this.updatePeriodTag();
@@ -323,6 +332,7 @@ class DashboardApp {
         if (this.ccaaFilter) {
             this.ccaaFilter.addEventListener('change', async (e) => {
                 this.selectedCcaa = e.target.value;
+                trackAnalyticsEvent('filter_ccaa', { region: this.selectedCcaa || 'ES Toda España' });
                 if (this.quickCcaaSelect) this.quickCcaaSelect.value = this.selectedCcaa;
                 await this.loadProvincesForCcaa(this.selectedCcaa);
                 this.updatePeriodTag();
@@ -1443,6 +1453,8 @@ class DashboardApp {
             if (brandA.toUpperCase().includes('DESCONOCIDO') || brandA === 'N/A') brandA = 'TOYOTA';
         }
 
+        trackAnalyticsEvent('open_brand_modal', { brand: brandA });
+
         const loader = document.getElementById('brand-modal-loader');
         if (loader) loader.style.display = 'flex';
 
@@ -1991,6 +2003,8 @@ class DashboardApp {
         document.body.style.overflow = 'hidden';
         if (window.lucide) lucide.createIcons();
 
+        trackAnalyticsEvent('open_model_modal');
+
         await this.fetchAndRenderModelCompare();
     }
 
@@ -2172,6 +2186,7 @@ class DashboardApp {
 
         const openPlate = (e) => {
             if (e) e.preventDefault();
+            trackAnalyticsEvent('open_plate_modal');
             if (plateModal) {
                 plateModal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
@@ -2212,6 +2227,7 @@ class DashboardApp {
 
         const openAbout = (e) => {
             if (e) e.preventDefault();
+            trackAnalyticsEvent('open_about_modal');
             if (aboutModal) {
                 aboutModal.style.display = 'flex';
                 document.body.style.overflow = 'hidden';
@@ -2369,6 +2385,7 @@ class DashboardApp {
             btnKpiBev.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.kpiQuotaMode = 'bev';
+                trackAnalyticsEvent('toggle_kpi_quota', { mode: 'bev' });
                 if (this.lastAllData && this.lastAllData.summary) {
                     window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode, this.lastAllData.fuel_mix || []);
                     this.bindKpiQuotaToggle();
@@ -2379,6 +2396,7 @@ class DashboardApp {
             btnKpiZero.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.kpiQuotaMode = 'zero';
+                trackAnalyticsEvent('toggle_kpi_quota', { mode: 'zero' });
                 if (this.lastAllData && this.lastAllData.summary) {
                     window.Components.renderMetrics(this.lastAllData.summary, this.kpiQuotaMode, this.lastAllData.fuel_mix || []);
                     this.bindKpiQuotaToggle();
@@ -2395,6 +2413,7 @@ class DashboardApp {
             btnChartBev.addEventListener('click', () => {
                 if (this.chartQuotaMode === 'bev') return;
                 this.chartQuotaMode = 'bev';
+                trackAnalyticsEvent('toggle_chart_quota', { mode: 'bev' });
                 btnChartBev.classList.add('active');
                 btnChartZero.classList.remove('active');
 
@@ -2413,6 +2432,7 @@ class DashboardApp {
             btnChartZero.addEventListener('click', () => {
                 if (this.chartQuotaMode === 'zero') return;
                 this.chartQuotaMode = 'zero';
+                trackAnalyticsEvent('toggle_chart_quota', { mode: 'zero' });
                 btnChartZero.classList.add('active');
                 btnChartBev.classList.remove('active');
 
