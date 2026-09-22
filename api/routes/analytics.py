@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 import sqlite3
 from typing import Optional, List, Any, Dict
 from datetime import datetime
+import time
 import sys
 import os
 
@@ -1547,6 +1548,7 @@ def get_models_compare(
     month: Optional[str] = Query(None, description="Mes en formato YYYY-MM"),
     date: Optional[str] = Query(None, description="Fecha en formato YYYY-MM-DD"),
     ccaa: Optional[str] = Query(None, description="CCAA opcional"),
+    purge: Optional[int] = Query(None, description="Forzar refresco de caché si purge=1"),
     conn: Any = Depends(get_db)
 ):
     """
@@ -1574,8 +1576,13 @@ def get_models_compare(
     raw_models = raw_models[:4]
 
     cache_key = f"{','.join(raw_models)}|{period_type}|{year}|{month or ''}|{date or ''}|{ccaa or ''}"
-    if cache_key in _MODELS_COMPARE_CACHE:
-        return _MODELS_COMPARE_CACHE[cache_key]
+    now = time.time()
+    if purge == 1:
+        _MODELS_COMPARE_CACHE.pop(cache_key, None)
+    elif cache_key in _MODELS_COMPARE_CACHE:
+        val, ts = _MODELS_COMPARE_CACHE[cache_key]
+        if now - ts < 600:
+            return val
 
     c = conn.cursor()
     where_ccaa = " AND LOWER(ccaa) = LOWER(?)" if ccaa and ccaa.strip() and ccaa.strip().lower() not in ('es toda españa', 'toda españa', 'todas las ccaa', 'todas', 'es', 'all', 'none', '') else ""
@@ -1780,7 +1787,7 @@ def get_models_compare(
 
     if len(_MODELS_COMPARE_CACHE) > 500:
         _MODELS_COMPARE_CACHE.clear()
-    _MODELS_COMPARE_CACHE[cache_key] = result
+    _MODELS_COMPARE_CACHE[cache_key] = (result, now)
     return result
 
 _GEO_PROVINCIAS_CACHE = {}
@@ -1792,6 +1799,7 @@ def get_geo_provincias(
     brand: Optional[str] = Query(None),
     model: Optional[str] = Query(None),
     fuel: Optional[str] = Query(None),
+    purge: Optional[int] = Query(None, description="Forzar refresco de caché si purge=1"),
     conn: Any = Depends(get_db)
 ):
     """
@@ -1812,8 +1820,13 @@ def get_geo_provincias(
         except Exception: return default
 
     cache_key = f"geo_{year}_{month}_{brand}_{model}_{fuel}"
-    if cache_key in _GEO_PROVINCIAS_CACHE:
-        return _GEO_PROVINCIAS_CACHE[cache_key]
+    now = time.time()
+    if purge == 1:
+        _GEO_PROVINCIAS_CACHE.pop(cache_key, None)
+    elif cache_key in _GEO_PROVINCIAS_CACHE:
+        val, ts = _GEO_PROVINCIAS_CACHE[cache_key]
+        if now - ts < 600:
+            return val
 
     c = conn.cursor()
 
@@ -1913,7 +1926,7 @@ def get_geo_provincias(
 
     if len(_GEO_PROVINCIAS_CACHE) > 200:
         _GEO_PROVINCIAS_CACHE.clear()
-    _GEO_PROVINCIAS_CACHE[cache_key] = result
+    _GEO_PROVINCIAS_CACHE[cache_key] = (result, now)
     return result
 
 def warm_cache():

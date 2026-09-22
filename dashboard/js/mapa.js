@@ -942,7 +942,7 @@ class TerritorialMapApp {
         if (fuel) q += `&fuel=${encodeURIComponent(fuel)}`;
 
         try {
-            const res = await fetch(`${API_BASE}/api/analytics/geo-provincias?${q}`, { signal });
+            const res = await fetch(`${API_BASE}/api/analytics/geo-provincias?${q}&_t=${Date.now()}`, { signal, cache: 'no-store' });
             if (!res.ok) throw new Error('API Error');
             const data = await res.json();
 
