@@ -7,7 +7,7 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
     ? 'http://127.0.0.1:8000'
     : (window.location.hostname.includes('cardatasales.com') ? '' : 'https://car-sales-api-jafd.onrender.com');
 
-const DATA_VERSION = '20260918_v3';
+const DATA_VERSION = '20260922_v2';
 
 const PROVINCIA_COORDS = {
     'Madrid': [40.4168, -3.7038],
@@ -386,6 +386,25 @@ class TerritorialMapApp {
         }
     }
 
+    getPeriodDisplay(periodVal) {
+        const labels = {
+            '2026': '2026',
+            '2026-09': 'Sep 2026',
+            '2026-08': 'Ago 2026',
+            '2026-07': 'Jul 2026',
+            '2026-06': 'Jun 2026',
+            '2026-05': 'May 2026',
+            '2026-04': 'Abr 2026',
+            '2026-03': 'Mar 2026',
+            '2026-02': 'Feb 2026',
+            '2026-01': 'Ene 2026',
+            '2025': '2025',
+            '2024': '2024',
+            '2023': '2023'
+        };
+        return labels[periodVal] || periodVal || '2026';
+    }
+
     showDrilldownBadge(visible, label) {
         let badge = document.getElementById('bcn-drilldown-badge');
         if (visible) {
@@ -396,8 +415,13 @@ class TerritorialMapApp {
                 const wrapper = document.getElementById('map-wrapper');
                 if (wrapper) wrapper.appendChild(badge);
             }
+            const periodSelect = document.getElementById('filter-period');
+            const periodVal = periodSelect ? periodSelect.value : '2026';
+            const periodLabel = this.getPeriodDisplay(periodVal);
+            const periodSuffix = ` (${periodLabel})`;
+
             const prefix = this.viewMode === 'all_cp' ? 'Modo:' : 'Desglose Códigos Postales:';
-            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${label || 'España'}</span>`;
+            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${label || 'España'}${periodSuffix}</span>`;
             badge.style.display = 'flex';
         } else {
             if (badge) badge.style.display = 'none';
@@ -420,9 +444,13 @@ class TerritorialMapApp {
         const brandSelect = document.getElementById('filter-brand');
         const modelSelect = document.getElementById('filter-model');
         const fuelSelect = document.getElementById('filter-fuel');
+        const periodSelect = document.getElementById('filter-period');
         const brand = brandSelect ? brandSelect.value : '';
         const model = modelSelect ? modelSelect.value : '';
         const fuel = fuelSelect ? fuelSelect.value : '';
+        const periodVal = periodSelect ? periodSelect.value : '2026';
+        const periodLabel = this.getPeriodDisplay(periodVal);
+        const isMonth = periodVal && periodVal.includes('-');
 
         const bounds = this.map.getBounds();
         const bPad = bounds.pad(0.12);
@@ -444,20 +472,25 @@ class TerritorialMapApp {
                     return;
                 }
 
+                // If a specific month is selected, use node.months[periodVal]; otherwise use node
+                const src = isMonth ? ((node.months && node.months[periodVal]) || null) : node;
+
                 let units = 0;
-                if (model) {
-                    units = (node.models && node.models[model]) || 0;
-                } else if (brand) {
-                    units = (node.brands && node.brands[brand]) || 0;
-                } else if (fuel) {
-                    units = (node.fuels && node.fuels[fuel]) || 0;
-                } else {
-                    units = node.total || 0;
+                if (src) {
+                    if (model) {
+                        units = (src.models && src.models[model]) || 0;
+                    } else if (brand) {
+                        units = (src.brands && src.brands[brand]) || 0;
+                    } else if (fuel) {
+                        units = (src.fuels && src.fuels[fuel]) || 0;
+                    } else {
+                        units = src.total || 0;
+                    }
                 }
 
                 if (units > 0) {
                     if (units > maxUnits) maxUnits = units;
-                    activeItems.push({ node, units });
+                    activeItems.push({ node, src, units });
                 }
             });
         });
@@ -489,7 +522,7 @@ class TerritorialMapApp {
             weight = 1.5;
         }
 
-        activeItems.forEach(({ node, units }) => {
+        activeItems.forEach(({ node, src, units }) => {
             const rawRadius = this.computePostalRadius(units, maxUnits);
             const radius = Math.max(baseMin, rawRadius * zoomFactor);
 
@@ -521,7 +554,7 @@ class TerritorialMapApp {
             const filterLabel = model ? ` (${model})` : (brand ? ` (${brand})` : '');
             circle.bindTooltip(`
                 <div style="font-family: inherit; font-size: 12px; font-weight: 700;">
-                    CP ${node.cp} - ${nodeDisplayName}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.${filterLabel}</span>
+                    CP ${node.cp} - ${nodeDisplayName}: <span style="color: ${colors.fill}; font-size: 13px;">${units.toLocaleString('es-ES')} un.${filterLabel}</span> <span style="font-size: 11px; color: #64748b; font-weight: 500;">(${periodLabel})</span>
                 </div>
             `, {
                 direction: 'top',
@@ -530,7 +563,8 @@ class TerritorialMapApp {
             });
 
             // Popup detail
-            const pctOfCp = node.total > 0 ? Math.round((units / node.total) * 100) : 0;
+            const cpTotalInPeriod = (src && src.total) ? src.total : 0;
+            const pctOfCp = cpTotalInPeriod > 0 ? Math.round((units / cpTotalInPeriod) * 100) : 0;
             let filterNotice = '';
             if (model) {
                 filterNotice = `
@@ -555,12 +589,13 @@ class TerritorialMapApp {
                 `;
             }
 
+            const topModelsList = (src && src.top_models) ? src.top_models : [];
             let topModelsHtml = '';
-            if (node.top_models && node.top_models.length > 0) {
+            if (topModelsList && topModelsList.length > 0) {
                 topModelsHtml = `
                     <div class="popup-top-models">
-                        <div class="popup-models-title">Top Modelos en CP ${node.cp} (2026)</div>
-                        ${node.top_models.map((m, idx) => `
+                        <div class="popup-models-title">Top Modelos en CP ${node.cp} (${periodLabel})</div>
+                        ${topModelsList.map((m, idx) => `
                             <div class="popup-model-line">
                                 <span><span class="popup-model-badge">#${idx+1}</span><strong>${m.modelo}</strong></span>
                                 <span style="font-weight: 700; color: #0f172a;">${m.total.toLocaleString('es-ES')} un.</span>
@@ -576,8 +611,8 @@ class TerritorialMapApp {
                     <span class="popup-ccaa">${nodeDisplayName}</span>
                 </div>
                 <div class="popup-stat-row">
-                    <span style="color: #64748b;">Total Turismos (2026):</span>
-                    <strong style="font-size: 14px; color: #0f172a;">${(node.total || 0).toLocaleString('es-ES')} un.</strong>
+                    <span style="color: #64748b;">Total Turismos (${periodLabel}):</span>
+                    <strong style="font-size: 14px; color: #0f172a;">${cpTotalInPeriod.toLocaleString('es-ES')} un.</strong>
                 </div>
                 ${filterNotice}
                 ${topModelsHtml}
@@ -1096,15 +1131,21 @@ class TerritorialMapApp {
 
         // If a specific model is selected AND we have postal data, show the CP ranking for that model!
         if (model) {
+            const periodSelect = document.getElementById('filter-period');
+            const periodVal = periodSelect ? periodSelect.value : '2026';
+            const periodLabel = this.getPeriodDisplay(periodVal);
+            const isMonth = periodVal && periodVal.includes('-');
+
             if (rankingTitle) {
-                rankingTitle.innerHTML = `🏆 Dónde se venden más <strong>${model}</strong>`;
+                rankingTitle.innerHTML = `🏆 Dónde se venden más <strong>${model}</strong> <small style="font-weight:400; font-size:12px; color:#64748b;">(${periodLabel})</small>`;
             }
 
-            // Aggregate all CPs that have sales of this model
+            // Aggregate all CPs that have sales of this model in this period
             const cpMatches = [];
             Object.values(this.loadedPostalData).forEach(nodes => {
                 nodes.forEach(n => {
-                    const u = (n.models && n.models[model]) || 0;
+                    const src = isMonth ? ((n.months && n.months[periodVal]) || null) : n;
+                    const u = (src && src.models && src.models[model]) || 0;
                     if (u > 0) {
                         cpMatches.push({
                             cp: n.cp,

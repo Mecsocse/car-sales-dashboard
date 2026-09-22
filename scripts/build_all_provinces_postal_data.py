@@ -1,4 +1,4 @@
-import os, sys, glob, time, json, zipfile, io, urllib.request
+import os, sys, glob, time, json, zipfile, io, urllib.request, re
 
 sys.path.insert(0, '.')
 
@@ -370,6 +370,14 @@ for fpath in files:
             
             modelo_raw = line[47:77].strip()
             modelo_clean = clean_model(marca_clean, modelo_raw)
+            m_full = f'{marca_clean} {modelo_clean}'.strip().upper()
+
+            date_str = line[:8].strip()
+            if len(date_str) == 8 and date_str.isdigit():
+                mo = f"{date_str[4:8]}-{date_str[2:4]}"
+            else:
+                m_fname = re.search(r'2026(\d{2})', os.path.basename(fpath))
+                mo = f"2026-{m_fname.group(1)}" if m_fname else '2026'
                 
             prov_dict = prov_postals[prefix]
             if cp not in prov_dict:
@@ -383,15 +391,24 @@ for fpath in files:
                     'total': 0,
                     'brands': {},
                     'fuels': {},
-                    '_models': {}
+                    '_models': {},
+                    'months': {}
                 }
                 
             node = prov_dict[cp]
             node['total'] += 1
             node['brands'][marca_clean] = node['brands'].get(marca_clean, 0) + 1
             node['fuels'][fuel_clean] = node['fuels'].get(fuel_clean, 0) + 1
-            m_full = f'{marca_clean} {modelo_clean}'.strip().upper()
             node['_models'][m_full] = node['_models'].get(m_full, 0) + 1
+
+            if mo.startswith('2026-'):
+                if mo not in node['months']:
+                    node['months'][mo] = {'total': 0, 'brands': {}, 'fuels': {}, '_models': {}}
+                m_node = node['months'][mo]
+                m_node['total'] += 1
+                m_node['brands'][marca_clean] = m_node['brands'].get(marca_clean, 0) + 1
+                m_node['fuels'][fuel_clean] = m_node['fuels'].get(fuel_clean, 0) + 1
+                m_node['_models'][m_full] = m_node['_models'].get(m_full, 0) + 1
 
             national_models[m_full] = national_models.get(m_full, 0) + 1
             if marca_clean not in national_brand_models:
@@ -447,6 +464,17 @@ for prefix, cp_dict in sorted(prov_postals.items()):
         sorted_m = sorted(node['_models'].items(), key=lambda x: x[1], reverse=True)
         top_models = [{'modelo': m[0], 'total': m[1]} for m in sorted_m[:10]]
         
+        months_dict = {}
+        for mo, m_node in node.get('months', {}).items():
+            sorted_mo_m = sorted(m_node['_models'].items(), key=lambda x: x[1], reverse=True)
+            months_dict[mo] = {
+                'total': m_node['total'],
+                'brands': m_node['brands'],
+                'fuels': m_node['fuels'],
+                'top_models': [{'modelo': m[0], 'total': m[1]} for m in sorted_mo_m[:10]],
+                'models': { m[0]: m[1] for m in sorted_mo_m }
+            }
+
         prov_list.append({
             'cp': node['cp'],
             'name': node['name'],
@@ -456,7 +484,8 @@ for prefix, cp_dict in sorted(prov_postals.items()):
             'brands': node['brands'],
             'fuels': node['fuels'],
             'top_models': top_models,
-            'models': { m[0]: m[1] for m in sorted_m }
+            'models': { m[0]: m[1] for m in sorted_m },
+            'months': months_dict
         })
         
     prov_list.sort(key=lambda x: x['total'], reverse=True)
