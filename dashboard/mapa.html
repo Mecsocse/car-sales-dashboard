@@ -173,7 +173,7 @@
                 </div>
                 <div>
                     <div class="brand-title">CarDataSales</div>
-                    <div class="brand-subtitle">Mapa Territorial de Ventas</div>
+                    <div class="brand-subtitle" data-i18n="map_brand_subtitle">Mapa Territorial de Ventas</div>
                 </div>
             </a>
 
@@ -181,10 +181,10 @@
             <div class="filters-strip">
                 <!-- Buscador de CP o Municipio -->
                 <div class="filter-group search-cp-group">
-                    <label for="search-cp-input">Buscar CP / Pueblo</label>
+                    <label for="search-cp-input" data-i18n="lbl_search_cp">Buscar CP / Pueblo</label>
                     <div class="search-cp-box">
                         <i data-lucide="search" class="search-cp-icon"></i>
-                        <input type="text" id="search-cp-input" placeholder="Ej: 08770, Palau, Arganda..." autocomplete="off" />
+                        <input type="text" id="search-cp-input" placeholder="Ej: 08770, Palau, Arganda..." autocomplete="off" data-i18n-placeholder="map_search_placeholder" />
                         <button type="button" id="search-cp-clear" class="search-cp-clear" style="display:none;" title="Limpiar">&times;</button>
                         <div id="search-cp-results" class="search-cp-dropdown" style="display:none;"></div>
                     </div>
@@ -192,25 +192,25 @@
 
                 <!-- Marca -->
                 <div class="filter-group">
-                    <label for="filter-brand">Marca</label>
+                    <label for="filter-brand" data-i18n="lbl_filter_brand">Marca</label>
                     <select id="filter-brand" title="Filtrar por Marca">
-                        <option value="">Todas las marcas</option>
+                        <option value="" data-i18n="opt_all_brands">Todas las marcas</option>
                     </select>
                 </div>
 
                 <!-- Modelo -->
                 <div class="filter-group">
-                    <label for="filter-model">Modelo</label>
+                    <label for="filter-model" data-i18n="lbl_filter_model">Modelo</label>
                     <select id="filter-model" title="Filtrar por Modelo de Coche">
-                        <option value="">Todos los modelos</option>
+                        <option value="" data-i18n="opt_all_models">Todos los modelos</option>
                     </select>
                 </div>
 
                 <!-- Tecnología / Carburante -->
                 <div class="filter-group">
-                    <label for="filter-fuel">Motor</label>
+                    <label for="filter-fuel" data-i18n="lbl_filter_fuel">Motor</label>
                     <select id="filter-fuel" title="Filtrar por Carburante o Tecnología">
-                        <option value="">Todos los motores</option>
+                        <option value="" data-i18n="opt_all_fuels">Todos los motores</option>
                         <option value="ELECTRICO">⚡ 100% Eléctrico (BEV)</option>
                         <option value="PHEV">🔌 Enchufable (PHEV)</option>
                         <option value="HEV">🌿 Híbrido (HEV/MHEV)</option>
@@ -222,7 +222,7 @@
 
                 <!-- Período Temporal -->
                 <div class="filter-group">
-                    <label for="filter-period">Período</label>
+                    <label for="filter-period" data-i18n="lbl_filter_period">Período</label>
                     <select id="filter-period" title="Seleccionar Período">
                         <option value="2026" selected>Año 2026</option>
                         <option value="2026-09">Sep 2026 (En curso)</option>
@@ -244,24 +244,28 @@
                 <div class="view-mode-toggle" id="view-mode-toggle" role="group" aria-label="Modo de visualización">
                     <button type="button" class="toggle-pill active" id="btn-mode-prov" data-mode="prov" title="Vista por provincias (desglose automático al hacer zoom)">
                         <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
-                        <span>Provincias</span>
+                        <span data-i18n="btn_mode_prov">Provincias</span>
                     </button>
                     <button type="button" class="toggle-pill" id="btn-mode-cp" data-mode="all_cp" title="Ver todas las bolitas de códigos postales en toda España (incluso con Zoom Out)">
                         <i data-lucide="map-pin" style="width: 14px; height: 14px;"></i>
-                        <span>Todos los CPs</span>
+                        <span data-i18n="btn_mode_cp">Todos los CPs</span>
                     </button>
                 </div>
             </div>
 
-            <!-- Navigation Links -->
+            <!-- Navigation Links & Language Switcher -->
             <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="lang-switcher" id="lang-switcher">
+                    <button class="lang-btn active" data-lang="es">🇪🇸 ES</button>
+                    <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+                </div>
                 <a href="/coches-mas-vendidos-espana" class="btn-back-dashboard" style="background: rgba(22, 163, 74, 0.12); color: #15803d; border: 1px solid rgba(22, 163, 74, 0.25); text-decoration: none;" title="Ver los coches más vendidos en España">
                     <span>🏆</span>
-                    <span>Top Ventas</span>
+                    <span data-i18n="btn_top_sales">Top Ventas</span>
                 </a>
                 <a href="/" class="btn-back-dashboard" style="text-decoration: none;">
                     <i data-lucide="arrow-left" style="width: 14px; height: 14px;"></i>
-                    <span>Dashboard</span>
+                    <span data-i18n="btn_dashboard">Dashboard</span>
                 </a>
             </div>
         </header>
@@ -270,7 +274,7 @@
         <aside class="map-sidebar">
             <!-- KPI Total -->
             <div class="sidebar-card">
-                <div class="kpi-title">Total Matriculaciones</div>
+                <div class="kpi-title" data-i18n="total_registrations">Total Matriculaciones</div>
                 <div class="kpi-value" id="sidebar-nat-total">--</div>
                 <div class="kpi-subtitle" id="sidebar-filter-desc">Cargando datos...</div>
             </div>
@@ -278,8 +282,8 @@
             <!-- Top Provinces Ranking List -->
             <div class="sidebar-card ranking-card">
                 <div class="ranking-title">
-                    <span>Top Provincias</span>
-                    <span style="font-size: 11px; font-weight: 600; color: #64748b;">(Clic para enfocar)</span>
+                    <span data-i18n="top_provinces">Top Provincias</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #64748b;" data-i18n="click_to_focus">(Clic para enfocar)</span>
                 </div>
                 <div class="ranking-list" id="sidebar-ranking-list">
                     <!-- Populated dynamically -->
@@ -289,12 +293,12 @@
 
         <!-- Map Legend -->
         <div class="map-legend">
-            <div>Volumen de matriculaciones</div>
+            <div data-i18n="legend_vol_title">Volumen de matriculaciones</div>
             <div class="legend-scale">
                 <div class="legend-circle-small"></div>
-                <span>Menor</span>
+                <span data-i18n="legend_vol_lower">Menor</span>
                 <div class="legend-circle-large"></div>
-                <span>Mayor volumen</span>
+                <span data-i18n="legend_vol_higher">Mayor volumen</span>
             </div>
         </div>
 
@@ -360,6 +364,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
     <!-- Custom Map Script -->
-    <script src="js/mapa.js?v=20260922_v2"></script>
+    <script src="js/i18n.js?v=20260922_v1"></script>
+    <script src="js/mapa.js?v=20260922_v3"></script>
 </body>
 </html>

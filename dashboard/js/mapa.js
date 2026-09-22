@@ -387,21 +387,20 @@ class TerritorialMapApp {
     }
 
     getPeriodDisplay(periodVal) {
-        const labels = {
-            '2026': '2026',
-            '2026-09': 'Sep 2026',
-            '2026-08': 'Ago 2026',
-            '2026-07': 'Jul 2026',
-            '2026-06': 'Jun 2026',
-            '2026-05': 'May 2026',
-            '2026-04': 'Abr 2026',
-            '2026-03': 'Mar 2026',
-            '2026-02': 'Feb 2026',
-            '2026-01': 'Ene 2026',
-            '2025': '2025',
-            '2024': '2024',
-            '2023': '2023'
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const labelsEs = {
+            '2026': '2026', '2026-09': 'Sep 2026', '2026-08': 'Ago 2026',
+            '2026-07': 'Jul 2026', '2026-06': 'Jun 2026', '2026-05': 'May 2026',
+            '2026-04': 'Abr 2026', '2026-03': 'Mar 2026', '2026-02': 'Feb 2026',
+            '2026-01': 'Ene 2026', '2025': '2025', '2024': '2024', '2023': '2023'
         };
+        const labelsEn = {
+            '2026': '2026', '2026-09': 'Sep 2026', '2026-08': 'Aug 2026',
+            '2026-07': 'Jul 2026', '2026-06': 'Jun 2026', '2026-05': 'May 2026',
+            '2026-04': 'Apr 2026', '2026-03': 'Mar 2026', '2026-02': 'Feb 2026',
+            '2026-01': 'Jan 2026', '2025': '2025', '2024': '2024', '2023': '2023'
+        };
+        const labels = isEn ? labelsEn : labelsEs;
         return labels[periodVal] || periodVal || '2026';
     }
 
@@ -420,8 +419,10 @@ class TerritorialMapApp {
             const periodLabel = this.getPeriodDisplay(periodVal);
             const periodSuffix = ` (${periodLabel})`;
 
-            const prefix = this.viewMode === 'all_cp' ? 'Modo:' : 'Desglose Códigos Postales:';
-            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${label || 'España'}${periodSuffix}</span>`;
+            const isEn = window.I18N && window.I18N.getLang() === 'en';
+            const prefix = this.viewMode === 'all_cp' ? (isEn ? 'Mode:' : 'Modo:') : (isEn ? 'Postal Codes Breakdown:' : 'Desglose Códigos Postales:');
+            const defaultLabel = isEn ? 'Spain' : 'España';
+            badge.innerHTML = `<span class="badge-dot"></span><span>${prefix} ${label || defaultLabel}${periodSuffix}</span>`;
             badge.style.display = 'flex';
         } else {
             if (badge) badge.style.display = 'none';
@@ -563,28 +564,33 @@ class TerritorialMapApp {
             });
 
             // Popup detail
+            const isEn = window.I18N && window.I18N.getLang() === 'en';
             const cpTotalInPeriod = (src && src.total) ? src.total : 0;
             const pctOfCp = cpTotalInPeriod > 0 ? Math.round((units / cpTotalInPeriod) * 100) : 0;
+            const cpLabelStr = isEn ? 'of PC' : 'del CP';
             let filterNotice = '';
             if (model) {
+                const modelLbl = isEn ? 'Model' : 'Modelo';
                 filterNotice = `
                     <div class="popup-stat-row">
-                        <span style="color: #64748b;">Modelo ${model}:</span>
-                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% del CP)</strong>
+                        <span style="color: #64748b;">${modelLbl} ${model}:</span>
+                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% ${cpLabelStr})</strong>
                     </div>
                 `;
             } else if (brand) {
+                const brandLbl = isEn ? 'Brand' : 'Marca';
                 filterNotice = `
                     <div class="popup-stat-row">
-                        <span style="color: #64748b;">Marca ${brand}:</span>
-                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% del CP)</strong>
+                        <span style="color: #64748b;">${brandLbl} ${brand}:</span>
+                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% ${cpLabelStr})</strong>
                     </div>
                 `;
             } else if (fuel) {
+                const motorLbl = isEn ? 'Powertrain' : 'Motor';
                 filterNotice = `
                     <div class="popup-stat-row">
-                        <span style="color: #64748b;">Motor ${fuel}:</span>
-                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% del CP)</strong>
+                        <span style="color: #64748b;">${motorLbl} ${fuel}:</span>
+                        <strong style="color: ${colors.stroke};">${units.toLocaleString('es-ES')} un. (${pctOfCp}% ${cpLabelStr})</strong>
                     </div>
                 `;
             }
@@ -592,9 +598,10 @@ class TerritorialMapApp {
             const topModelsList = (src && src.top_models) ? src.top_models : [];
             let topModelsHtml = '';
             if (topModelsList && topModelsList.length > 0) {
+                const topModelsTitle = isEn ? `Top Models in PC ${node.cp}` : `Top Modelos en CP ${node.cp}`;
                 topModelsHtml = `
                     <div class="popup-top-models">
-                        <div class="popup-models-title">Top Modelos en CP ${node.cp} (${periodLabel})</div>
+                        <div class="popup-models-title">${topModelsTitle} (${periodLabel})</div>
                         ${topModelsList.map((m, idx) => `
                             <div class="popup-model-line">
                                 <span><span class="popup-model-badge">#${idx+1}</span><strong>${m.modelo}</strong></span>
@@ -605,13 +612,14 @@ class TerritorialMapApp {
                 `;
             }
 
+            const totalCarsLbl = isEn ? 'Total Passenger Cars' : 'Total Turismos';
             const popupContent = `
                 <div class="popup-header">
                     <span class="popup-title">CP ${node.cp}</span>
                     <span class="popup-ccaa">${nodeDisplayName}</span>
                 </div>
                 <div class="popup-stat-row">
-                    <span style="color: #64748b;">Total Turismos (${periodLabel}):</span>
+                    <span style="color: #64748b;">${totalCarsLbl} (${periodLabel}):</span>
                     <strong style="font-size: 14px; color: #0f172a;">${cpTotalInPeriod.toLocaleString('es-ES')} un.</strong>
                 </div>
                 ${filterNotice}
@@ -664,6 +672,11 @@ class TerritorialMapApp {
         if (btnCp) {
             btnCp.addEventListener('click', () => this.setViewMode('all_cp'));
         }
+
+        // Global language changed listener
+        window.addEventListener('languageChanged', () => {
+            this.fetchAndRender();
+        });
     }
 
     async loadSearchIndex() {
@@ -1055,11 +1068,13 @@ class TerritorialMapApp {
             });
 
             // Popup content with Top Models
+            const isEn = window.I18N && window.I18N.getLang() === 'en';
             let topModelsHtml = '';
             if (p.top_models && p.top_models.length > 0) {
+                const topModelsTitle = isEn ? `Top Models in ${p.provincia}` : `Top Modelos en ${p.provincia}`;
                 topModelsHtml = `
                     <div class="popup-top-models">
-                        <div class="popup-models-title">Top Modelos en ${p.provincia}</div>
+                        <div class="popup-models-title">${topModelsTitle}</div>
                         ${p.top_models.map((m, idx) => `
                             <div class="popup-model-line">
                                 <span><span class="popup-model-badge">#${idx+1}</span><strong>${m.modelo}</strong></span>
@@ -1070,22 +1085,26 @@ class TerritorialMapApp {
                 `;
             }
 
+            const regLabel = isEn ? 'Registrations:' : 'Matriculaciones:';
+            const natShareLabel = isEn ? 'National share:' : 'Cuota nacional:';
+            const cpBreakdownBtn = isEn ? '🔍 View breakdown by Postal Codes' : '🔍 Ver desglose por Códigos Postales';
+
             const popupContent = `
                 <div class="popup-header">
                     <span class="popup-title">${p.provincia}</span>
                     <span class="popup-ccaa">${p.ccaa}</span>
                 </div>
                 <div class="popup-stat-row">
-                    <span style="color: #64748b;">Matriculaciones:</span>
+                    <span style="color: #64748b;">${regLabel}</span>
                     <strong style="font-size: 15px; color: ${colors.stroke};">${p.total.toLocaleString('es-ES')} un.</strong>
                 </div>
                 <div class="popup-stat-row">
-                    <span style="color: #64748b;">Cuota nacional:</span>
+                    <span style="color: #64748b;">${natShareLabel}</span>
                     <strong>${p.share}%</strong>
                 </div>
                 ${topModelsHtml}
                 <div style="margin-top: 10px; padding: 7px 10px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 11px; color: #166534; font-weight: 700; text-align: center; cursor: pointer;" onclick="window.TerritorialMap && window.TerritorialMap.zoomToProvince('${p.provincia}')">
-                    🔍 Ver desglose por Códigos Postales
+                    ${cpBreakdownBtn}
                 </div>
             `;
 
@@ -1120,10 +1139,15 @@ class TerritorialMapApp {
             kpiVal.textContent = (data.national_total || 0).toLocaleString('es-ES');
         }
 
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+
         if (kpiSub) {
-            const mTxt = model ? model : (brand ? brand : 'Todas las marcas');
-            const fTxt = fuel ? fuel : 'Todos los carburantes';
-            const pTxt = data.month || `Año ${data.year || '2026'}`;
+            const allBrandsTxt = isEn ? 'All brands' : 'Todas las marcas';
+            const allFuelsTxt = isEn ? 'All powertrains' : 'Todos los carburantes';
+            const yrTxt = isEn ? `Year ${data.year || '2026'}` : `Año ${data.year || '2026'}`;
+            const mTxt = model ? model : (brand ? brand : allBrandsTxt);
+            const fTxt = fuel ? fuel : allFuelsTxt;
+            const pTxt = data.month || yrTxt;
             kpiSub.textContent = `${mTxt} • ${fTxt} • ${pTxt}`;
         }
 
@@ -1137,7 +1161,8 @@ class TerritorialMapApp {
             const isMonth = periodVal && periodVal.includes('-');
 
             if (rankingTitle) {
-                rankingTitle.innerHTML = `🏆 Dónde se venden más <strong>${model}</strong> <small style="font-weight:400; font-size:12px; color:#64748b;">(${periodLabel})</small>`;
+                const titleStr = isEn ? `🏆 Where <strong>${model}</strong> sells most` : `🏆 Dónde se venden más <strong>${model}</strong>`;
+                rankingTitle.innerHTML = `${titleStr} <small style="font-weight:400; font-size:12px; color:#64748b;">(${periodLabel})</small>`;
             }
 
             // Aggregate all CPs that have sales of this model in this period
@@ -1196,7 +1221,7 @@ class TerritorialMapApp {
 
         // Default: Provincial ranking
         if (rankingTitle) {
-            rankingTitle.textContent = 'Top Provincias por Volumen';
+            rankingTitle.textContent = isEn ? 'Top Provinces by Volume' : 'Top Provincias por Volumen';
         }
 
         if (!data || !data.provinces) return;

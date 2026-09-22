@@ -265,13 +265,19 @@
             <!-- Header Section -->
             <header class="top-header">
                 <div class="header-title">
-                    <h1>Coches más vendidos en España</h1>
-                    <p class="subtitle">Datos oficiales de matriculaciones de turismos procesados de la DGT</p>
+                    <h1 data-i18n="header_title">Coches más vendidos en España</h1>
+                    <p class="subtitle" data-i18n="header_subtitle">Datos oficiales de matriculaciones de turismos procesados de la DGT</p>
                 </div>
                 
                 <div class="header-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <!-- Language Switcher Toggle (ES / EN) -->
+                    <div class="lang-switcher" id="lang-switcher" style="margin-right: 2px;">
+                        <button class="lang-btn active" data-lang="es">🇪🇸 ES</button>
+                        <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+                    </div>
+
                     <!-- DGT Spanish License Plate Widget -->
-                    <button class="dgt-plate-widget-btn" id="btn-open-plate-modal" title="Haz clic para ver el histórico de letras de la DGT">
+                    <button class="dgt-plate-widget-btn" id="btn-open-plate-modal" title="Haz clic para ver el histórico de letras de la DGT" data-i18n-title="plate_widget_tooltip">
                         <div class="spanish-plate-mini">
                             <div class="plate-blue-strip">
                                 <span class="eu-stars">🇪🇺</span>
@@ -280,7 +286,7 @@
                             <span class="plate-letters-bold" id="widget-plate-letters">7160 · NSH</span>
                         </div>
                         <div class="plate-widget-meta">
-                            <span class="meta-title">Última Matrícula DGT</span>
+                            <span class="meta-title" data-i18n="last_dgt_plate">Última Matrícula DGT</span>
                             <span class="meta-date" id="widget-plate-date">4 Sep 2026</span>
                         </div>
                     </button>
@@ -288,31 +294,31 @@
                     <!-- Brand Analysis Button in Header -->
                     <button class="btn btn-primary" id="btn-header-brand-analysis" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
                         <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
-                        <span>Análisis de Marca</span>
+                        <span data-i18n="btn_brand_analysis">Análisis de Marca</span>
                     </button>
 
                     <!-- Model Comparison Button in Header -->
                     <button class="btn btn-primary" id="btn-header-model-analysis" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
                         <i data-lucide="git-compare" style="width: 16px; height: 16px;"></i>
-                        <span>Comparar Modelos</span>
+                        <span data-i18n="btn_model_analysis">Comparar Modelos</span>
                     </button>
 
                     <!-- Interactive Territorial Map Button -->
-                    <a href="/mapa" class="btn btn-primary" id="btn-header-mapa" style="background: linear-gradient(135deg, #059669, #047857); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28); text-decoration: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias">
+                    <a href="/mapa" class="btn btn-primary" id="btn-header-mapa" style="background: linear-gradient(135deg, #059669, #047857); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28); text-decoration: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias" data-i18n-title="btn_mapa_tooltip">
                         <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
-                        <span>Mapa por CPs</span>
+                        <span data-i18n="btn_mapa">Mapa por CPs</span>
                     </a>
 
                     <!-- Top Ventas 2026 Ranking Button in Header -->
                     <a href="/coches-mas-vendidos-espana" class="btn btn-primary" id="btn-header-top-sales" style="background: linear-gradient(135deg, #16a34a, #15803d); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.28); text-decoration: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;" title="Ranking oficial de coches más vendidos en España">
                         <span>🏆</span>
-                        <span>Coche más vendido (Top 20)</span>
+                        <span data-i18n="btn_top_sales">Coche más vendido (Top 20)</span>
                     </a>
 
                     <!-- About Project Button -->
                     <button class="btn btn-secondary" id="btn-open-about-modal">
                         <i data-lucide="info"></i>
-                        <span>Sobre el proyecto</span>
+                        <span data-i18n="btn_about">Sobre el proyecto</span>
                     </button>
 
                     <!-- Follow on X / Twitter Button -->
@@ -320,7 +326,7 @@
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                         </svg>
-                        <span>Seguir en X</span>
+                        <span data-i18n="btn_follow_x">Seguir en X</span>
                     </a>
                 </div>
             </header>
@@ -330,7 +336,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
                     <div style="max-width: 820px;">
                         <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; color: #15803d; margin-bottom: 6px; background: #dcfce7; padding: 3px 8px; border-radius: 4px;">
-                            <span>🏆 Datos Oficiales DGT 2026</span>
+                            <span data-i18n="featured_badge">🏆 Datos Oficiales DGT 2026</span>
                         </div>
                         <h2 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.35;">
                             ¿Cuál es el coche más vendido en España en 2026? El <strong>Dacia Sandero</strong> con <strong>24.693 unidades</strong>
@@ -341,7 +347,7 @@
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <a href="/coches-mas-vendidos-espana" class="btn btn-primary" style="background: #16a34a; border: none; color: #ffffff; padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.25); white-space: nowrap;">
-                            <span>Ver Informe y Ranking Top 20</span>
+                            <span data-i18n="featured_btn">Ver Informe y Ranking Top 20</span>
                             <span>→</span>
                         </a>
                     </div>
@@ -353,15 +359,15 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; flex-wrap: wrap; gap: 12px;">
                     <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; color: #0f172a;">
                         <i data-lucide="calendar" style="color: #0284c7;"></i>
-                        <span>Control Temporal y Período</span>
+                        <span data-i18n="temporal_controls_title">Control Temporal y Período</span>
                     </div>
 
                     <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <!-- Fast CCAA Picker in Main Control Bar -->
                         <div style="display: flex; align-items: center; gap: 8px; background: #ffffff; padding: 4px 12px; border-radius: 8px; border: 1px solid #cbd5e1;">
-                            <span style="font-size: 12px; color: #475569; font-weight: 700;">🗺️ Región / CCAA:</span>
+                            <span style="font-size: 12px; color: #475569; font-weight: 700;" data-i18n="region_ccaa_label">🗺️ Región / CCAA:</span>
                             <select id="quick-ccaa-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer;">
-                                <option value="" selected>🇪🇸 Toda España</option>
+                                <option value="" selected data-i18n="opt_all_spain">🇪🇸 Toda España</option>
                                 <option value="Andalucía">Andalucía</option>
                                 <option value="Aragón">Aragón</option>
                                 <option value="Asturias">Asturias</option>
@@ -386,19 +392,19 @@
                         <!-- Brand Analysis Quick Button in Toolbar -->
                         <button id="btn-toolbar-brand-analysis" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #d8b4fe; background: #faf5ff; color: #7c3aed; cursor: pointer; transition: all 0.2s ease;">
                             <i data-lucide="bar-chart-2" style="width: 15px; height: 15px; color: #7c3aed;"></i>
-                            <span>Análisis de Marca</span>
+                            <span data-i18n="btn_brand_analysis">Análisis de Marca</span>
                         </button>
 
                         <!-- Model Comparison Quick Button in Toolbar -->
                         <button id="btn-toolbar-model-analysis" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #bfdbfe; background: #eff6ff; color: #2563eb; cursor: pointer; transition: all 0.2s ease;">
                             <i data-lucide="git-compare" style="width: 15px; height: 15px; color: #2563eb;"></i>
-                            <span>Comparar Modelos</span>
+                            <span data-i18n="btn_model_analysis">Comparar Modelos</span>
                         </button>
 
                         <!-- Mapa Territorial Quick Button in Toolbar -->
-                        <a href="/mapa" id="btn-toolbar-mapa" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #059669; text-decoration: none; cursor: pointer; transition: all 0.2s ease;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias">
+                        <a href="/mapa" id="btn-toolbar-mapa" class="btn" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 8px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #059669; text-decoration: none; cursor: pointer; transition: all 0.2s ease;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias" data-i18n-title="btn_mapa_tooltip">
                             <i data-lucide="map-pin" style="width: 15px; height: 15px; color: #059669;"></i>
-                            <span>Ver Mapa CPs</span>
+                            <span data-i18n="btn_view_map_cps">Ver Mapa CPs</span>
                         </a>
 
                         <div class="active-period-badge" id="active-period-tag" style="background: #2563eb; color: #ffffff; padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);">
@@ -411,7 +417,7 @@
                 <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: flex-start;">
                     <!-- 1. Seleccionar Mes Concreto (Defecto: Mes Actual) -->
                     <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 200px;">
-                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📆 Mes Concreto:</span>
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;" data-i18n="lbl_select_month">📆 Mes Concreto:</span>
                         <div id="container-month-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 2px solid #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); transition: all 0.2s ease;">
                             <select id="quick-month-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 14px;">
                                 <!-- Injected dynamically with ALL historical months -->
@@ -421,10 +427,10 @@
 
                     <!-- 2. Seleccionar Año Completo -->
                     <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px;">
-                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📊 Año Completo:</span>
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;" data-i18n="lbl_select_year">📊 Año Completo:</span>
                         <div id="container-year-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
                             <select id="quick-year-select" style="background: transparent; border: none; color: #0f172a; font-weight: 700; outline: none; cursor: pointer; width: 100%; font-size: 14px;">
-                                <option value="" style="font-weight:700; color:#94a3b8;">-- Seleccionar Año --</option>
+                                <option value="" style="font-weight:700; color:#94a3b8;" data-i18n="opt_select_year">-- Seleccionar Año --</option>
                                 <option value="2026">Año 2026 Completo</option>
                                 <option value="2025">Año 2025 Completo</option>
                                 <option value="2024">Año 2024 Completo</option>
@@ -434,7 +440,7 @@
 
                     <!-- 3. Seleccionar Día Concreto -->
                     <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px;">
-                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;">📅 Día Concreto:</span>
+                        <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; font-weight: 700;" data-i18n="lbl_select_day">📅 Día Concreto:</span>
                         <div id="container-date-select" style="display: flex; align-items: center; gap: 6px; background: #ffffff; padding: 8px 14px; border-radius: 8px; border: 1px solid #cbd5e1; transition: all 0.2s ease;">
                             <input type="date" id="single-date-picker" style="background: transparent; border: none; color: #0f172a; outline: none; cursor: pointer; font-family: inherit; font-weight: 600; width: 100%; font-size: 14px;">
                         </div>
@@ -518,7 +524,7 @@
                     </div>
                     <div style="text-align: center; margin-top: 12px;">
                         <button id="btn-extend-ev-brands" class="btn btn-secondary" style="padding: 4px 12px; font-size: 11px;">
-                            <span>Ver 10 más</span>
+                            <span data-i18n="btn_show_more">Ver 10 más</span>
                         </button>
                     </div>
                 </div>
@@ -530,7 +536,7 @@
                 <div class="glass-panel chart-card">
                     <div class="chart-header">
                         <h3 id="monthly-evolution-title">Evolución Mensual (Ene - Sep 2026)</h3>
-                        <span class="text-muted" style="font-size: 12px; color: #64748b;">Unidades turismos por mes</span>
+                        <span class="text-muted" style="font-size: 12px; color: #64748b;" data-i18n="sub_monthly_evolution">Unidades turismos por mes</span>
                     </div>
                     <div class="chart-container" style="height: 280px;">
                         <canvas id="monthlyEvolutionChart"></canvas>
@@ -540,9 +546,9 @@
                 <!-- Mix por Carburante Doughnut Chart -->
                 <div class="glass-panel chart-card">
                     <div class="chart-header">
-                        <h3>Mix por Carburante</h3>
+                        <h3 data-i18n="title_fuel_mix">Mix por Carburante</h3>
                         <div class="chart-legend-indicator" style="color: #475569; font-weight: 600; font-size: 13px;">
-                            <span class="dot text-cyan"></span> % del total
+                            <span class="dot text-cyan"></span> <span data-i18n="fuel_mix_pct">% del total</span>
                         </div>
                     </div>
                     <div class="chart-container" style="height: 280px;">
@@ -557,8 +563,8 @@
                 <div class="glass-panel chart-card">
                     <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                         <div>
-                            <h3 id="chart-ev-quota-title">Cuota 100% Eléctricos Mes a Mes</h3>
-                            <span class="text-muted" style="font-size: 12px; color: #64748b;" id="chart-ev-quota-sub">% BEV sobre total turismos</span>
+                            <h3 id="chart-ev-quota-title" data-i18n="title_ev_quota">Cuota 100% Eléctricos Mes a Mes</h3>
+                            <span class="text-muted" style="font-size: 12px; color: #64748b;" id="chart-ev-quota-sub" data-i18n="sub_ev_quota">% BEV sobre total turismos</span>
                         </div>
                         <div class="chart-toggle-group">
                             <button class="chart-toggle-btn active" id="toggle-quota-chart-bev">100% BEV</button>
@@ -573,8 +579,8 @@
                 <!-- 2. Acumulado 100% Eléctricos Mes a Mes (Multi-año) -->
                 <div class="glass-panel chart-card">
                     <div class="chart-header">
-                        <h3>Acumulado 100% Eléctricos Mes a Mes</h3>
-                        <span class="text-muted" style="font-size: 12px; color: #64748b;">Unidades BEV acumuladas por año</span>
+                        <h3 data-i18n="title_ev_cumulative">Acumulado 100% Eléctricos Mes a Mes</h3>
+                        <span class="text-muted" style="font-size: 12px; color: #64748b;" data-i18n="sub_ev_cumulative">Unidades BEV acumuladas por año</span>
                     </div>
                     <div class="chart-container" style="height: 290px;">
                         <canvas id="evCumulativeTrendChart"></canvas>
@@ -586,8 +592,8 @@
             <section class="mb-4">
                 <div class="glass-panel chart-card p-4">
                     <div class="chart-header" style="margin-bottom: 16px;">
-                        <h3 id="all-tech-quota-title">Cuota por Tecnología Mes a Mes (2026)</h3>
-                        <span class="text-muted" style="font-size: 12px; color: #64748b;">Evolución del % de cuota de mercado de cada propulsión</span>
+                        <h3 id="all-tech-quota-title" data-i18n="title_tech_quota">Cuota por Tecnología Mes a Mes (2026)</h3>
+                        <span class="text-muted" style="font-size: 12px; color: #64748b;" data-i18n="sub_tech_quota">Evolución del % de cuota de mercado de cada propulsión</span>
                     </div>
                     <div class="chart-container" style="height: 320px;">
                         <canvas id="allTechQuotaChart"></canvas>
@@ -600,12 +606,12 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <div>
                         <h3 class="section-title">Ventas Mes a Mes por Modelo (<span id="matrix-year-title">2026</span>)</h3>
-                        <p style="font-size: 13px; color: #64748b; margin: 0;">Haz clic en la flechita de cualquier columna para ordenar las ventas por ese mes o por el Total</p>
+                        <p style="font-size: 13px; color: #64748b; margin: 0;" data-i18n="sub_matrix_table">Haz clic en la flechita de cualquier columna para ordenar las ventas por ese mes o por el Total</p>
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <div class="search-input-wrapper" style="width: 250px;">
                             <i data-lucide="search"></i>
-                            <input type="text" id="matrix-search" class="search-input" placeholder="Buscar modelo o marca...">
+                            <input type="text" id="matrix-search" class="search-input" placeholder="Buscar modelo o marca..." data-i18n-placeholder="search_model_or_brand">
                         </div>
                     </div>
                 </div>
@@ -700,7 +706,7 @@
                 <div style="text-align: center; margin-top: 16px;">
                     <button id="btn-load-more-matrix" class="btn btn-secondary" style="padding: 8px 24px;">
                         <i data-lucide="chevron-down"></i>
-                        <span>Ver más modelos (Top 50)</span>
+                        <span data-i18n="btn_load_more_matrix">Ver más modelos (Top 50)</span>
                     </button>
                 </div>
             </section>
@@ -709,8 +715,8 @@
             <section id="section-compare" class="glass-panel mb-4" style="padding: 20px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                     <div>
-                        <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;">Comparador Intermensual e Interanual</h3>
-                        <p style="font-size: 12px; color: #64748b;">Analiza la evolución del MIX de carburantes y volumen entre dos meses o años distintos</p>
+                        <h3 style="font-size: 18px; font-weight: 700; color: #0f172a;" data-i18n="title_comparator">Comparador Intermensual e Interanual</h3>
+                        <p style="font-size: 12px; color: #64748b;" data-i18n="sub_comparator">Analiza la evolución del MIX de carburantes y volumen entre dos meses o años distintos</p>
                     </div>
                     <div style="display: flex; gap: 10px; align-items: center;">
                         <select id="compare-month-a" style="background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;">
@@ -720,7 +726,7 @@
                         <select id="compare-month-b" style="background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;">
                             <!-- Injected dynamically with ALL historical months -->
                         </select>
-                        <button id="btn-compare" class="btn btn-secondary" style="padding: 6px 16px;">Comparar</button>
+                        <button id="btn-compare" class="btn btn-secondary" style="padding: 6px 16px;" data-i18n="btn_compare">Comparar</button>
                     </div>
                 </div>
 
@@ -732,10 +738,10 @@
                         <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #0f172a;">
                             <thead>
                                 <tr style="border-bottom: 2px solid #e2e8f0; color: #475569; text-align: left; font-weight: 700;">
-                                    <th style="padding: 8px;">Carburante</th>
-                                    <th style="padding: 8px;">Período A</th>
-                                    <th style="padding: 8px;">Período B</th>
-                                    <th style="padding: 8px;">Dif. (pp)</th>
+                                    <th style="padding: 8px;" data-i18n="th_fuel">Carburante</th>
+                                    <th style="padding: 8px;" data-i18n="th_period_a">Período A</th>
+                                    <th style="padding: 8px;" data-i18n="th_period_b">Período B</th>
+                                    <th style="padding: 8px;" data-i18n="th_diff_pp">Dif. (pp)</th>
                                 </tr>
                             </thead>
                             <tbody id="compare-table-body">
@@ -1559,9 +1565,10 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/charts.js?v=20260921_quarterly_v3"></script>
-    <script src="js/components.js?v=20260921_kpi"></script>
+    <script src="js/i18n.js?v=20260922_v1"></script>
+    <script src="js/charts.js?v=20260922_v1"></script>
+    <script src="js/components.js?v=20260922_v1"></script>
     <script src="js/insights.js?v=20260913_models_v2"></script>
-    <script src="js/app.js?v=20260921_quarterly_v3"></script>
+    <script src="js/app.js?v=20260922_v1"></script>
 </body>
 </html>

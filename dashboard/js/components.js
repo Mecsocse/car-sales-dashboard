@@ -27,8 +27,13 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
     
     let changeVal = "-";
     let changeColor = "text-muted";
-    let changeIcon = "minus";
-    let compLabel = summary.comparison_label || "vs período anterior";
+    const _t = (key, fallback) => (window.I18N ? window.I18N.t(key, fallback) : fallback);
+    let compLabel = summary.comparison_label || _t("kpi_comp_previous", "vs período anterior");
+    if (summary.comparison_label && window.I18N && window.I18N.getLang() === 'en') {
+        compLabel = summary.comparison_label.replace("vs mismo período 2025", "vs same period 2025")
+                                           .replace("vs mes anterior", "vs previous month")
+                                           .replace("vs año anterior", "vs previous year");
+    }
 
     if (summary.pct_change !== undefined && summary.pct_change !== null) {
         const numChange = Number(summary.pct_change);
@@ -61,18 +66,23 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
     }
 
     const isZero = quotaMode === 'zero';
-    const quotaTitle = isZero ? "Cuota Electrificada (Etiqueta 0)" : "Cuota Eléctrico Puro (BEV)";
+    const quotaTitle = isZero 
+        ? _t("kpi_zero_share", "Cuota Electrificada (Etiqueta 0)") 
+        : _t("kpi_bev_share", "Cuota Eléctrico Puro (BEV)");
     const quotaVal = isZero ? `${zeroShare}%` : `${evShare}%`;
-    const quotaSub = isZero ? "BEV + PHEV enchufables" : "sobre total vehículo";
+    const quotaSub = isZero 
+        ? _t("kpi_zero_sub", "BEV + PHEV enchufables") 
+        : _t("kpi_bev_sub", "sobre total vehículo");
     const quotaBadge = isZero ? "ZERO" : "DGT";
 
     const rawBrand = summary.top_brand || "N/A";
     const topBrandVal = rawBrand.toUpperCase().includes('DESCONOCIDO') ? "N/A" : rawBrand;
-    const topBrandUnits = (topBrandVal !== "N/A" && summary.top_brand_units) ? `${summary.top_brand_units.toLocaleString("es-ES")} un.` : "";
+    const unitsSuffix = _t("units_suffix", "un.");
+    const topBrandUnits = (topBrandVal !== "N/A" && summary.top_brand_units) ? `${summary.top_brand_units.toLocaleString("es-ES")} ${unitsSuffix}` : "";
 
     const rawModel = summary.top_model || "N/A";
     const topModelVal = rawModel.toUpperCase().includes('DESCONOCIDO') ? "N/A" : rawModel;
-    const topModelUnits = (topModelVal !== "N/A" && summary.top_model_units) ? `${summary.top_model_units.toLocaleString("es-ES")} un.` : "";
+    const topModelUnits = (topModelVal !== "N/A" && summary.top_model_units) ? `${summary.top_model_units.toLocaleString("es-ES")} ${unitsSuffix}` : "";
 
     const quotaCardHtml = `
         <div class="glass-panel metric-card">
@@ -93,13 +103,13 @@ function renderMetrics(summary, quotaMode = 'bev', fuelMix = []) {
         </div>
     `;
 
-    const brandAttrs = `id="card-top-brand" style="cursor: pointer; transition: transform 0.15s ease;" onclick="if(window.App) window.App.openBrandModal('${topBrandVal !== 'N/A' ? topBrandVal : ''}')" title="Haz clic para ver el Análisis Integral de Marca"`;
+    const brandAttrs = `id="card-top-brand" style="cursor: pointer; transition: transform 0.15s ease;" onclick="if(window.App) window.App.openBrandModal('${topBrandVal !== 'N/A' ? topBrandVal : ''}')" title="${_t('kpi_brand_hint', 'Haz clic para ver el Análisis Integral de Marca')}"`;
 
     container.innerHTML = `
-        ${createMetricCard("Matriculaciones Totales", totalVal, changeVal, changeIcon, changeColor, compLabel, "car")}
+        ${createMetricCard(_t("kpi_total_registrations", "Matriculaciones Totales"), totalVal, changeVal, changeIcon, changeColor, compLabel, "car")}
         ${quotaCardHtml}
-        ${createMetricCard("Marca Ganadora", topBrandVal, topBrandUnits, "award", "text-green", "👆 Clic para análisis completo", "award", brandAttrs)}
-        ${createMetricCard("Modelo Ganador", topModelVal, topModelUnits, "trophy", "text-purple", "Modelo más vendido", "trophy")}
+        ${createMetricCard(_t("kpi_winning_brand", "Marca Ganadora"), topBrandVal, topBrandUnits, "award", "text-green", _t("kpi_brand_hint", "👆 Clic para análisis completo"), "award", brandAttrs)}
+        ${createMetricCard(_t("kpi_winning_model", "Modelo Ganador"), topModelVal, topModelUnits, "trophy", "text-purple", _t("kpi_model_sub", "Modelo más vendido"), "trophy")}
     `;
 
     if (window.lucide) lucide.createIcons();

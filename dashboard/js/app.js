@@ -140,7 +140,12 @@ class DashboardApp {
 
     populateQuickMonthDropdown() {
         if (!this.quickMonthSelect) return;
-        const monthsName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const monthsNameEs = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const monthsNameEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthsName = isEn ? monthsNameEn : monthsNameEs;
+        const currentMonthSuffix = isEn ? ' (Current Month)' : ' (Mes Actual)';
+        const defaultPrompt = isEn ? '-- Select Month --' : '-- Seleccionar Mes --';
         
         const now = new Date();
         const curYear = now.getFullYear();
@@ -153,14 +158,14 @@ class DashboardApp {
 
         const years = [curYear, curYear - 1, curYear - 2];
 
-        let html = '<option value="" style="font-weight:700; color:#94a3b8;">-- Seleccionar Mes --</option>';
+        let html = `<option value="" style="font-weight:700; color:#94a3b8;">${defaultPrompt}</option>`;
 
         years.forEach(yr => {
             const maxM = yr === curYear ? curMonthNum : 12;
             for (let m = maxM; m >= 1; m--) {
                 const mCode = `${yr}-${m.toString().padStart(2, '0')}`;
                 const isCurrent = mCode === curMonthCode;
-                const mLabel = isCurrent ? `${monthsName[m - 1]} ${yr} (Mes Actual)` : `${monthsName[m - 1]} ${yr}`;
+                const mLabel = isCurrent ? `${monthsName[m - 1]} ${yr}${currentMonthSuffix}` : `${monthsName[m - 1]} ${yr}`;
                 const sel = mCode === this.selectedMonth ? 'selected' : '';
                 html += `<option value="${mCode}" ${sel}>${mLabel}</option>`;
             }
@@ -175,7 +180,10 @@ class DashboardApp {
     populateHistoricalCompareDropdowns() {
         if (!this.compareMonthA || !this.compareMonthB) return;
 
-        const monthsName = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const monthsNameEs = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+        const monthsNameEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthsName = isEn ? monthsNameEn : monthsNameEs;
         const now = new Date();
         const curYear = now.getFullYear();
         const curMonthNum = now.getMonth() + 1;
@@ -299,6 +307,18 @@ class DashboardApp {
     }
 
     bindPeriodEvents() {
+        window.addEventListener('languageChanged', () => {
+            this.populateQuickMonthDropdown();
+            this.populateHistoricalCompareDropdowns();
+            this.updatePeriodTag();
+            if (this.lastAllData) {
+                this.renderAllDataPayload(this.lastAllData);
+            }
+            if (this.matrixTableBody) {
+                this.loadMonthlyMatrix(this.matrixSearchInput ? this.matrixSearchInput.value : '', this.matrixLimit);
+            }
+        });
+
         if (this.quickCcaaSelect) {
             this.quickCcaaSelect.addEventListener('change', async (e) => {
                 this.selectedCcaa = e.target.value;
@@ -396,51 +416,81 @@ class DashboardApp {
                 this.refreshAll();
             });
         }
+
+        // Global language changed listener for dynamic reactive UI updates
+        window.addEventListener('languageChanged', () => {
+            this.populateQuickMonthDropdown();
+            this.populateHistoricalCompareDropdowns();
+            this.updatePeriodTag();
+            if (this.lastAllData) {
+                this.renderAllDataPayload(this.lastAllData);
+            }
+            if (typeof this.loadMonthlyMatrix === 'function') {
+                this.loadMonthlyMatrix(this.matrixSearchInput ? this.matrixSearchInput.value : '', this.matrixLimit);
+            }
+            if (typeof this.loadMonthComparison === 'function') {
+                this.loadMonthComparison();
+            }
+        });
     }
 
     updatePeriodTag() {
         if (!this.activePeriodTag) return;
 
-        const monthsName = {
+        const isEn = window.I18N && window.I18N.getLang() === 'en';
+        const monthsNameEs = {
             '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
             '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
             '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
         };
+        const monthsNameEn = {
+            '01': 'January', '02': 'February', '03': 'March', '04': 'April',
+            '05': 'May', '06': 'June', '07': 'July', '08': 'August',
+            '09': 'September', '10': 'October', '11': 'November', '12': 'December'
+        };
+        const monthsName = isEn ? monthsNameEn : monthsNameEs;
 
         const now = new Date();
         const curMonthCode = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}`;
 
-        let periodStr = `📆 Mes Concreto: ${this.selectedMonth || curMonthCode}`;
+        let periodStr = isEn ? `📆 Month: ${this.selectedMonth || curMonthCode}` : `📆 Mes Concreto: ${this.selectedMonth || curMonthCode}`;
         if (this.currentPeriod === 'year') {
-            periodStr = `📊 Año ${this.selectedYear} Completo (Ene - Dic)`;
+            periodStr = isEn ? `📊 Full Year ${this.selectedYear} (Jan - Dec)` : `📊 Año ${this.selectedYear} Completo (Ene - Dic)`;
         } else if (this.singleDatePicker && this.singleDatePicker.value) {
             const dParts = this.singleDatePicker.value.split('-');
             const dFormatted = dParts.length === 3 ? `${dParts[2]}/${dParts[1]}/${dParts[0]}` : this.singleDatePicker.value;
-            periodStr = `📅 Día Concreto: ${dFormatted}`;
+            periodStr = isEn ? `📅 Specific Day: ${dFormatted}` : `📅 Día Concreto: ${dFormatted}`;
         } else if (this.dateFromFilter && this.dateFromFilter.value) {
-            periodStr = `📅 Rango: ${this.dateFromFilter.value} ${this.dateToFilter.value ? 'a ' + this.dateToFilter.value : ''}`;
+            periodStr = isEn ? `📅 Range: ${this.dateFromFilter.value} ${this.dateToFilter.value ? 'to ' + this.dateToFilter.value : ''}` : `📅 Rango: ${this.dateFromFilter.value} ${this.dateToFilter.value ? 'a ' + this.dateToFilter.value : ''}`;
         } else {
             const parts = (this.selectedMonth || curMonthCode).split('-');
             const monthTxt = monthsName[parts[1]] || parts[1];
-            periodStr = (this.selectedMonth === curMonthCode) 
-                ? `📆 ${monthTxt} ${parts[0]} (Mes Actual en Curso)` 
-                : `📆 Mes Concreto: ${monthTxt} ${parts[0]}`;
+            if (isEn) {
+                periodStr = (this.selectedMonth === curMonthCode) 
+                    ? `📆 ${monthTxt} ${parts[0]} (Current Ongoing Month)` 
+                    : `📆 Month: ${monthTxt} ${parts[0]}`;
+            } else {
+                periodStr = (this.selectedMonth === curMonthCode) 
+                    ? `📆 ${monthTxt} ${parts[0]} (Mes Actual en Curso)` 
+                    : `📆 Mes Concreto: ${monthTxt} ${parts[0]}`;
+            }
         }
 
         if (this.selectedCcaa) {
-            periodStr += ` | 🗺️ CCAA: ${this.selectedCcaa}`;
+            periodStr += isEn ? ` | 🗺️ Region: ${this.selectedCcaa}` : ` | 🗺️ CCAA: ${this.selectedCcaa}`;
         }
 
         if (this.fuelFilter && this.fuelFilter.value) {
             periodStr += ` | ⚡ ${this.fuelFilter.value}`;
         }
 
-        this.activePeriodTag.innerHTML = `✨ Visualizando en este momento: <strong>${periodStr}</strong>`;
+        const prefixViewing = isEn ? '✨ Currently viewing:' : '✨ Visualizando en este momento:';
+        this.activePeriodTag.innerHTML = `${prefixViewing} <strong>${periodStr}</strong>`;
 
         let badgeLabel = this.selectedMonth;
-        if (this.currentPeriod === 'today') badgeLabel = '⚡ Hoy (Día)';
-        else if (this.currentPeriod === 'yesterday') badgeLabel = '⏮️ Ayer (Día)';
-        else if (this.currentPeriod === 'year') badgeLabel = `Año ${this.selectedYear} Completo`;
+        if (this.currentPeriod === 'today') badgeLabel = isEn ? '⚡ Today (Day)' : '⚡ Hoy (Día)';
+        else if (this.currentPeriod === 'yesterday') badgeLabel = isEn ? '⏮️ Yesterday (Day)' : '⏮️ Ayer (Día)';
+        else if (this.currentPeriod === 'year') badgeLabel = isEn ? `Full Year ${this.selectedYear}` : `Año ${this.selectedYear} Completo`;
         else if (this.singleDatePicker && this.singleDatePicker.value) {
             const dp = this.singleDatePicker.value.split('-');
             badgeLabel = dp.length === 3 ? `${dp[2]}/${dp[1]}/${dp[0]}` : this.singleDatePicker.value;
