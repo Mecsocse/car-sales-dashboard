@@ -250,7 +250,7 @@
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1171398586910114" crossorigin="anonymous"></script>
 
     <!-- Stylesheets -->
-    <link rel="stylesheet" href="css/styles.css?v=20260921_kpi">
+    <link rel="stylesheet" href="css/styles.css?v=20260922_header">
 </head>
 <body>
     <!-- Global Loading Clock Indicator -->
@@ -269,65 +269,74 @@
                     <p class="subtitle" data-i18n="header_subtitle">Datos oficiales de matriculaciones de turismos procesados de la DGT</p>
                 </div>
                 
-                <div class="header-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <!-- Language Switcher Toggle (ES / EN) -->
-                    <div class="lang-switcher" id="lang-switcher" style="margin-right: 2px;">
-                        <button class="lang-btn active" data-lang="es">🇪🇸 ES</button>
-                        <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+                <div class="header-actions">
+                    <!-- Cluster 1: Primary Navigation & Analysis Tools -->
+                    <div class="header-nav-tools">
+                        <!-- Territorial Map Button -->
+                        <a href="/mapa" class="header-nav-btn header-nav-map" id="btn-header-mapa" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias" data-i18n-title="btn_mapa_tooltip">
+                            <i data-lucide="map-pin"></i>
+                            <span data-i18n="btn_mapa">Mapa CPs</span>
+                        </a>
+
+                        <!-- Segmented Analysis Pill: Brands | Models -->
+                        <div class="header-segmented-tools">
+                            <button id="btn-header-brand-analysis" class="segmented-tool-btn" title="Análisis Integral de Marca" data-i18n-title="modal_brand_title">
+                                <i data-lucide="bar-chart-2"></i>
+                                <span data-i18n="btn_brand_analysis_short">Marcas</span>
+                            </button>
+                            <div class="segmented-tool-sep"></div>
+                            <button id="btn-header-model-analysis" class="segmented-tool-btn" title="Comparador de Modelos" data-i18n-title="modal_model_title">
+                                <i data-lucide="git-compare"></i>
+                                <span data-i18n="btn_model_analysis_short">Modelos</span>
+                            </button>
+                        </div>
+
+                        <!-- Top Ventas 2026 Ranking Button -->
+                        <a href="/coches-mas-vendidos-espana" class="header-nav-btn header-nav-top20" id="btn-header-top-sales" title="Ranking oficial de coches más vendidos en España">
+                            <span class="top20-badge-icon">🏆</span>
+                            <span data-i18n="btn_top_20">Top 20</span>
+                        </a>
                     </div>
 
-                    <!-- DGT Spanish License Plate Widget -->
-                    <button class="dgt-plate-widget-btn" id="btn-open-plate-modal" title="Haz clic para ver el histórico de letras de la DGT" data-i18n-title="plate_widget_tooltip">
-                        <div class="spanish-plate-mini">
-                            <div class="plate-blue-strip">
-                                <span class="eu-stars">🇪🇺</span>
-                                <span class="country-e">E</span>
+                    <!-- Cluster 2: Live DGT Spanish License Plate Widget -->
+                    <div class="header-widget-cluster">
+                        <button class="dgt-plate-widget-btn" id="btn-open-plate-modal" title="Haz clic para ver el histórico de letras de la DGT" data-i18n-title="plate_widget_tooltip">
+                            <div class="spanish-plate-mini">
+                                <div class="plate-blue-strip">
+                                    <span class="eu-stars">🇪🇺</span>
+                                    <span class="country-e">E</span>
+                                </div>
+                                <span class="plate-letters-bold" id="widget-plate-letters">7160 · NSH</span>
                             </div>
-                            <span class="plate-letters-bold" id="widget-plate-letters">7160 · NSH</span>
+                            <div class="plate-widget-meta">
+                                <span class="meta-title" data-i18n="last_dgt_plate">Última Matrícula DGT</span>
+                                <span class="meta-date" id="widget-plate-date">4 Sep 2026</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- Cluster 3: Utilities Cluster -->
+                    <div class="header-utilities-cluster">
+                        <div class="header-v-divider" aria-hidden="true"></div>
+
+                        <!-- About Project Icon Button -->
+                        <button class="header-icon-btn" id="btn-open-about-modal" title="Sobre el proyecto" data-i18n-title="btn_about" aria-label="Sobre el proyecto">
+                            <i data-lucide="info"></i>
+                        </button>
+
+                        <!-- Follow on X / Twitter Button -->
+                        <a href="https://x.com/CarDataSales" target="_blank" rel="noopener noreferrer" class="header-icon-btn" title="Síguenos en X (Twitter) @CarDataSales" aria-label="Síguenos en X @CarDataSales">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                            </svg>
+                        </a>
+
+                        <!-- Language Switcher Toggle (ES / EN) -->
+                        <div class="lang-switcher" id="lang-switcher">
+                            <button class="lang-btn active" data-lang="es">🇪🇸 ES</button>
+                            <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
                         </div>
-                        <div class="plate-widget-meta">
-                            <span class="meta-title" data-i18n="last_dgt_plate">Última Matrícula DGT</span>
-                            <span class="meta-date" id="widget-plate-date">4 Sep 2026</span>
-                        </div>
-                    </button>
-
-                    <!-- Brand Analysis Button in Header -->
-                    <button class="btn btn-primary" id="btn-header-brand-analysis" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(124, 58, 237, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
-                        <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i>
-                        <span data-i18n="btn_brand_analysis">Análisis de Marca</span>
-                    </button>
-
-                    <!-- Model Comparison Button in Header -->
-                    <button class="btn btn-primary" id="btn-header-model-analysis" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25); cursor: pointer; padding: 7px 14px; border-radius: 8px;">
-                        <i data-lucide="git-compare" style="width: 16px; height: 16px;"></i>
-                        <span data-i18n="btn_model_analysis">Comparar Modelos</span>
-                    </button>
-
-                    <!-- Interactive Territorial Map Button -->
-                    <a href="/mapa" class="btn btn-primary" id="btn-header-mapa" style="background: linear-gradient(135deg, #059669, #047857); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(5, 150, 105, 0.28); text-decoration: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;" title="Explorar mapa territorial de matriculaciones por Códigos Postales y Provincias" data-i18n-title="btn_mapa_tooltip">
-                        <i data-lucide="map-pin" style="width: 16px; height: 16px;"></i>
-                        <span data-i18n="btn_mapa">Mapa por CPs</span>
-                    </a>
-
-                    <!-- Top Ventas 2026 Ranking Button in Header -->
-                    <a href="/coches-mas-vendidos-espana" class="btn btn-primary" id="btn-header-top-sales" style="background: linear-gradient(135deg, #16a34a, #15803d); border: none; color: #ffffff; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.28); text-decoration: none; padding: 7px 14px; border-radius: 8px; cursor: pointer;" title="Ranking oficial de coches más vendidos en España">
-                        <span>🏆</span>
-                        <span data-i18n="btn_top_sales">Coche más vendido (Top 20)</span>
-                    </a>
-
-                    <!-- About Project Button -->
-                    <button class="btn btn-secondary" id="btn-open-about-modal">
-                        <i data-lucide="info"></i>
-                        <span data-i18n="btn_about">Sobre el proyecto</span>
-                    </button>
-
-                    <!-- Follow on X / Twitter Button -->
-                    <a href="https://x.com/CarDataSales" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" title="Síguenos en X (Twitter) @CarDataSales" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                        </svg>
-                        <span data-i18n="btn_follow_x">Seguir en X</span>
-                    </a>
+                    </div>
                 </div>
             </header>
 
@@ -1565,10 +1574,10 @@
     </footer>
 
     <!-- Scripts -->
-    <script src="js/i18n.js?v=20260922_v4"></script>
-    <script src="js/charts.js?v=20260922_v4"></script>
-    <script src="js/components.js?v=20260922_v4"></script>
+    <script src="js/i18n.js?v=20260922_v5"></script>
+    <script src="js/charts.js?v=20260922_v5"></script>
+    <script src="js/components.js?v=20260922_v5"></script>
     <script src="js/insights.js?v=20260913_models_v2"></script>
-    <script src="js/app.js?v=20260922_v4"></script>
+    <script src="js/app.js?v=20260922_v5"></script>
 </body>
 </html>

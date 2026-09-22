@@ -79,6 +79,192 @@ body {
     margin-top: 4px;
 }
 
+/* Top Header Actions & Functional Clusters */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: nowrap;
+}
+
+/* Cluster 1: Navigation & Analysis Tools */
+.header-nav-tools {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.header-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 12px;
+    border-radius: 9px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.header-nav-btn i {
+    width: 15px;
+    height: 15px;
+}
+
+/* Map Pill Button */
+.header-nav-map {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+    box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+}
+
+.header-nav-map:hover {
+    background: #059669;
+    color: #ffffff;
+    border-color: #059669;
+    box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25);
+    transform: translateY(-1px);
+}
+
+/* Segmented Pill: [ Marcas | Modelos ] */
+.header-segmented-tools {
+    display: inline-flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 9px;
+    height: 38px;
+    padding: 2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.segmented-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 100%;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.segmented-tool-btn i {
+    width: 14px;
+    height: 14px;
+}
+
+.segmented-tool-btn#btn-header-brand-analysis i {
+    color: #7c3aed;
+}
+
+.segmented-tool-btn#btn-header-model-analysis i {
+    color: #2563eb;
+}
+
+.segmented-tool-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+.segmented-tool-btn#btn-header-brand-analysis:hover {
+    color: #6d28d9;
+    background: #f5f3ff;
+}
+
+.segmented-tool-btn#btn-header-model-analysis:hover {
+    color: #1d4ed8;
+    background: #eff6ff;
+}
+
+.segmented-tool-sep {
+    width: 1px;
+    height: 18px;
+    background: #e2e8f0;
+}
+
+/* Top 20 Ranking Button */
+.header-nav-top20 {
+    background: #ffffff;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    box-shadow: 0 1px 2px rgba(22, 163, 74, 0.06);
+}
+
+.header-nav-top20:hover {
+    background: #16a34a;
+    color: #ffffff;
+    border-color: #16a34a;
+    box-shadow: 0 3px 10px rgba(22, 163, 74, 0.25);
+    transform: translateY(-1px);
+}
+
+.top20-badge-icon {
+    font-size: 13px;
+    line-height: 1;
+}
+
+/* Cluster 2: DGT Plate Widget Cluster */
+.header-widget-cluster {
+    display: flex;
+    align-items: center;
+}
+
+/* Cluster 3: Utilities Cluster (About, X, Lang) */
+.header-utilities-cluster {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.header-v-divider {
+    width: 1px;
+    height: 22px;
+    background: #cbd5e1;
+    margin: 0 2px;
+}
+
+.header-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 0;
+}
+
+.header-icon-btn i {
+    width: 16px;
+    height: 16px;
+}
+
+.header-icon-btn:hover {
+    color: #0f172a;
+    border-color: #94a3b8;
+    background: #f8fafc;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
 /* Glass Panels (White Light Cards) */
 .glass-panel {
     background: #ffffff;
@@ -864,20 +1050,21 @@ select:focus, input:focus {
 .dgt-plate-widget-btn {
     display: inline-flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 10px;
-    padding: 4px 12px 4px 6px;
+    border-radius: 9px;
+    height: 38px;
+    padding: 2px 10px 2px 4px;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     text-align: left;
 }
 
 .dgt-plate-widget-btn:hover {
     border-color: #2563eb;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+    box-shadow: 0 3px 10px rgba(37, 99, 235, 0.15);
     transform: translateY(-1px);
 }
 
@@ -887,8 +1074,8 @@ select:focus, input:focus {
     background: #ffffff;
     border: 1.5px solid #0f172a;
     border-radius: 5px;
-    height: 34px;
-    padding: 0 8px 0 0;
+    height: 32px;
+    padding: 0 6px 0 0;
     font-family: 'Outfit', -apple-system, sans-serif;
     box-shadow: inset 0 1px 2px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08);
     overflow: hidden;
@@ -901,20 +1088,20 @@ select:focus, input:focus {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 18px;
+    width: 17px;
     height: 100%;
     margin-right: 6px;
     padding: 2px 0;
 }
 
 .plate-blue-strip .eu-stars {
-    font-size: 8px;
+    font-size: 7.5px;
     line-height: 1;
     color: #ffcc00;
 }
 
 .plate-blue-strip .country-e {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 900;
     color: #ffffff;
     line-height: 1;
@@ -922,27 +1109,28 @@ select:focus, input:focus {
 }
 
 .plate-letters-bold {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 900;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     color: #0f172a;
 }
 
 .plate-widget-meta {
     display: flex;
     flex-direction: column;
+    line-height: 1.15;
 }
 
 .plate-widget-meta .meta-title {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 700;
     color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
 }
 
 .plate-widget-meta .meta-date {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 700;
     color: #0284c7;
 }
@@ -1175,4 +1363,67 @@ select:focus, input:focus {
     box-shadow: 0 1px 4px rgba(15, 23, 42, 0.2);
 }
 
+/* Responsive adjustments for Top Header & Functional Clusters */
+@media (max-width: 1280px) {
+    .top-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+}
 
+@media (max-width: 860px) {
+    .header-actions {
+        gap: 12px;
+    }
+    .header-nav-tools {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 640px) {
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .header-nav-tools {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .header-nav-tools .header-nav-map {
+        grid-column: 1 / -1;
+        justify-content: center;
+    }
+    .header-segmented-tools {
+        width: 100%;
+        justify-content: center;
+    }
+    .segmented-tool-btn {
+        flex: 1;
+        justify-content: center;
+    }
+    .header-nav-top20 {
+        justify-content: center;
+    }
+    .header-widget-cluster {
+        width: 100%;
+    }
+    .header-widget-cluster .dgt-plate-widget-btn {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .header-utilities-cluster {
+        justify-content: space-between;
+        width: 100%;
+    }
+    .header-v-divider {
+        display: none;
+    }
+}
