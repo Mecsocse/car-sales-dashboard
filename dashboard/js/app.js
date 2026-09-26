@@ -1088,6 +1088,32 @@ class DashboardApp {
         if (!allData) return;
         this.lastAllData = allData;
 
+        // Helper to filter out commercial vans / furgonetas from passenger car rankings
+        const isCommercialVan = (marca, modelo) => {
+            const m = String(marca || '').toUpperCase().trim();
+            const mod = String(modelo || '').toUpperCase().trim();
+            const full = `${m} ${mod}`;
+            
+            const vanKeywords = [
+                'QUBO', 'DOBLO', 'DUCATO', 'SCUDO', 'TALENTO', 'FIORINO', 'STRADA', 'ULYSSE',
+                'BERLINGO', 'JUMPY', 'JUMPER', 'NEMO', 'SPACETOURER',
+                'RIFTER', 'PARTNER', 'EXPERT', 'BOXER', 'TRAVELLER', 'BIPPER',
+                'KANGOO', 'TRAFIC', 'MASTER', 'EXPRESS',
+                'CADDY', 'TRANSPORTER', 'CARAVELLE', 'MULTIVAN', 'CALIFORNIA', 'CRAFTER', 'AMAROK',
+                'TOURNEO', 'TRANSIT', 'RANGER',
+                'PROACE', 'HILUX',
+                'COMBO', 'VIVARO', 'MOVANO', 'ZAFIRA LIFE',
+                'CITAN', 'VITO', 'SPRINTER', 'CLASE V', 'CLASE T',
+                'TOWNSTAR', 'PRIMASTAR', 'INTERSTAR', 'NV200', 'NV250', 'NV300', 'NV400', 'NAVARA',
+                'DOKKER',
+                'STARIA', 'H-1', 'H1', 'H350',
+                'DAILY', 'DELIVER', 'T90'
+            ];
+            const coachbuilders = ['REHATRANS', 'CODETRANS', 'RODRIGUEZ', 'CARBUS', 'INTEGRALIA'];
+            if (coachbuilders.includes(m)) return true;
+            return vanKeywords.some(kw => mod.includes(kw) || full.includes(kw));
+        };
+
         // Clean model full names
         const cleanModelName = (marca, modeloFull, modeloRaw) => {
             let name = String(modeloFull || modeloRaw || '').trim();
@@ -1144,7 +1170,7 @@ class DashboardApp {
                     if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
                         mName = mName.substring(brandUpper.length + 1).trim();
                     }
-                    if (!mName || mName.toUpperCase().includes('DESCONOCIDO')) return;
+                    if (!mName || mName.toUpperCase().includes('DESCONOCIDO') || isCommercialVan(b.marca, mName)) return;
 
                     // Reclassify CUPRA dedicated models if they appear under SEAT
                     if (brandUpper === 'SEAT' && (mName.toUpperCase().includes('FORMENTOR') || mName.toUpperCase().includes('TERRAMAR') || mName.toUpperCase().includes('TAVASCAN') || mName.toUpperCase().includes('BORN') || mName.toUpperCase().includes('RAVAL'))) {
@@ -1161,7 +1187,7 @@ class DashboardApp {
 
                 const sortedModels = Object.entries(merged)
                     .map(([modelo, total]) => ({ modelo, total }))
-                    .filter(x => x.total > 0 && !x.modelo.startsWith('202') && x.modelo !== '-' && x.modelo !== '--' && x.modelo !== '----')
+                    .filter(x => x.total > 0 && !x.modelo.startsWith('202') && x.modelo !== '-' && x.modelo !== '--' && x.modelo !== '----' && !isCommercialVan(b.marca, x.modelo))
                     .sort((x, y) => y.total - x.total);
 
                 return {
@@ -1176,7 +1202,7 @@ class DashboardApp {
             .filter(m => {
                 const name = String(m.modelo_full || m.modelo || '');
                 const marca = String(m.marca || '');
-                return !name.toUpperCase().includes('DESCONOCIDO') && !marca.toUpperCase().includes('DESCONOCIDO') && !name.startsWith('202');
+                return !name.toUpperCase().includes('DESCONOCIDO') && !marca.toUpperCase().includes('DESCONOCIDO') && !name.startsWith('202') && !isCommercialVan(marca, name);
             })
             .map(m => ({
                 ...m,
@@ -1190,7 +1216,7 @@ class DashboardApp {
             .filter(m => {
                 const name = String(m.modelo_full || m.modelo || '');
                 const marca = String(m.marca || '');
-                return !name.toUpperCase().includes('DESCONOCIDO') && !marca.toUpperCase().includes('DESCONOCIDO') && !name.startsWith('202');
+                return !name.toUpperCase().includes('DESCONOCIDO') && !marca.toUpperCase().includes('DESCONOCIDO') && !name.startsWith('202') && !isCommercialVan(marca, name);
             })
             .map(m => ({
                 ...m,
@@ -1222,7 +1248,7 @@ class DashboardApp {
                     if (mName.toUpperCase().startsWith(brandUpper + ' ')) {
                         mName = mName.substring(brandUpper.length + 1).trim();
                     }
-                    if (!mName || mName.toUpperCase().includes('DESCONOCIDO')) return;
+                    if (!mName || mName.toUpperCase().includes('DESCONOCIDO') || isCommercialVan(b.marca, mName)) return;
                     merged[mName] = (merged[mName] || 0) + m.total;
                 });
 

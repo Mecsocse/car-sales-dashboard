@@ -9,6 +9,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
 from config import DB_PATH
 from api.routes.registrations import build_full_where, exec_query
+from agents.extractor.dgt_spain import is_commercial_van
 
 router = APIRouter()
 
@@ -795,6 +796,7 @@ def get_monthly_matrix(
     exec_query(c, query, params)
     rows = c.fetchall()
 
+    valid_rows = [r for r in rows if not is_commercial_van(r['marca'], r['modelo'], r.get('modelo_full', ''))]
     return [{
         "rank": idx + 1,
         "marca": r['marca'],
@@ -804,7 +806,7 @@ def get_monthly_matrix(
         "may": r['may'], "jun": r['jun'], "jul": r['jul'], "ago": r['ago'],
         "sep": r['sep'], "oct": r['oct'], "nov": r['nov'], "dic": r['dic'],
         "total_2026": r['total_2026']
-    } for idx, r in enumerate(rows)]
+    } for idx, r in enumerate(valid_rows)]
 
 @router.get("/provinces/ranking")
 def get_province_ranking(conn: sqlite3.Connection = Depends(get_db)):
@@ -905,7 +907,7 @@ def get_models_full_list(limit: int = 250, conn: Any = Depends(get_db)):
         if not r: return None
         if isinstance(r, dict): return r.get(col)
         return r[idx]
-    res = [_v(r, 'modelo', 0) for r in rows if _v(r, 'modelo', 0)]
+    res = [_v(r, 'modelo', 0) for r in rows if _v(r, 'modelo', 0) and not is_commercial_van('', '', _v(r, 'modelo', 0))]
     _LIST_CACHE[key] = res
     return res
 
@@ -946,7 +948,7 @@ def get_models_catalog(conn: Any = Depends(get_db)):
     for r in rows:
         b = str(_v(r, 'marca', 0) or '').strip().upper()
         m = str(_v(r, 'modelo', 1) or '').strip().upper()
-        if not b or not m or len(m) < 2 or any(ex in b for ex in excluded_keywords) or '?' in m:
+        if not b or not m or len(m) < 2 or any(ex in b for ex in excluded_keywords) or '?' in m or is_commercial_van(b, m):
             continue
         if b not in catalog:
             catalog[b] = []
@@ -1084,11 +1086,11 @@ def get_dashboard_all_data(
                     if rpc_res.get('brands'):
                         rpc_res['brands'] = [b for b in rpc_res['brands'] if not str(b.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(b.get('marca', '')).upper()]
                     if rpc_res.get('models'):
-                        rpc_res['models'] = [m for m in rpc_res['models'] if not str(m.get('modelo', '')).startswith('202') and not str(m.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(m.get('modelo_full', '')).upper()]
+                        rpc_res['models'] = [m for m in rpc_res['models'] if not str(m.get('modelo', '')).startswith('202') and not str(m.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(m.get('modelo_full', '')).upper() and not is_commercial_van(m.get('marca', ''), m.get('modelo', ''), m.get('modelo_full', ''))]
                     if rpc_res.get('ev_models'):
-                        rpc_res['ev_models'] = [m for m in rpc_res['ev_models'] if not str(m.get('modelo', '')).startswith('202') and not str(m.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(m.get('modelo_full', '')).upper()]
+                        rpc_res['ev_models'] = [m for m in rpc_res['ev_models'] if not str(m.get('modelo', '')).startswith('202') and not str(m.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(m.get('modelo_full', '')).upper() and not is_commercial_van(m.get('marca', ''), m.get('modelo', ''), m.get('modelo_full', ''))]
                     if rpc_res.get('ev_brands'):
-                        rpc_res['ev_brands'] = [b for b in rpc_res['ev_brands'] if not str(b.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(b.get('marca', '')).upper()]
+                        rpc_res['ev_brands'] = [b for b in rpc_res['ev_brands'] if not str(b.get('marca', '')).startswith('202') and 'DESCONOCIDO' not in str(b.get('marca', '')).upper() and b.get('marca') not in ('REHATRANS', 'CODETRANS', 'RODRIGUEZ', 'CARBUS', 'INTEGRALIA')]
                     if rpc_res.get('summary'):
                         if str(rpc_res['summary'].get('top_brand', '')).startswith('202') or 'DESCONOCIDO' in str(rpc_res['summary'].get('top_brand', '')).upper():
                             rpc_res['summary']['top_brand'] = rpc_res['brands'][0]['marca'] if rpc_res.get('brands') else "N/A"
@@ -1492,7 +1494,7 @@ def get_brand_deepdive(
             "modelo": _val(r, 'modelo_clean', 0),
             "total": _val(r, 'total', 1, 0),
             "pct": round((_val(r, 'total', 1, 0) / (tot_units or 1) * 100), 1)
-        } for r in mod_rows if _val(r, 'modelo_clean', 0) and _val(r, 'total', 1, 0) > 0]
+        } for r in mod_rows if _val(r, 'modelo_clean', 0) and _val(r, 'total', 1, 0) > 0 and not is_commercial_van(b_clean, _val(r, 'modelo_clean', 0))]
 
         # 5. Mix de Carburantes
         p_f = [year, b_clean, ccaa.strip()] if where_ccaa else [year, b_clean]

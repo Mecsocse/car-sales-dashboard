@@ -47,25 +47,25 @@ INE_MAP = {
 }
 
 CANONICAL_MODELS = {
-    'DACIA': ['SANDERO', 'DUSTER', 'JOGGER', 'SPRING', 'BIGSTER', 'LOGAN', 'LODGY', 'DOKKER'],
-    'RENAULT': ['5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'CLIO', 'CAPTUR', 'AUSTRAL', 'ARKANA', 'MEGANE', 'SCENIC', 'ESPACE', 'RAFALE', 'SYMBIOZ', 'TWINGO', 'KANGOO', 'ZOE', 'KADJAR'],
+    'DACIA': ['SANDERO', 'DUSTER', 'JOGGER', 'SPRING', 'BIGSTER', 'LOGAN', 'LODGY'],
+    'RENAULT': ['5 E-TECH', '4 E-TECH', 'MEGANE E-TECH', 'SCENIC E-TECH', 'CLIO', 'CAPTUR', 'AUSTRAL', 'ARKANA', 'MEGANE', 'SCENIC', 'ESPACE', 'RAFALE', 'SYMBIOZ', 'TWINGO', 'ZOE', 'KADJAR'],
     'MG': ['ZS', 'MG4', 'MG3', 'HS', 'EHS', 'CYBERSTER', 'MARVEL R', '5 ELECTRIC', 'S5', 'S6'],
     'SEAT': ['IBIZA', 'ARONA', 'ATECA', 'LEON', 'TARRACO', 'ALHAMBRA'],
-    'HYUNDAI': ['IONIQ 5', 'IONIQ 6', 'IONIQ 9', 'TUCSON', 'KONA', 'I20', 'I10', 'I30', 'BAYON', 'SANTA FE', 'STARIA', 'INSTER'],
-    'TOYOTA': ['COROLLA CROSS', 'YARIS CROSS', 'COROLLA', 'C-HR EV', 'C-HR', 'GR YARIS', 'YARIS', 'RAV4', 'AYGO X', 'BZ4X', 'HIGHLANDER', 'CAMRY', 'LAND CRUISER', 'PROACE CITY', 'PROACE', 'AURIS'],
-    'VOLKSWAGEN': ['ID.2X', 'ID.POLO', 'ID.2', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'CADDY', 'MULTIVAN', 'CALIFORNIA', 'ARTEON', 'TOUAREG', 'TAYRON'],
+    'HYUNDAI': ['IONIQ 5', 'IONIQ 6', 'IONIQ 9', 'TUCSON', 'KONA', 'I20', 'I10', 'I30', 'BAYON', 'SANTA FE', 'INSTER'],
+    'TOYOTA': ['COROLLA CROSS', 'YARIS CROSS', 'COROLLA', 'C-HR EV', 'C-HR', 'GR YARIS', 'YARIS', 'RAV4', 'AYGO X', 'BZ4X', 'HIGHLANDER', 'CAMRY', 'LAND CRUISER', 'AURIS'],
+    'VOLKSWAGEN': ['ID.2X', 'ID.POLO', 'ID.2', 'ID.3', 'ID.4', 'ID.5', 'ID.7', 'ID. BUZZ', 'T-ROC', 'T-CROSS', 'TIGUAN', 'GOLF', 'POLO', 'TAIGO', 'PASSAT', 'TOURAN', 'ARTEON', 'TOUAREG', 'TAYRON'],
     'KIA': ['EV2', 'EV3', 'EV4', 'EV5', 'EV6', 'EV9', 'SPORTAGE', 'NIRO', 'STONIC', 'XCEED', 'CEED', 'PICANTO', 'SORENTO', 'PROCEED', 'RIO', 'PV5'],
-    'PEUGEOT': ['E-2008', 'E-208', 'E-3008', 'E-308', 'E-5008', '2008', '208', '3008', '308', '5008', '408', '508', 'RIFTER', 'TRAVELLER', 'PARTNER'],
-    'CITROEN': ['Ë-C3 AIRCROSS', 'C3 AIRCROSS', 'Ë-C4 X', 'C4 X', 'Ë-C4', 'Ë-C3', 'C3', 'C4', 'C5 AIRCROSS', 'C5 X', 'BERLINGO', 'SPACETOURER'],
+    'PEUGEOT': ['E-2008', 'E-208', 'E-3008', 'E-308', 'E-5008', '2008', '208', '3008', '308', '5008', '408', '508'],
+    'CITROEN': ['Ë-C3 AIRCROSS', 'C3 AIRCROSS', 'Ë-C4 X', 'C4 X', 'Ë-C4', 'Ë-C3', 'C3', 'C4', 'C5 AIRCROSS', 'C5 X'],
     'CUPRA': ['FORMENTOR', 'TERRAMAR', 'TAVASCAN', 'BORN', 'RAVAL', 'LEON', 'ATECA'],
     'BMW': ['IX1', 'IX2', 'IX3', 'IX', 'I4', 'I5', 'I7', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'SERIE 1', 'SERIE 2', 'SERIE 3', 'SERIE 4', 'SERIE 5', 'Z4', 'M2', 'M3', 'M4', 'M5'],
-    'MERCEDES-BENZ': ['EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'GLC', 'GLA', 'GLB', 'GLE', 'GLS', 'CLA', 'CLE', 'CLASE A', 'CLASE C', 'CLASE E', 'CLASE S', 'CLASE B', 'CLASE V', 'CITAN'],
+    'MERCEDES-BENZ': ['EQA', 'EQB', 'EQE', 'EQS', 'EQV', 'GLC', 'GLA', 'GLB', 'GLE', 'GLS', 'CLA', 'CLE', 'CLASE A', 'CLASE C', 'CLASE E', 'CLASE S', 'CLASE B'],
     'AUDI': ['Q4', 'Q6', 'Q8', 'E-TRON', 'Q3', 'Q5', 'Q2', 'Q7', 'A3', 'A1', 'A4', 'A5', 'A6', 'TT', 'R8'],
     'SKODA': ['ELROQ', 'ENYAQ', 'EPIQ', 'KAMIQ', 'KAROQ', 'FABIA', 'OCTAVIA', 'KODIAQ', 'SCALA', 'SUPERB'],
-    'NISSAN': ['QASHQAI', 'JUKE', 'X-TRAIL', 'TOWNSTAR', 'ARIYA', 'LEAF', 'MICRA'],
+    'NISSAN': ['QASHQAI', 'JUKE', 'X-TRAIL', 'ARIYA', 'LEAF', 'MICRA'],
     'TESLA': ['MODEL Y', 'MODEL 3', 'MODEL X', 'MODEL S', 'CYBERTRUCK'],
-    'FIAT': ['500E', '500', 'PANDA', '600', 'TIPO', '500X', 'TOPOLINO', 'DOBLO'],
-    'OPEL': ['CORSA', 'MOKKA', 'CROSSLAND', 'ASTRA', 'GRANDLAND', 'FRONTERA', 'COMBO'],
+    'FIAT': ['500E', '500', 'PANDA', '600', 'TIPO', '500X', 'TOPOLINO'],
+    'OPEL': ['CORSA', 'MOKKA', 'CROSSLAND', 'ASTRA', 'GRANDLAND', 'FRONTERA'],
     'JEEP': ['AVENGER', 'RENEGADE', 'COMPASS', 'WRANGLER', 'GRAND CHEROKEE'],
     'VOLVO': ['EX30', 'EX40', 'EC40', 'EX90', 'XC40', 'XC60', 'XC90', 'V60', 'V90', 'S60'],
     'MAZDA': ['CX-6E', '6E', 'CX-30', 'CX-5', 'MAZDA3', 'MAZDA2', 'CX-60', 'CX-80', 'MX-5', 'MX-30'],
@@ -75,6 +75,79 @@ CANONICAL_MODELS = {
     'EBRO': ['S700', 'S800', 'S400', 'S900'],
     'LEAPMOTOR': ['B10', 'T03', 'C10', 'B05']
 }
+
+COMMERCIAL_VAN_PATTERNS = [
+    # FIAT
+    ('FIAT', 'QUBO'), ('FIAT', 'DOBLO'), ('FIAT', 'DUCATO'), ('FIAT', 'SCUDO'), 
+    ('FIAT', 'TALENTO'), ('FIAT', 'FIORINO'), ('FIAT', 'STRADA'), ('FIAT', 'ULYSSE'),
+    # CITROEN
+    ('CITROEN', 'BERLINGO'), ('CITROEN', 'JUMPY'), ('CITROEN', 'JUMPER'), 
+    ('CITROEN', 'NEMO'), ('CITROEN', 'SPACETOURER'),
+    # PEUGEOT
+    ('PEUGEOT', 'RIFTER'), ('PEUGEOT', 'PARTNER'), ('PEUGEOT', 'EXPERT'), 
+    ('PEUGEOT', 'BOXER'), ('PEUGEOT', 'TRAVELLER'), ('PEUGEOT', 'BIPPER'),
+    # RENAULT
+    ('RENAULT', 'KANGOO'), ('RENAULT', 'TRAFIC'), ('RENAULT', 'MASTER'), 
+    ('RENAULT', 'EXPRESS'),
+    # VOLKSWAGEN
+    ('VOLKSWAGEN', 'CADDY'), ('VOLKSWAGEN', 'TRANSPORTER'), ('VOLKSWAGEN', 'CARAVELLE'), 
+    ('VOLKSWAGEN', 'MULTIVAN'), ('VOLKSWAGEN', 'CALIFORNIA'), ('VOLKSWAGEN', 'CRAFTER'), 
+    ('VOLKSWAGEN', 'AMAROK'),
+    # FORD
+    ('FORD', 'TOURNEO'), ('FORD', 'TRANSIT'), ('FORD', 'RANGER'),
+    # TOYOTA
+    ('TOYOTA', 'PROACE'), ('TOYOTA', 'HILUX'),
+    # OPEL
+    ('OPEL', 'COMBO'), ('OPEL', 'VIVARO'), ('OPEL', 'MOVANO'), ('OPEL', 'ZAFIRA LIFE'),
+    # MERCEDES
+    ('MERCEDES-BENZ', 'CITAN'), ('MERCEDES-BENZ', 'VITO'), ('MERCEDES-BENZ', 'SPRINTER'),
+    ('MERCEDES', 'CITAN'), ('MERCEDES', 'VITO'), ('MERCEDES', 'SPRINTER'),
+    ('MERCEDES-BENZ', 'CLASE V'), ('MERCEDES', 'CLASE V'), ('MERCEDES-BENZ', 'CLASE T'), ('MERCEDES', 'CLASE T'),
+    # NISSAN
+    ('NISSAN', 'TOWNSTAR'), ('NISSAN', 'PRIMASTAR'), ('NISSAN', 'INTERSTAR'), 
+    ('NISSAN', 'NV200'), ('NISSAN', 'NV250'), ('NISSAN', 'NV300'), ('NISSAN', 'NV400'), 
+    ('NISSAN', 'NAVARA'),
+    # DACIA
+    ('DACIA', 'DOKKER'),
+    # HYUNDAI
+    ('HYUNDAI', 'H1'), ('HYUNDAI', 'H-1'), ('HYUNDAI', 'STARIA'), ('HYUNDAI', 'H350'),
+    # IVECO
+    ('IVECO', 'DAILY'),
+    # MAXUS
+    ('MAXUS', 'DELIVER'), ('MAXUS', 'EDELIVER'), ('MAXUS', 'T90'),
+    # MAN
+    ('MAN', 'TGE'),
+    # ISUZU
+    ('ISUZU', 'D-MAX'),
+    # MITSUBISHI
+    ('MITSUBISHI', 'L200')
+]
+
+GENERIC_VAN_KEYWORDS = [
+    'BERLINGO', 'RIFTER', 'PARTNER', 'KANGOO', 'TRAFIC', 'CADDY', 'TRANSPORTER', 
+    'MULTIVAN', 'CARAVELLE', 'CRAFTER', 'TOURNEO', 'TRANSIT', 'PROACE', 'VITO', 
+    'SPRINTER', 'CITAN', 'QUBO', 'DOBLO', 'DUCATO', 'SCUDO', 'VIVARO', 'MOVANO',
+    'INTERSTAR', 'PRIMASTAR', 'TOWNSTAR', 'DAILY'
+]
+
+COACHBUILDER_BRANDS = [
+    'REHATRANS', 'CODETRANS', 'RODRIGUEZ', 'CARBUS', 'INTEGRALIA'
+]
+
+def is_commercial_van(brand, model_clean, model_raw=''):
+    b = str(brand or '').upper().strip()
+    mc = str(model_clean or '').upper().strip()
+    mr = str(model_raw or '').upper().strip()
+    
+    if b in COACHBUILDER_BRANDS:
+        return True
+    for v_b, v_m in COMMERCIAL_VAN_PATTERNS:
+        if (b == v_b or b.replace('-BENZ', '') == v_b) and (v_m in mc or v_m in mr):
+            return True
+    for gv in GENERIC_VAN_KEYWORDS:
+        if gv in mc or gv in mr:
+            return True
+    return False
 
 def clean_brand(raw_b):
     b = str(raw_b).strip().upper()
@@ -143,7 +216,10 @@ def clean_model(raw_m, brand, prop=''):
     s = re.sub(r'\s+(HYBRID|HEV|PHEV|BEV|EV|ELECTRIC|MHEV|TSI|TDI|TFSI|HDI|DCI|4MATIC|4DRIVE|QUATTRO|AWD)\b.*', '', s)
     s = s.strip()
     if s.startswith(b + ' '): s = s[len(b)+1:].strip()
-    return s if s else raw_m.strip().upper()
+    final_m = s if s else raw_m.strip().upper()
+    if is_commercial_van(b, final_m, raw_m):
+        return ''
+    return final_m
 
 def parse_dgt_fuel(line, brand_clean, model_clean):
     line_u = line.upper()
@@ -298,7 +374,7 @@ class DGTSpainExtractor:
                 
             prop_code = l[93:94].strip() if len(l) > 94 else ''
             m_clean = clean_model(model_raw, b_clean, prop=prop_code)
-            if not m_clean or m_clean == 'DESCONOCIDO': continue
+            if not m_clean or m_clean == 'DESCONOCIDO' or is_commercial_van(b_clean, m_clean, model_raw): continue
             
             mf = f"{b_clean} {m_clean}"
             p_code = l[165:167].strip()
